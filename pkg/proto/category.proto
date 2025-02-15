@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package pb;
+
+import "api.proto";
+import "google/protobuf/empty.proto";
+
+
+option go_package = "ecommerce/internal/pb";
+
+message FindAllCategoryRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+}
+
+message FindByIdCategoryRequest {
+    int32 id = 1;
+}
+
+message CreateCategoryRequest {
+    string name = 1;
+    string description = 2;
+    string slug_category = 3;
+    string image_category = 4;
+}
+
+message UpdateCategoryRequest {
+    int32 category_id = 1;
+    string name = 2;
+    string description = 3;
+    string slug_category = 4;
+    string image_category = 5;
+}
+
+
+
+message CategoryResponse {
+    int32 id = 1;
+    string name = 2;
+    string description = 3;
+    string slug_category = 4;
+    string image_category = 5;
+    string created_at = 6;
+    string updated_at = 7;
+}
+  
+message CategoryResponseDeleteAt {
+    int32 id = 1;
+    string name = 2;
+    string description = 3;
+    string slug_category = 4;
+    string image_category = 5;
+    string created_at = 6;
+    string updated_at = 7;
+    string deleted_at = 8;
+}
+  
+message ApiResponseCategory {
+    string status = 1;
+    string message = 2;
+    CategoryResponse data = 3;
+}
+
+message ApiResponseCategoryDeleteAt {
+    string status = 1;
+    string message = 2;
+    CategoryResponseDeleteAt data = 3;
+}
+  
+message ApiResponsesCategory {
+    string status = 1;
+    string message = 2;
+    repeated CategoryResponse data = 3;
+}
+  
+message ApiResponseCategoryDelete {
+    string status = 1;
+    string message = 2;
+}
+  
+message ApiResponseCategoryAll {
+    string status = 1;
+    string message = 2;
+}
+  
+message ApiResponsePaginationCategoryDeleteAt {
+    string status = 1;
+    string message = 2;
+    repeated CategoryResponseDeleteAt data = 3;
+    PaginationMeta pagination = 4;
+}
+  
+message ApiResponsePaginationCategory {
+    string status = 1;
+    string message = 2;
+    repeated CategoryResponse data = 3;
+    PaginationMeta pagination = 4;
+}
+
+
+service CategoryService {
+    rpc FindAll(FindAllCategoryRequest) returns (ApiResponsePaginationCategory);
+    rpc FindById(FindByIdCategoryRequest) returns (ApiResponseCategory);
+
+    rpc FindByActive(FindAllCategoryRequest) returns (ApiResponsePaginationCategoryDeleteAt) {}
+    rpc FindByTrashed(FindAllCategoryRequest) returns (ApiResponsePaginationCategoryDeleteAt) {}
+
+
+    rpc Create(CreateCategoryRequest) returns (ApiResponseCategory);
+    rpc Update(UpdateCategoryRequest) returns (ApiResponseCategory);
+    rpc TrashedCategory(FindByIdCategoryRequest) returns (ApiResponseCategoryDeleteAt);
+    rpc RestoreCategory(FindByIdCategoryRequest) returns (ApiResponseCategoryDeleteAt);
+    rpc DeleteCategoryPermanent(FindByIdCategoryRequest) returns (ApiResponseCategoryDelete);
+
+    rpc RestoreAllCategory(google.protobuf.Empty) returns (ApiResponseCategoryAll){}
+    rpc DeleteAllCategoryPermanent(google.protobuf.Empty) returns (ApiResponseCategoryAll){}
+}
+

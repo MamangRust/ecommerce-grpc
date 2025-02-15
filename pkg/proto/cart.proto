@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package pb;
+
+import "api.proto";
+import "google/protobuf/empty.proto";
+
+
+option go_package = "ecommerce/internal/pb";
+
+
+message FindAllCartRequest {
+    int32 user_id = 1;
+    int32 page = 2;
+    int32 page_size = 3;
+    string search = 4;
+}
+
+message CreateCartRequest {
+    string name = 1;
+    string price = 2;
+    string image_product = 3;
+    int32 quantity = 4;
+    int32 product_id = 5;
+    optional int32 user_id = 6; 
+    int32 weight = 7;
+}
+
+message FindByIdCartRequest {
+    int32 id = 1;
+}
+
+message DeleteCartRequest {
+    repeated int32 cart_ids = 1;
+}
+
+
+message CartResponse {
+    int32 id = 1;
+    int32 user_id = 2;
+    int32 product_id = 3;
+    string name = 4;
+    int32 price = 5;
+    string image = 6;
+    int32 quantity = 7;
+    int32 weight = 8;
+    string created_at = 9;
+    string updated_at = 10;
+}
+  
+ 
+message CartResponseDeletedAt {
+    int32 id = 1;
+    int32 user_id = 2;
+    int32 product_id = 3;
+    string name = 4;
+    int32 price = 5;
+    string image = 6;
+    int32 quantity = 7;
+    int32 weight = 8;
+    string created_at = 9;
+    string updated_at = 10;
+    string deleted_at = 11;
+}
+
+
+message ApiResponseCart {
+    string status = 1;
+    string message = 2;
+    CartResponse data = 3;
+}
+
+
+message ApiResponseCartDelete {
+    string status = 1;
+    string message = 2;
+}
+
+message ApiResponseCartAll {
+    string status = 1;
+    string message = 2;
+}
+
+
+
+message ApiResponsePaginationCart {
+    string status = 1;
+    string message = 2;
+    repeated CartResponse data = 3;
+    PaginationMeta pagination = 4;
+}
+
+
+service CartService{
+    rpc FindAll(FindAllCartRequest) returns(ApiResponsePaginationCart);
+    rpc Create(CreateCartRequest) returns(ApiResponseCart);
+    rpc Delete(FindByIdCartRequest) returns(ApiResponseCartDelete);
+    rpc DeleteAll(DeleteCartRequest) returns(ApiResponseCartAll);
+}

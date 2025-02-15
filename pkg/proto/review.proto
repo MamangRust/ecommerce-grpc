@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package pb;
+
+import "google/protobuf/empty.proto";
+
+import "api.proto";
+option go_package = "ecommerce/internal/pb";
+
+message FindAllReviewProductRequest {
+    int32 product_id = 1;
+    int32 page = 2;
+    int32 page_size = 3;
+    string search = 4;
+}
+
+message FindByIdReviewRequest{
+    int32 id = 1;
+}
+
+
+message FindAllReviewRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+}
+
+
+message CreateReviewRequest {
+    int32 user_id = 1;
+    int32 product_id = 2;
+    string name = 3;
+    string comment = 4;
+    int32 rating = 5;
+}
+
+
+message UpdateReviewRequest {
+    int32 review_id = 1;
+    string name = 2;
+    string comment = 3;
+    int32 rating = 4;
+}
+
+
+message ReviewResponse {
+    int32 id = 1;
+    int32 user_id = 2;
+    int32 product_id = 3;
+    string name = 4;
+    string comment = 5;
+    int32 rating = 6;
+    string created_at = 7;
+    string updated_at = 8;
+}
+
+
+message ReviewResponseDeleteAt {
+    int32 id = 1;
+    int32 user_id = 2;
+    int32 product_id = 3;
+    string name = 4;
+    string comment = 5;
+    int32 rating = 6;
+    string created_at = 7;
+    string updated_at = 8;
+    string deleted_at = 9;
+}
+
+
+message ApiResponseReview {
+    string status = 1;
+    string message = 2;
+    ReviewResponse data = 3;
+}
+
+
+message ApiResponseReviewDeleteAt {
+    string status = 1;
+    string message = 2;
+    ReviewResponseDeleteAt data = 3;
+}
+
+
+message ApiResponsesReview {
+    string status = 1;
+    string message = 2;
+    repeated ReviewResponse data = 3;
+}
+
+
+message ApiResponsePaginationReview {
+    string status = 1;
+    string message = 2;
+    repeated ReviewResponse data = 3;
+    PaginationMeta pagination = 4;
+}
+
+message ApiResponseReviewDelete {
+    string status = 1;
+    string message = 2;
+}
+
+message ApiResponseReviewAll {
+    string status = 1;
+    string message = 2;
+}
+  
+
+message ApiResponsePaginationReviewDeleteAt {
+    string status = 1;
+    string message = 2;
+    repeated ReviewResponseDeleteAt data = 3;
+    PaginationMeta pagination = 4;
+}
+
+
+service ReviewService {
+    rpc FindAll(FindAllReviewRequest) returns (ApiResponsePaginationReview);
+    rpc FindByProduct(FindAllReviewProductRequest) returns(ApiResponsePaginationReview);
+    rpc FindByTrashed(FindAllReviewRequest) returns (ApiResponsePaginationReviewDeleteAt);
+    rpc FindByActive(FindAllReviewRequest) returns (ApiResponsePaginationReviewDeleteAt);
+    
+    rpc Create(CreateReviewRequest) returns (ApiResponseReview);
+    rpc Update(UpdateReviewRequest) returns (ApiResponseReview);
+    
+    rpc TrashedReview(FindByIdReviewRequest) returns (ApiResponseReviewDeleteAt);
+    rpc RestoreReview(FindByIdReviewRequest) returns (ApiResponseReviewDeleteAt);
+    rpc DeleteReviewPermanent(FindByIdReviewRequest) returns (ApiResponseReviewDelete);
+
+    rpc RestoreAllReview(google.protobuf.Empty) returns (ApiResponseReviewAll);
+    rpc DeleteAllReviewPermanent(google.protobuf.Empty) returns (ApiResponseReviewAll);
+}

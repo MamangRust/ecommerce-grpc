@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package pb;
+
+import "api.proto";
+import "shipping_address.proto";
+import "google/protobuf/empty.proto";
+
+
+option go_package = "ecommerce/internal/pb";
+
+message FindAllOrderRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+}
+
+message FindByIdOrderRequest {
+    int32 id = 1;
+}
+
+message CreateOrderRequest {
+    int32 merchant_id = 1;
+    int32 user_id = 2;
+    int32 total_price = 3;
+    repeated CreateOrderItemRequest items = 4;
+    CreateShippingAddressRequest shipping = 5;
+}
+
+message UpdateOrderRequest {
+    int32 order_id = 1;
+    int32 total_price = 2;
+    repeated UpdateOrderItemRequest items = 3;
+    UpdateShippingAddressRequest shipping = 4;
+}
+
+message CreateOrderItemRequest {
+    int32 product_id = 1;
+    int32 quantity = 2;
+    int32 price = 3;
+}
+
+message UpdateOrderItemRequest {
+    int32 order_item_id = 1;
+    int32 product_id = 2;
+    int32 quantity = 3;
+    int32 price = 4;
+}
+
+
+message OrderResponse {
+    int32 id = 1;
+    int32 merchant_id = 2;
+    int32 user_id = 3;
+    int32 total_price = 4;
+    string created_at = 5;
+    string updated_at = 6;
+}
+  
+message OrderResponseDeleteAt {
+    int32 id = 1;
+    int32 merchant_id = 2;
+    int32 user_id = 3;
+    int32 total_price = 4;
+    string created_at = 5;
+    string updated_at = 6;
+    string deleted_at = 7;
+}
+
+message ApiResponseOrder {
+    string status = 1;
+    string message = 2;
+    OrderResponse data = 3;
+}
+
+message ApiResponseOrderDeleteAt{
+    string status = 1;
+    string message = 2;
+    OrderResponseDeleteAt data = 3;
+}
+
+message ApiResponsesOrder {
+    string status = 1;
+    string message = 2;
+    repeated OrderResponse data = 3;
+}
+
+message ApiResponseOrderDelete {
+    string status = 1;
+    string message = 2;
+}
+
+message ApiResponseOrderAll {
+    string status = 1;
+    string message = 2;
+}
+
+message ApiResponsePaginationOrderDeleteAt {
+    string status = 1;
+    string message = 2;
+    repeated OrderResponseDeleteAt data = 3;
+    PaginationMeta pagination = 4;
+}
+
+message ApiResponsePaginationOrder {
+    string status = 1;
+    string message = 2;
+    repeated OrderResponse data = 3;
+    PaginationMeta pagination = 4;
+}
+
+service OrderService{
+    rpc FindAll(FindAllOrderRequest) returns(ApiResponsePaginationOrder);
+    rpc FindById(FindByIdOrderRequest) returns(ApiResponseOrder);
+    
+    rpc FindByActive(FindAllOrderRequest) returns (ApiResponsePaginationOrderDeleteAt) {}
+    rpc FindByTrashed(FindAllOrderRequest) returns (ApiResponsePaginationOrderDeleteAt) {}
+
+
+    rpc Create(CreateOrderRequest) returns (ApiResponseOrder);
+    rpc Update(UpdateOrderRequest) returns (ApiResponseOrder);
+    rpc TrashedOrder(FindByIdOrderRequest) returns (ApiResponseOrderDeleteAt);
+    rpc RestoreOrder(FindByIdOrderRequest) returns (ApiResponseOrderDeleteAt);
+    rpc DeleteOrderPermanent(FindByIdOrderRequest) returns (ApiResponseOrderDelete);
+
+    rpc RestoreAllOrder(google.protobuf.Empty) returns (ApiResponseOrderAll){}
+    rpc DeleteAllOrderPermanent(google.protobuf.Empty) returns (ApiResponseOrderAll){}
+}
