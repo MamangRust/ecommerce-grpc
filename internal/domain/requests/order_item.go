@@ -2,6 +2,12 @@ package requests
 
 import "github.com/go-playground/validator/v10"
 
+type FindAllOrderItems struct {
+	Search   string `json:"search" validate:"required"`
+	Page     int    `json:"page" validate:"min=1"`
+	PageSize int    `json:"page_size" validate:"min=1,max=100"`
+}
+
 type CreateOrderItemRecordRequest struct {
 	OrderID   int `json:"order_id" validate:"required"`
 	ProductID int `json:"product_id" validate:"required"`

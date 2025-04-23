@@ -22,6 +22,19 @@ type CreateRefreshTokenParams struct {
 	Expiration time.Time `json:"expiration"`
 }
 
+// CreateRefreshToken: Creates a new refresh token
+// Purpose: Generate a refresh token for user authentication
+// Parameters:
+//
+//	$1: user_id - ID of the user this token belongs to
+//	$2: token - The actual refresh token string
+//	$3: expiration - Expiration timestamp of the token
+//
+// Returns: The created refresh token record (excluding sensitive fields if any)
+// Business Logic:
+//   - Sets both created_at and updated_at to current timestamp
+//   - Used in JWT refresh token rotation
+//   - Typically created during login/auth flows
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (*RefreshToken, error) {
 	row := q.db.QueryRowContext(ctx, createRefreshToken, arg.UserID, arg.Token, arg.Expiration)
 	var i RefreshToken
@@ -42,6 +55,16 @@ DELETE FROM refresh_tokens
 WHERE token = $1
 `
 
+// DeleteRefreshToken: Permanently deletes a refresh token
+// Purpose: Invalidate a specific refresh token
+// Parameters:
+//
+//	$1: token - The token string to delete
+//
+// Business Logic:
+//   - Hard deletes the token record
+//   - Used during logout/token invalidation
+//   - Prevents token reuse after deletion
 func (q *Queries) DeleteRefreshToken(ctx context.Context, token string) error {
 	_, err := q.db.ExecContext(ctx, deleteRefreshToken, token)
 	return err
@@ -52,6 +75,16 @@ DELETE FROM refresh_tokens
 WHERE user_id = $1
 `
 
+// DeleteRefreshTokenByUserId: Permanently deletes all tokens for a user
+// Purpose: Invalidate all refresh tokens for a user
+// Parameters:
+//
+//	$1: user_id - ID of the user whose tokens to delete
+//
+// Business Logic:
+//   - Hard deletes all tokens for the user
+//   - Used during password reset or account lock
+//   - Ensures complete session invalidation
 func (q *Queries) DeleteRefreshTokenByUserId(ctx context.Context, userID int32) error {
 	_, err := q.db.ExecContext(ctx, deleteRefreshTokenByUserId, userID)
 	return err
@@ -63,6 +96,17 @@ FROM refresh_tokens
 WHERE token = $1 AND deleted_at IS NULL
 `
 
+// FindRefreshTokenByToken: Retrieves active refresh token by token string
+// Purpose: Validate and lookup refresh token
+// Parameters:
+//
+//	$1: token - The refresh token string to find
+//
+// Returns: The refresh token record if found and active
+// Business Logic:
+//   - Only returns non-deleted tokens
+//   - Used during token refresh operations
+//   - Helps prevent token reuse
 func (q *Queries) FindRefreshTokenByToken(ctx context.Context, token string) (*RefreshToken, error) {
 	row := q.db.QueryRowContext(ctx, findRefreshTokenByToken, token)
 	var i RefreshToken
@@ -96,6 +140,18 @@ ORDER BY
 LIMIT 1
 `
 
+// FindRefreshTokenByUserId: Retrieves latest active refresh token for user
+// Purpose: Get current valid refresh token for a user
+// Parameters:
+//
+//	$1: user_id - ID of the user to find token for
+//
+// Returns: The most recent refresh token for the user
+// Business Logic:
+//   - Returns only active (non-deleted) tokens
+//   - Orders by creation date (newest first)
+//   - Used for token management and validation
+//   - Limits to 1 result to get latest token
 func (q *Queries) FindRefreshTokenByUserId(ctx context.Context, userID int32) (*RefreshToken, error) {
 	row := q.db.QueryRowContext(ctx, findRefreshTokenByUserId, userID)
 	var i RefreshToken
@@ -111,10 +167,11 @@ func (q *Queries) FindRefreshTokenByUserId(ctx context.Context, userID int32) (*
 	return &i, err
 }
 
-const updateRefreshTokenByUserId = `-- name: UpdateRefreshTokenByUserId :exec
+const updateRefreshTokenByUserId = `-- name: UpdateRefreshTokenByUserId :one
 UPDATE refresh_tokens
 SET token = $2, expiration = $3, updated_at = current_timestamp
 WHERE user_id = $1 AND deleted_at IS NULL
+RETURNING refresh_token_id, user_id, token, expiration, created_at, updated_at, deleted_at
 `
 
 type UpdateRefreshTokenByUserIdParams struct {
@@ -123,7 +180,30 @@ type UpdateRefreshTokenByUserIdParams struct {
 	Expiration time.Time `json:"expiration"`
 }
 
-func (q *Queries) UpdateRefreshTokenByUserId(ctx context.Context, arg UpdateRefreshTokenByUserIdParams) error {
-	_, err := q.db.ExecContext(ctx, updateRefreshTokenByUserId, arg.UserID, arg.Token, arg.Expiration)
-	return err
+// UpdateRefreshTokenByUserId: Updates refresh token for a user
+// Purpose: Rotate/refresh token for a user
+// Parameters:
+//
+//	$1: user_id - ID of the user to update token for
+//	$2: token - New token string
+//	$3: expiration - New expiration timestamp
+//
+// Business Logic:
+//   - Updates token and expiration fields
+//   - Sets updated_at to current time
+//   - Only modifies active tokens
+//   - Used during token rotation flows
+func (q *Queries) UpdateRefreshTokenByUserId(ctx context.Context, arg UpdateRefreshTokenByUserIdParams) (*RefreshToken, error) {
+	row := q.db.QueryRowContext(ctx, updateRefreshTokenByUserId, arg.UserID, arg.Token, arg.Expiration)
+	var i RefreshToken
+	err := row.Scan(
+		&i.RefreshTokenID,
+		&i.UserID,
+		&i.Token,
+		&i.Expiration,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return &i, err
 }

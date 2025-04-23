@@ -39,7 +39,7 @@ func (s *sliderResponseMapper) ToSliderResponseDeleteAt(slider *record.SliderRec
 		Image:     slider.Image,
 		CreatedAt: slider.CreatedAt,
 		UpdatedAt: slider.UpdatedAt,
-		DeletedAt: *slider.DeletedAt,
+		DeletedAt: slider.DeletedAt,
 	}
 }
 

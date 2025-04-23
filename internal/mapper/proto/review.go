@@ -3,6 +3,8 @@ package protomapper
 import (
 	"ecommerce/internal/domain/response"
 	"ecommerce/internal/pb"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type reviewProtoMapper struct {
@@ -68,6 +70,15 @@ func (r *reviewProtoMapper) ToProtoResponsePaginationReview(pagination *pb.Pagin
 	}
 }
 
+func (r *reviewProtoMapper) ToProtoResponsePaginationReviewsDetail(pagination *pb.PaginationMeta, status string, message string, reviews []*response.ReviewsDetailResponse) *pb.ApiResponsePaginationReviewDetail {
+	return &pb.ApiResponsePaginationReviewDetail{
+		Status:     status,
+		Message:    message,
+		Data:       r.mapResponsesReviewsDetail(reviews),
+		Pagination: mapPaginationMeta(pagination),
+	}
+}
+
 func (r *reviewProtoMapper) mapResponseReview(review *response.ReviewResponse) *pb.ReviewResponse {
 	return &pb.ReviewResponse{
 		Id:        int32(review.ID),
@@ -91,7 +102,58 @@ func (r *reviewProtoMapper) mapResponsesReview(reviews []*response.ReviewRespons
 	return mappedReviews
 }
 
+func (r *reviewProtoMapper) mapResponseReviewsDetail(review *response.ReviewsDetailResponse) *pb.ReviewsDetailResponse {
+	if review == nil {
+		return nil
+	}
+
+	var reviewDetail *pb.ReviewDetailResponse
+	if review.ReviewDetail != nil {
+		reviewDetail = &pb.ReviewDetailResponse{
+			Id:        int32(review.ReviewDetail.ID),
+			Type:      review.ReviewDetail.Type,
+			Url:       review.ReviewDetail.Url,
+			Caption:   review.ReviewDetail.Caption,
+			CreatedAt: review.ReviewDetail.CreatedAt,
+		}
+	}
+
+	var deletedAt string
+	if review.DeletedAt != nil {
+		deletedAt = *review.DeletedAt
+	}
+
+	return &pb.ReviewsDetailResponse{
+		Id:           int32(review.ID),
+		UserId:       int32(review.UserID),
+		ProductId:    int32(review.ProductID),
+		Name:         review.Name,
+		Comment:      review.Comment,
+		Rating:       int32(review.Rating),
+		ReviewDetail: reviewDetail,
+		CreatedAt:    review.CreatedAt,
+		UpdatedAt:    review.UpdatedAt,
+		DeletedAt:    deletedAt,
+	}
+}
+
+func (r *reviewProtoMapper) mapResponsesReviewsDetail(reviews []*response.ReviewsDetailResponse) []*pb.ReviewsDetailResponse {
+	var mappedReviews []*pb.ReviewsDetailResponse
+
+	for _, review := range reviews {
+		mappedReviews = append(mappedReviews, r.mapResponseReviewsDetail(review))
+	}
+
+	return mappedReviews
+}
+
 func (r *reviewProtoMapper) mapResponseReviewDeleteAt(review *response.ReviewResponseDeleteAt) *pb.ReviewResponseDeleteAt {
+	var deletedAt *wrapperspb.StringValue
+
+	if review.DeletedAt != nil {
+		deletedAt = wrapperspb.String(*review.DeletedAt)
+	}
+
 	return &pb.ReviewResponseDeleteAt{
 		Id:        int32(review.ID),
 		UserId:    int32(review.UserID),
@@ -101,7 +163,7 @@ func (r *reviewProtoMapper) mapResponseReviewDeleteAt(review *response.ReviewRes
 		Rating:    int32(review.Rating),
 		CreatedAt: review.CreatedAt,
 		UpdatedAt: review.UpdatedAt,
-		DeletedAt: review.DeletedAt,
+		DeletedAt: deletedAt,
 	}
 }
 

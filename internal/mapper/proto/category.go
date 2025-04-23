@@ -3,6 +3,8 @@ package protomapper
 import (
 	"ecommerce/internal/domain/response"
 	"ecommerce/internal/pb"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type categoryProtoMapper struct {
@@ -68,6 +70,38 @@ func (c *categoryProtoMapper) ToProtoResponsePaginationCategory(pagination *pb.P
 	}
 }
 
+func (c *categoryProtoMapper) ToProtoResponseCategoryMonthlyPrice(status string, message string, row []*response.CategoryMonthPriceResponse) *pb.ApiResponseCategoryMonthPrice {
+	return &pb.ApiResponseCategoryMonthPrice{
+		Status:  status,
+		Message: message,
+		Data:    c.mapResponsesCategoryMonthlyPrices(row),
+	}
+}
+
+func (c *categoryProtoMapper) ToProtoResponseCategoryYearlyPrice(status string, message string, row []*response.CategoryYearPriceResponse) *pb.ApiResponseCategoryYearPrice {
+	return &pb.ApiResponseCategoryYearPrice{
+		Status:  status,
+		Message: message,
+		Data:    c.mapResponsesCategoryYearlyPrices(row),
+	}
+}
+
+func (c *categoryProtoMapper) ToProtoResponseMonthlyTotalPrice(status string, message string, row []*response.CategoriesMonthlyTotalPriceResponse) *pb.ApiResponseCategoryMonthlyTotalPrice {
+	return &pb.ApiResponseCategoryMonthlyTotalPrice{
+		Status:  status,
+		Message: message,
+		Data:    c.mapResponseCategoryMonthlyTotalPrices(row),
+	}
+}
+
+func (c *categoryProtoMapper) ToProtoResponseYearlyTotalPrice(status string, message string, row []*response.CategoriesYearlyTotalPriceResponse) *pb.ApiResponseCategoryYearlyTotalPrice {
+	return &pb.ApiResponseCategoryYearlyTotalPrice{
+		Status:  status,
+		Message: message,
+		Data:    c.mapResponseCategoryYearlyTotalPrices(row),
+	}
+}
+
 func (c *categoryProtoMapper) mapResponseCategory(category *response.CategoryResponse) *pb.CategoryResponse {
 	return &pb.CategoryResponse{
 		Id:            int32(category.ID),
@@ -91,6 +125,12 @@ func (c *categoryProtoMapper) mapResponsesCategory(categories []*response.Catego
 }
 
 func (c *categoryProtoMapper) mapResponseCategoryDeleteAt(category *response.CategoryResponseDeleteAt) *pb.CategoryResponseDeleteAt {
+	var deletedAt *wrapperspb.StringValue
+
+	if category.DeletedAt != nil {
+		deletedAt = wrapperspb.String(*category.DeletedAt)
+	}
+
 	return &pb.CategoryResponseDeleteAt{
 		Id:            int32(category.ID),
 		Name:          category.Name,
@@ -99,7 +139,7 @@ func (c *categoryProtoMapper) mapResponseCategoryDeleteAt(category *response.Cat
 		ImageCategory: category.ImageCategory,
 		CreatedAt:     category.CreatedAt,
 		UpdatedAt:     category.UpdatedAt,
-		DeletedAt:     category.DeletedAt,
+		DeletedAt:     deletedAt,
 	}
 }
 
@@ -111,4 +151,82 @@ func (c *categoryProtoMapper) mapResponsesCategoryDeleteAt(categories []*respons
 	}
 
 	return mappedCategories
+}
+
+func (s *categoryProtoMapper) mapResponseCategoryMonthlyPrice(category *response.CategoryMonthPriceResponse) *pb.CategoryMonthPriceResponse {
+	return &pb.CategoryMonthPriceResponse{
+		Month:        category.Month,
+		CategoryId:   int32(category.CategoryID),
+		CategoryName: category.CategoryName,
+		OrderCount:   int32(category.OrderCount),
+		ItemsSold:    int32(category.ItemsSold),
+		TotalRevenue: int32(category.TotalRevenue),
+	}
+}
+
+func (s *categoryProtoMapper) mapResponsesCategoryMonthlyPrices(c []*response.CategoryMonthPriceResponse) []*pb.CategoryMonthPriceResponse {
+	var categoryRecords []*pb.CategoryMonthPriceResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.mapResponseCategoryMonthlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *categoryProtoMapper) mapResponseCategoryYearlyPrice(category *response.CategoryYearPriceResponse) *pb.CategoryYearPriceResponse {
+	return &pb.CategoryYearPriceResponse{
+		Year:               category.Year,
+		CategoryId:         int32(category.CategoryID),
+		CategoryName:       category.CategoryName,
+		OrderCount:         int32(category.OrderCount),
+		ItemsSold:          int32(category.ItemsSold),
+		TotalRevenue:       int32(category.TotalRevenue),
+		UniqueProductsSold: int32(category.UniqueProductsSold),
+	}
+}
+
+func (s *categoryProtoMapper) mapResponsesCategoryYearlyPrices(c []*response.CategoryYearPriceResponse) []*pb.CategoryYearPriceResponse {
+	var categoryRecords []*pb.CategoryYearPriceResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.mapResponseCategoryYearlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *categoryProtoMapper) mapResponseCashierMonthlyTotalPrice(c *response.CategoriesMonthlyTotalPriceResponse) *pb.CategoriesMonthlyTotalPriceResponse {
+	return &pb.CategoriesMonthlyTotalPriceResponse{
+		Year:         c.Year,
+		Month:        c.Month,
+		TotalRevenue: int32(c.TotalRevenue),
+	}
+}
+
+func (s *categoryProtoMapper) mapResponseCategoryMonthlyTotalPrices(c []*response.CategoriesMonthlyTotalPriceResponse) []*pb.CategoriesMonthlyTotalPriceResponse {
+	var CategoryRecords []*pb.CategoriesMonthlyTotalPriceResponse
+
+	for _, Category := range c {
+		CategoryRecords = append(CategoryRecords, s.mapResponseCashierMonthlyTotalPrice(Category))
+	}
+
+	return CategoryRecords
+}
+
+func (s *categoryProtoMapper) mapResponseCategoryYearlyTotalSale(c *response.CategoriesYearlyTotalPriceResponse) *pb.CategoriesYearlyTotalPriceResponse {
+	return &pb.CategoriesYearlyTotalPriceResponse{
+		Year:         c.Year,
+		TotalRevenue: int32(c.TotalRevenue),
+	}
+}
+
+func (s *categoryProtoMapper) mapResponseCategoryYearlyTotalPrices(c []*response.CategoriesYearlyTotalPriceResponse) []*pb.CategoriesYearlyTotalPriceResponse {
+	var CategoryRecords []*pb.CategoriesYearlyTotalPriceResponse
+
+	for _, Category := range c {
+		CategoryRecords = append(CategoryRecords, s.mapResponseCategoryYearlyTotalSale(Category))
+	}
+
+	return CategoryRecords
 }

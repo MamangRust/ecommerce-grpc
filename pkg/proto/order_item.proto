@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package pb;
 
+import "google/protobuf/wrappers.proto";
 import "api.proto";
 
 option go_package = "ecommerce/internal/pb";
@@ -35,7 +36,7 @@ message OrderItemResponseDeleteAt {
     int32 price = 5;
     string created_at = 6;
     string updated_at = 7;
-    string deleted_at = 8;
+    google.protobuf.StringValue deleted_at = 8;
 }
 
 message ApiResponseOrderItem {

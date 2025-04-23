@@ -34,6 +34,11 @@ func (o *orderResponseMapper) ToResponsesOrder(orders []*pb.OrderResponse) []*re
 }
 
 func (o *orderResponseMapper) ToResponseOrderDeleteAt(order *pb.OrderResponseDeleteAt) *response.OrderResponseDeleteAt {
+	var deletedAt string
+	if order.DeletedAt != nil {
+		deletedAt = order.DeletedAt.Value
+	}
+
 	return &response.OrderResponseDeleteAt{
 		ID:         int(order.Id),
 		MerchantID: int(order.MerchantId),
@@ -41,7 +46,7 @@ func (o *orderResponseMapper) ToResponseOrderDeleteAt(order *pb.OrderResponseDel
 		TotalPrice: int(order.TotalPrice),
 		CreatedAt:  order.CreatedAt,
 		UpdatedAt:  order.UpdatedAt,
-		DeleteAt:   order.DeletedAt,
+		DeletedAt:  &deletedAt,
 	}
 }
 
@@ -69,6 +74,82 @@ func (o *orderResponseMapper) ToApiResponseOrderDeleteAt(pbResponse *pb.ApiRespo
 		Message: pbResponse.Message,
 		Data:    o.ToResponseOrderDeleteAt(pbResponse.Data),
 	}
+}
+
+func (s *orderResponseMapper) ToOrderMonthlyPrice(category *pb.OrderMonthlyResponse) *response.OrderMonthlyResponse {
+	return &response.OrderMonthlyResponse{
+		Month:          category.Month,
+		OrderCount:     int(category.OrderCount),
+		TotalRevenue:   int(category.TotalRevenue),
+		TotalItemsSold: int(category.TotalItemsSold),
+	}
+}
+
+func (s *orderResponseMapper) ToOrderMonthlyPrices(c []*pb.OrderMonthlyResponse) []*response.OrderMonthlyResponse {
+	var categoryRecords []*response.OrderMonthlyResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.ToOrderMonthlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *orderResponseMapper) ToOrderYearlyPrice(category *pb.OrderYearlyResponse) *response.OrderYearlyResponse {
+	return &response.OrderYearlyResponse{
+		Year:               category.Year,
+		OrderCount:         int(category.OrderCount),
+		TotalRevenue:       int(category.TotalRevenue),
+		TotalItemsSold:     int(category.TotalItemsSold),
+		ActiveCashiers:     int(category.ActiveCashiers),
+		UniqueProductsSold: int(category.UniqueProductsSold),
+	}
+}
+
+func (s *orderResponseMapper) ToOrderYearlyPrices(c []*pb.OrderYearlyResponse) []*response.OrderYearlyResponse {
+	var categoryRecords []*response.OrderYearlyResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.ToOrderYearlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *orderResponseMapper) ToResponseOrderMonthlyTotalRevenue(c *pb.OrderMonthlyTotalRevenueResponse) *response.OrderMonthlyTotalRevenueResponse {
+	return &response.OrderMonthlyTotalRevenueResponse{
+		Year:           c.Year,
+		Month:          c.Month,
+		TotalRevenue:   int(c.TotalRevenue),
+		TotalItemsSold: int(c.TotalItemsSold),
+	}
+}
+
+func (s *orderResponseMapper) ToResponseOrderMonthlyTotalRevenues(c []*pb.OrderMonthlyTotalRevenueResponse) []*response.OrderMonthlyTotalRevenueResponse {
+	var orderRecords []*response.OrderMonthlyTotalRevenueResponse
+
+	for _, row := range c {
+		orderRecords = append(orderRecords, s.ToResponseOrderMonthlyTotalRevenue(row))
+	}
+
+	return orderRecords
+}
+
+func (s *orderResponseMapper) ToResponseOrderYearlyTotalRevenue(c *pb.OrderYearlyTotalRevenueResponse) *response.OrderYearlyTotalRevenueResponse {
+	return &response.OrderYearlyTotalRevenueResponse{
+		Year:         c.Year,
+		TotalRevenue: int(c.TotalRevenue),
+	}
+}
+
+func (s *orderResponseMapper) ToResponseOrderYearlyTotalRevenues(c []*pb.OrderYearlyTotalRevenueResponse) []*response.OrderYearlyTotalRevenueResponse {
+	var orderRecords []*response.OrderYearlyTotalRevenueResponse
+
+	for _, row := range c {
+		orderRecords = append(orderRecords, s.ToResponseOrderYearlyTotalRevenue(row))
+	}
+
+	return orderRecords
 }
 
 func (o *orderResponseMapper) ToApiResponsesOrder(pbResponse *pb.ApiResponsesOrder) *response.ApiResponsesOrder {
@@ -108,5 +189,37 @@ func (o *orderResponseMapper) ToApiResponsePaginationOrder(pbResponse *pb.ApiRes
 		Message:    pbResponse.Message,
 		Data:       o.ToResponsesOrder(pbResponse.Data),
 		Pagination: *mapPaginationMeta(pbResponse.Pagination),
+	}
+}
+
+func (o *orderResponseMapper) ToApiResponseMonthlyOrder(pbResponse *pb.ApiResponseOrderMonthly) *response.ApiResponseOrderMonthly {
+	return &response.ApiResponseOrderMonthly{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    o.ToOrderMonthlyPrices(pbResponse.Data),
+	}
+}
+
+func (o *orderResponseMapper) ToApiResponseYearlyOrder(pbResponse *pb.ApiResponseOrderYearly) *response.ApiResponseOrderYearly {
+	return &response.ApiResponseOrderYearly{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    o.ToOrderYearlyPrices(pbResponse.Data),
+	}
+}
+
+func (o *orderResponseMapper) ToApiResponseMonthlyTotalRevenue(pbResponse *pb.ApiResponseOrderMonthlyTotalRevenue) *response.ApiResponseOrderMonthlyTotalRevenue {
+	return &response.ApiResponseOrderMonthlyTotalRevenue{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    o.ToResponseOrderMonthlyTotalRevenues(pbResponse.Data),
+	}
+}
+
+func (o *orderResponseMapper) ToApiResponseYearlyTotalRevenue(pbResponse *pb.ApiResponseOrderYearlyTotalRevenue) *response.ApiResponseOrderYearlyTotalRevenue {
+	return &response.ApiResponseOrderYearlyTotalRevenue{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    o.ToResponseOrderYearlyTotalRevenues(pbResponse.Data),
 	}
 }

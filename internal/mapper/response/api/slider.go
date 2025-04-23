@@ -31,13 +31,18 @@ func (s *sliderResponseMapper) ToResponsesSlider(pbResponses []*pb.SliderRespons
 }
 
 func (s *sliderResponseMapper) ToResponseSliderDeleteAt(pbResponse *pb.SliderResponseDeleteAt) *response.SliderResponseDeleteAt {
+	var deletedAt string
+	if pbResponse.DeletedAt != nil {
+		deletedAt = pbResponse.DeletedAt.Value
+	}
+
 	return &response.SliderResponseDeleteAt{
 		ID:        int(pbResponse.Id),
 		Name:      pbResponse.Name,
 		Image:     pbResponse.Image,
 		CreatedAt: pbResponse.CreatedAt,
 		UpdatedAt: pbResponse.UpdatedAt,
-		DeletedAt: pbResponse.DeletedAt,
+		DeletedAt: &deletedAt,
 	}
 }
 

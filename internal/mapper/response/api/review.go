@@ -33,6 +33,11 @@ func (r *reviewResponseMapper) ToResponsesReview(pbResponses []*pb.ReviewRespons
 }
 
 func (r *reviewResponseMapper) ToResponseReviewDeleteAt(pbResponse *pb.ReviewResponseDeleteAt) *response.ReviewResponseDeleteAt {
+	var deletedAt string
+	if pbResponse.DeletedAt != nil {
+		deletedAt = pbResponse.DeletedAt.Value
+	}
+
 	return &response.ReviewResponseDeleteAt{
 		ID:        int(pbResponse.Id),
 		UserID:    int(pbResponse.UserId),
@@ -41,7 +46,7 @@ func (r *reviewResponseMapper) ToResponseReviewDeleteAt(pbResponse *pb.ReviewRes
 		Comment:   pbResponse.Comment,
 		CreatedAt: pbResponse.CreatedAt,
 		UpdatedAt: pbResponse.UpdatedAt,
-		DeletedAt: pbResponse.DeletedAt,
+		DeletedAt: &deletedAt,
 	}
 }
 
@@ -49,6 +54,49 @@ func (r *reviewResponseMapper) ToResponsesReviewDeleteAt(pbResponses []*pb.Revie
 	var reviews []*response.ReviewResponseDeleteAt
 	for _, review := range pbResponses {
 		reviews = append(reviews, r.ToResponseReviewDeleteAt(review))
+	}
+	return reviews
+}
+
+func (r *reviewResponseMapper) ToResponseReviewsDetail(pbResponse *pb.ReviewsDetailResponse) *response.ReviewsDetailResponse {
+	if pbResponse == nil {
+		return nil
+	}
+
+	var deletedAt *string
+	if pbResponse.DeletedAt != "" {
+		deletedAt = &pbResponse.DeletedAt
+	}
+
+	var reviewDetail *response.ReviewDetailResponse
+	if pbResponse.ReviewDetail != nil {
+		reviewDetail = &response.ReviewDetailResponse{
+			ID:        int(pbResponse.ReviewDetail.Id),
+			Type:      pbResponse.ReviewDetail.Type,
+			Url:       pbResponse.ReviewDetail.Url,
+			Caption:   pbResponse.ReviewDetail.Caption,
+			CreatedAt: pbResponse.ReviewDetail.CreatedAt,
+		}
+	}
+
+	return &response.ReviewsDetailResponse{
+		ID:           int(pbResponse.Id),
+		UserID:       int(pbResponse.UserId),
+		ProductID:    int(pbResponse.ProductId),
+		Name:         pbResponse.Name,
+		Comment:      pbResponse.Comment,
+		Rating:       int(pbResponse.Rating),
+		ReviewDetail: reviewDetail,
+		CreatedAt:    pbResponse.CreatedAt,
+		UpdatedAt:    pbResponse.UpdatedAt,
+		DeletedAt:    deletedAt,
+	}
+}
+
+func (r *reviewResponseMapper) ToResponsesReviewsDetail(pbResponses []*pb.ReviewsDetailResponse) []*response.ReviewsDetailResponse {
+	var reviews []*response.ReviewsDetailResponse
+	for _, review := range pbResponses {
+		reviews = append(reviews, r.ToResponseReviewsDetail(review))
 	}
 	return reviews
 }
@@ -106,5 +154,13 @@ func (r *reviewResponseMapper) ToApiResponsePaginationReview(pbResponse *pb.ApiR
 		Message:    pbResponse.Message,
 		Data:       r.ToResponsesReview(pbResponse.Data),
 		Pagination: *mapPaginationMeta(pbResponse.Pagination),
+	}
+}
+
+func (r *reviewResponseMapper) ToApiResponsePaginationReviewsDetail(pbResponse *pb.ApiResponsePaginationReviewDetail) *response.ApiResponsePaginationReviewsDetail {
+	return &response.ApiResponsePaginationReviewsDetail{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    r.ToResponsesReviewsDetail(pbResponse.Data),
 	}
 }

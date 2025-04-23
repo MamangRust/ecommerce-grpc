@@ -4,6 +4,7 @@ package pb;
 
 import "api.proto";
 import "shipping_address.proto";
+import "google/protobuf/wrappers.proto";
 import "google/protobuf/empty.proto";
 
 
@@ -15,9 +16,61 @@ message FindAllOrderRequest {
     string search = 3;
 }
 
+message FindAllOrderMerchantRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+    int32 merchant_id = 4;
+}
+
+
 message FindByIdOrderRequest {
     int32 id = 1;
 }
+
+message FindYearOrder{
+    int32 year = 1;
+}
+
+message FindYearOrderByMerchant{
+    int32 merchant_id = 1;
+    int32 year = 2;
+}
+
+
+message FindYearMonthTotalRevenue{
+    int32 year = 1;
+    int32 month = 2;
+}
+
+message FindYearTotalRevenue{
+    int32 year = 1;
+}
+
+message FindYearMonthTotalRevenueById{
+    int32 year = 1;
+    int32 month = 2;
+    int32 order_id = 3;
+}
+
+message FindYearTotalRevenueById{
+    int32 year = 1;
+    int32 order_id = 2;
+}
+
+
+message FindYearMonthTotalRevenueByMerchant{
+    int32 year = 1;
+    int32 month = 2;
+    int32 merchant_id = 3;
+}
+
+message FindYearTotalRevenueByMerchant{
+    int32 year = 1;
+    int32 merchant_id = 2;
+}
+
+
 
 message CreateOrderRequest {
     int32 merchant_id = 1;
@@ -48,6 +101,23 @@ message UpdateOrderItemRequest {
 }
 
 
+message OrderMonthlyResponse {
+    string month = 1;
+    int32 order_count = 2;
+    int32 total_revenue = 3;
+    int32 total_items_sold = 4;
+}
+  
+message OrderYearlyResponse {
+    string year = 1;
+    int32 order_count = 2;
+    int32 total_revenue = 3;
+    int32 total_items_sold = 4;
+    int32 active_cashiers = 5;
+    int32 unique_products_sold = 6;
+}
+  
+
 message OrderResponse {
     int32 id = 1;
     int32 merchant_id = 2;
@@ -64,8 +134,40 @@ message OrderResponseDeleteAt {
     int32 total_price = 4;
     string created_at = 5;
     string updated_at = 6;
-    string deleted_at = 7;
+    google.protobuf.StringValue deleted_at = 7;
 }
+
+
+message OrderMonthlyTotalRevenueResponse {
+    string year = 1;
+    string month = 2;
+    int32 order_count = 3;
+    int32 total_revenue = 4;
+    int32 total_items_sold = 5;
+  }
+  
+message OrderYearlyTotalRevenueResponse {
+    string year = 1;
+    int32 order_count = 2;
+    int32 total_revenue = 3;
+    int32 total_items_sold = 4;
+    int32 active_cashiers = 5;
+    int32 unique_products_sold = 6;
+}
+  
+
+message ApiResponseOrderMonthly {
+    string status = 1;
+    string message = 2;
+    repeated OrderMonthlyResponse data = 3;
+}
+
+message ApiResponseOrderYearly{
+    string status = 1;
+    string message = 2;
+    repeated OrderYearlyResponse data = 3;
+}
+
 
 message ApiResponseOrder {
     string status = 1;
@@ -109,7 +211,38 @@ message ApiResponsePaginationOrder {
     PaginationMeta pagination = 4;
 }
 
+
+message ApiResponseOrderMonthlyTotalRevenue {
+    string status = 1;
+    string message = 2;
+    repeated OrderMonthlyTotalRevenueResponse data = 3;
+}
+  
+message ApiResponseOrderYearlyTotalRevenue {
+    string status = 1;
+    string message = 2;
+    repeated OrderYearlyTotalRevenueResponse data = 3;
+}
+
+
+
 service OrderService{
+    rpc FindMonthlyTotalRevenue(FindYearMonthTotalRevenue) returns (ApiResponseOrderMonthlyTotalRevenue){}
+    rpc FindYearlyTotalRevenue(FindYearTotalRevenue) returns (ApiResponseOrderYearlyTotalRevenue){}
+
+    rpc FindMonthlyTotalRevenueById(FindYearMonthTotalRevenueById) returns (ApiResponseOrderMonthlyTotalRevenue){}
+    rpc FindYearlyTotalRevenueById(FindYearTotalRevenueById) returns (ApiResponseOrderYearlyTotalRevenue){}
+
+    rpc FindMonthlyTotalRevenueByMerchant(FindYearMonthTotalRevenueByMerchant) returns (ApiResponseOrderMonthlyTotalRevenue){}
+    rpc FindYearlyTotalRevenueByMerchant(FindYearTotalRevenueByMerchant) returns (ApiResponseOrderYearlyTotalRevenue){}
+
+    rpc FindMonthlyRevenue(FindYearOrder) returns(ApiResponseOrderMonthly);
+    rpc FindYearlyRevenue(FindYearOrder) returns(ApiResponseOrderYearly);
+
+    rpc FindMonthlyRevenueByMerchant(FindYearOrderByMerchant) returns(ApiResponseOrderMonthly);
+    rpc FindYearlyRevenueByMerchant(FindYearOrderByMerchant) returns(ApiResponseOrderYearly);
+
+
     rpc FindAll(FindAllOrderRequest) returns(ApiResponsePaginationOrder);
     rpc FindById(FindByIdOrderRequest) returns(ApiResponseOrder);
     

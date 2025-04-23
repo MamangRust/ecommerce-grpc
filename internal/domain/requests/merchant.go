@@ -2,6 +2,12 @@ package requests
 
 import "github.com/go-playground/validator/v10"
 
+type FindAllMerchant struct {
+	Search   string `json:"search" validate:"required"`
+	Page     int    `json:"page" validate:"min=1"`
+	PageSize int    `json:"page_size" validate:"min=1,max=100"`
+}
+
 type CreateMerchantRequest struct {
 	UserID       int    `json:"user_id" validate:"required"`
 	Name         string `json:"name" validate:"required"`
@@ -13,7 +19,7 @@ type CreateMerchantRequest struct {
 }
 
 type UpdateMerchantRequest struct {
-	MerchantID   int    `json:"merchant_id" validate:"required"`
+	MerchantID   *int   `json:"merchant_id"`
 	UserID       int    `json:"user_id" validate:"required"`
 	Name         string `json:"name" validate:"required"`
 	Description  string `json:"description" validate:"required"`

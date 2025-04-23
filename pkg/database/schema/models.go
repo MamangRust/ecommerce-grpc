@@ -9,6 +9,19 @@ import (
 	"time"
 )
 
+type Banner struct {
+	BannerID  int32        `json:"banner_id"`
+	Name      string       `json:"name"`
+	StartDate time.Time    `json:"start_date"`
+	EndDate   time.Time    `json:"end_date"`
+	StartTime time.Time    `json:"start_time"`
+	EndTime   time.Time    `json:"end_time"`
+	IsActive  sql.NullBool `json:"is_active"`
+	CreatedAt sql.NullTime `json:"created_at"`
+	UpdatedAt sql.NullTime `json:"updated_at"`
+	DeletedAt sql.NullTime `json:"deleted_at"`
+}
+
 type Cart struct {
 	CartID    int32        `json:"cart_id"`
 	UserID    int32        `json:"user_id"`
@@ -46,6 +59,66 @@ type Merchant struct {
 	CreatedAt    sql.NullTime   `json:"created_at"`
 	UpdatedAt    sql.NullTime   `json:"updated_at"`
 	DeletedAt    sql.NullTime   `json:"deleted_at"`
+}
+
+type MerchantBusinessInformation struct {
+	MerchantBusinessInfoID int32          `json:"merchant_business_info_id"`
+	MerchantID             int32          `json:"merchant_id"`
+	BusinessType           sql.NullString `json:"business_type"`
+	TaxID                  sql.NullString `json:"tax_id"`
+	EstablishedYear        sql.NullInt32  `json:"established_year"`
+	NumberOfEmployees      sql.NullInt32  `json:"number_of_employees"`
+	WebsiteUrl             sql.NullString `json:"website_url"`
+	CreatedAt              sql.NullTime   `json:"created_at"`
+	UpdatedAt              sql.NullTime   `json:"updated_at"`
+	DeletedAt              sql.NullTime   `json:"deleted_at"`
+}
+
+type MerchantCertificationsAndAward struct {
+	MerchantCertificationID int32          `json:"merchant_certification_id"`
+	MerchantID              int32          `json:"merchant_id"`
+	Title                   string         `json:"title"`
+	Description             sql.NullString `json:"description"`
+	IssuedBy                sql.NullString `json:"issued_by"`
+	IssueDate               sql.NullTime   `json:"issue_date"`
+	ExpiryDate              sql.NullTime   `json:"expiry_date"`
+	CertificateUrl          sql.NullString `json:"certificate_url"`
+	CreatedAt               sql.NullTime   `json:"created_at"`
+	UpdatedAt               sql.NullTime   `json:"updated_at"`
+	DeletedAt               sql.NullTime   `json:"deleted_at"`
+}
+
+type MerchantDetail struct {
+	MerchantDetailID int32          `json:"merchant_detail_id"`
+	MerchantID       int32          `json:"merchant_id"`
+	DisplayName      sql.NullString `json:"display_name"`
+	CoverImageUrl    sql.NullString `json:"cover_image_url"`
+	LogoUrl          sql.NullString `json:"logo_url"`
+	ShortDescription sql.NullString `json:"short_description"`
+	WebsiteUrl       sql.NullString `json:"website_url"`
+	CreatedAt        sql.NullTime   `json:"created_at"`
+	UpdatedAt        sql.NullTime   `json:"updated_at"`
+	DeletedAt        sql.NullTime   `json:"deleted_at"`
+}
+
+type MerchantPolicy struct {
+	MerchantPolicyID int32        `json:"merchant_policy_id"`
+	MerchantID       int32        `json:"merchant_id"`
+	PolicyType       string       `json:"policy_type"`
+	Title            string       `json:"title"`
+	Description      string       `json:"description"`
+	CreatedAt        sql.NullTime `json:"created_at"`
+	UpdatedAt        sql.NullTime `json:"updated_at"`
+	DeletedAt        sql.NullTime `json:"deleted_at"`
+}
+
+type MerchantSocialMediaLink struct {
+	MerchantSocialID int32        `json:"merchant_social_id"`
+	MerchantDetailID int32        `json:"merchant_detail_id"`
+	Platform         string       `json:"platform"`
+	Url              string       `json:"url"`
+	CreatedAt        sql.NullTime `json:"created_at"`
+	UpdatedAt        sql.NullTime `json:"updated_at"`
 }
 
 type Order struct {
@@ -108,6 +181,17 @@ type Review struct {
 	CreatedAt sql.NullTime `json:"created_at"`
 	UpdatedAt sql.NullTime `json:"updated_at"`
 	DeletedAt sql.NullTime `json:"deleted_at"`
+}
+
+type ReviewDetail struct {
+	ReviewDetailID int32          `json:"review_detail_id"`
+	ReviewID       int32          `json:"review_id"`
+	Type           string         `json:"type"`
+	Url            string         `json:"url"`
+	Caption        sql.NullString `json:"caption"`
+	CreatedAt      sql.NullTime   `json:"created_at"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	DeletedAt      sql.NullTime   `json:"deleted_at"`
 }
 
 type Role struct {

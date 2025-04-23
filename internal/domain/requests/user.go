@@ -2,6 +2,12 @@ package requests
 
 import "github.com/go-playground/validator/v10"
 
+type FindAllUsers struct {
+	Search   string `json:"search" validate:"required"`
+	Page     int    `json:"page" validate:"min=1"`
+	PageSize int    `json:"page_size" validate:"min=1,max=100"`
+}
+
 type CreateUserRequest struct {
 	FirstName       string `json:"firstname" validate:"required,alpha"`
 	LastName        string `json:"lastname" validate:"required,alpha"`
@@ -11,7 +17,7 @@ type CreateUserRequest struct {
 }
 
 type UpdateUserRequest struct {
-	UserID          int    `json:"user_id" validate:"required,min=1"`
+	UserID          *int   `json:"user_id"`
 	FirstName       string `json:"firstname" validate:"required,alpha"`
 	LastName        string `json:"lastname" validate:"required,alpha"`
 	Email           string `json:"email" validate:"required,email"`

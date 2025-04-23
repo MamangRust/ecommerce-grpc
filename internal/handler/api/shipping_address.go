@@ -31,20 +31,20 @@ func NewHandlerShippingAddress(
 		mapping: mapping,
 	}
 
-	routercategory := router.Group("/api/shipping-address")
+	myrouter := router.Group("/api/shipping-address")
 
-	routercategory.GET("", shippingHandler.FindAllShipping)
-	routercategory.GET("/:id", shippingHandler.FindById)
-	routercategory.GET("/order/:id", shippingHandler.FindByOrder)
-	routercategory.GET("/active", shippingHandler.FindByActive)
-	routercategory.GET("/trashed", shippingHandler.FindByTrashed)
+	myrouter.GET("", shippingHandler.FindAllShipping)
+	myrouter.GET("/:id", shippingHandler.FindById)
+	myrouter.GET("/order/:id", shippingHandler.FindByOrder)
+	myrouter.GET("/active", shippingHandler.FindByActive)
+	myrouter.GET("/trashed", shippingHandler.FindByTrashed)
 
-	routercategory.POST("/trashed/:id", shippingHandler.TrashedShippingAddress)
-	routercategory.POST("/restore/:id", shippingHandler.RestoreShippingAddress)
-	routercategory.DELETE("/permanent/:id", shippingHandler.DeleteShippingAddressPermanent)
+	myrouter.POST("/trashed/:id", shippingHandler.TrashedShippingAddress)
+	myrouter.POST("/restore/:id", shippingHandler.RestoreShippingAddress)
+	router.DELETE("/permanent/:id", shippingHandler.DeleteShippingAddressPermanent)
 
-	routercategory.POST("/restore/all", shippingHandler.RestoreAllShippingAddress)
-	routercategory.POST("/permanent/all", shippingHandler.DeleteAllShippingAddressPermanent)
+	myrouter.POST("/restore/all", shippingHandler.RestoreAllShippingAddress)
+	myrouter.POST("/permanent/all", shippingHandler.DeleteAllShippingAddressPermanent)
 
 	return shippingHandler
 
@@ -52,14 +52,14 @@ func NewHandlerShippingAddress(
 
 // @Security Bearer
 // @Summary Find all shipping-address
-// @Tags Category
+// @Tags shipping address
 // @Description Retrieve a list of all shipping-address
 // @Accept json
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Number of items per page" default(10)
 // @Param search query string false "Search query"
-// @Success 200 {object} response.ApiResponsePaginationCategory "List of shipping-address"
+// @Success 200 {object} response.ApiResponsePaginationShippingAddress "List of shipping-address"
 // @Failure 500 {object} response.ErrorResponse "Failed to retrieve shipping-address data"
 // @Router /api/shipping-address [get]
 func (h *shippingAddressHandleApi) FindAllShipping(c echo.Context) error {
@@ -86,10 +86,11 @@ func (h *shippingAddressHandleApi) FindAllShipping(c echo.Context) error {
 	res, err := h.client.FindAll(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve shipping-address data", zap.Error(err))
+		h.logger.Error("Failed to fetch shipping address", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve shipping-address data: ",
+			Status:  "server_error",
+			Message: "We couldn't retrieve the shipping address list. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -117,6 +118,7 @@ func (h *shippingAddressHandleApi) FindById(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
 			Status:  "error",
 			Message: "Invalid shipping address ID",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -129,10 +131,11 @@ func (h *shippingAddressHandleApi) FindById(c echo.Context) error {
 	res, err := h.client.FindById(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve shipping address data", zap.Error(err))
+		h.logger.Error("Failed to fetch shipping address details", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve shipping address data: " + err.Error(),
+			Status:  "server_error",
+			Message: "We couldn't retrieve the shipping address details. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -160,6 +163,7 @@ func (h *shippingAddressHandleApi) FindByOrder(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
 			Status:  "error",
 			Message: "Invalid order ID",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -172,10 +176,11 @@ func (h *shippingAddressHandleApi) FindByOrder(c echo.Context) error {
 	res, err := h.client.FindByOrder(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve shipping address data", zap.Error(err))
+		h.logger.Error("Failed to fetch shipping address details", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve shipping address data: " + err.Error(),
+			Status:  "server_error",
+			Message: "We couldn't retrieve the shipping address details. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -190,6 +195,9 @@ func (h *shippingAddressHandleApi) FindByOrder(c echo.Context) error {
 // @Description Retrieve a list of active shipping-address
 // @Accept json
 // @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Number of items per page" default(10)
+// @Param search query string false "Search query"
 // @Success 200 {object} response.ApiResponsePaginationShippingAddressDeleteAt "List of active shipping-address"
 // @Failure 500 {object} response.ErrorResponse "Failed to retrieve shipping data"
 // @Router /api/shipping-address/active [get]
@@ -217,10 +225,11 @@ func (h *shippingAddressHandleApi) FindByActive(c echo.Context) error {
 	res, err := h.client.FindByActive(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve shipping-address data", zap.Error(err))
+		h.logger.Error("Failed to fetch active shipping address", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve shipping-address data: ",
+			Status:  "server_error",
+			Message: "We couldn't retrieve the active shipping address list. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -236,6 +245,9 @@ func (h *shippingAddressHandleApi) FindByActive(c echo.Context) error {
 // @Description Retrieve a list of trashed shipping-address records
 // @Accept json
 // @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Number of items per page" default(10)
+// @Param search query string false "Search query"
 // @Success 200 {object} response.ApiResponsePaginationShippingAddressDeleteAt "List of trashed shipping-address data"
 // @Failure 500 {object} response.ErrorResponse "Failed to retrieve shipping-address data"
 // @Router /api/shipping-address/trashed [get]
@@ -263,10 +275,11 @@ func (h *shippingAddressHandleApi) FindByTrashed(c echo.Context) error {
 	res, err := h.client.FindByTrashed(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve category data", zap.Error(err))
+		h.logger.Error("Failed to fetch archived shipping address", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve category data: ",
+			Status:  "server_error",
+			Message: "We couldn't retrieve the archived shipping address list. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -291,10 +304,11 @@ func (h *shippingAddressHandleApi) TrashedShippingAddress(c echo.Context) error 
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid shipping address ID", zap.Error(err))
+		h.logger.Debug("Invalid shipping address ID format", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid shipping address ID",
+			Status:  "invalid_input",
+			Message: "Please provide a valid shipping address ID",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -307,10 +321,11 @@ func (h *shippingAddressHandleApi) TrashedShippingAddress(c echo.Context) error 
 	res, err := h.client.TrashedShipping(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve trashed shipping address", zap.Error(err))
+		h.logger.Error("Failed to archive shipping address", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed shipping address: ",
+			Status:  "archive_failed",
+			Message: "We couldn't archive the shipping address. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -339,6 +354,7 @@ func (h *shippingAddressHandleApi) RestoreShippingAddress(c echo.Context) error 
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
 			Status:  "error",
 			Message: "Invalid shipping address ID",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -355,6 +371,7 @@ func (h *shippingAddressHandleApi) RestoreShippingAddress(c echo.Context) error 
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
 			Status:  "error",
 			Message: "Failed to restore shipping address: ",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -383,6 +400,7 @@ func (h *shippingAddressHandleApi) DeleteShippingAddressPermanent(c echo.Context
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
 			Status:  "error",
 			Message: "Invalid shipping address ID",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -395,10 +413,12 @@ func (h *shippingAddressHandleApi) DeleteShippingAddressPermanent(c echo.Context
 	res, err := h.client.DeleteShippingPermanent(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to delete shipping address", zap.Error(err))
+		h.logger.Error("Failed to permanently delete shipping address", zap.Error(err))
+
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to delete shipping address: ",
+			Status:  "deletion_failed",
+			Message: "We couldn't permanently delete the shipping address. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -423,10 +443,11 @@ func (h *shippingAddressHandleApi) RestoreAllShippingAddress(c echo.Context) err
 	res, err := h.client.RestoreAllShipping(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Failed to restore all shipping addresses", zap.Error(err))
+		h.logger.Error("Bulk shipping address restoration failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all shipping addresses",
+			Status:  "bulk_restore_failed",
+			Message: "We couldn't restore all shipping address. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -453,10 +474,11 @@ func (h *shippingAddressHandleApi) DeleteAllShippingAddressPermanent(c echo.Cont
 	res, err := h.client.DeleteAllShippingPermanent(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Failed to permanently delete all shipping addresses", zap.Error(err))
+		h.logger.Error("Bulk shipping address deletion failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all shipping addresses",
+			Status:  "bulk_deletion_failed",
+			Message: "We couldn't permanently delete all categories. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 

@@ -16,6 +16,19 @@ FROM order_items
 WHERE order_id = $1 AND deleted_at IS NULL
 `
 
+// CalculateTotalPrice: Calculates total price of active order items for a specific order
+// Purpose: Provides the aggregated monetary value of an order
+// Parameters:
+//
+//	$1: order_id - identifier of the order
+//
+// Returns:
+//
+//	total_price: Sum of (quantity * price) for all active items in the order
+//
+// Business Logic:
+//   - Ignores soft-deleted items
+//   - Ensures result is zero if no items exist
 func (q *Queries) CalculateTotalPrice(ctx context.Context, orderID int32) (int32, error) {
 	row := q.db.QueryRowContext(ctx, calculateTotalPrice, orderID)
 	var total_price int32
@@ -36,6 +49,21 @@ type CreateOrderItemParams struct {
 	Price     int32 `json:"price"`
 }
 
+// CreateOrderItem: Inserts a new order item record
+// Purpose: Adds a product to a specific order
+// Parameters:
+//
+//	$1: order_id
+//	$2: product_id
+//	$3: quantity
+//	$4: price
+//
+// Returns:
+//
+//	The newly created order item
+//
+// Business Logic:
+//   - Assumes quantity and price are validated in application layer
 func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (*OrderItem, error) {
 	row := q.db.QueryRowContext(ctx, createOrderItem,
 		arg.OrderID,
@@ -64,7 +92,12 @@ WHERE
     deleted_at IS NOT NULL
 `
 
-// Delete All Trashed Order Item Permanently
+// DeleteAllPermanentOrdersItem: Permanently deletes all trashed order items
+// Purpose: Performs hard delete of all soft-deleted items
+// Parameters: None
+// Returns: None
+// Business Logic:
+//   - Used for data cleanup or archival enforcement
 func (q *Queries) DeleteAllPermanentOrdersItem(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, deleteAllPermanentOrdersItem)
 	return err
@@ -74,7 +107,16 @@ const deleteOrderItemPermanently = `-- name: DeleteOrderItemPermanently :exec
 DELETE FROM order_items WHERE order_id = $1 AND deleted_at IS NOT NULL
 `
 
-// Delete Order Item Permanently
+// DeleteOrderItemPermanently: Permanently deletes a trashed order item
+// Purpose: Removes the record entirely from the database
+// Parameters:
+//
+//	$1: order_item_id
+//
+// Returns: None
+// Business Logic:
+//   - Only deletes if already soft-deleted
+//   - Irreversible action
 func (q *Queries) DeleteOrderItemPermanently(ctx context.Context, orderID int32) error {
 	_, err := q.db.ExecContext(ctx, deleteOrderItemPermanently, orderID)
 	return err
@@ -110,7 +152,23 @@ type GetOrderItemsRow struct {
 	TotalCount  int64        `json:"total_count"`
 }
 
-// Get Order Items  with Pagination and Total Count
+// GetOrderItems: Retrieves active order items with pagination and search
+// Purpose: Provides paginated listing of non-deleted order items for display or reporting
+// Parameters:
+//
+//	$1: Search keyword (matches order_id or product_id, optional)
+//	$2: Limit (number of records per page)
+//	$3: Offset (starting record index)
+//
+// Returns:
+//
+//	All matching order item fields
+//	total_count: Total number of results ignoring pagination (for frontend pagination UI)
+//
+// Business Logic:
+//   - Filters out soft-deleted items
+//   - Supports keyword-based filtering
+//   - Includes total result count via window function
 func (q *Queries) GetOrderItems(ctx context.Context, arg GetOrderItemsParams) ([]*GetOrderItemsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOrderItems, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -175,7 +233,21 @@ type GetOrderItemsActiveRow struct {
 	TotalCount  int64        `json:"total_count"`
 }
 
-// Get Active Order Item with Pagination and Total Count
+// GetOrderItemsActive: Retrieves active order items (duplicate-safe with GetOrderItems)
+// Purpose: Lists active (non-deleted) order items with pagination and optional search
+// Parameters:
+//
+//	$1: Search keyword (order_id or product_id, optional)
+//	$2: Limit (pagination size)
+//	$3: Offset (pagination start)
+//
+// Returns:
+//
+//	Order item fields plus total matching count
+//
+// Business Logic:
+//   - Behaves similarly to GetOrderItems
+//   - Used when clarity between active/trashed context is required
 func (q *Queries) GetOrderItemsActive(ctx context.Context, arg GetOrderItemsActiveParams) ([]*GetOrderItemsActiveRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOrderItemsActive, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -217,6 +289,18 @@ WHERE order_id = $1
   AND deleted_at IS NULL
 `
 
+// GetOrderItemsByOrder: Retrieves active order items for a specific order
+// Purpose: Fetches all non-deleted order items under one order
+// Parameters:
+//
+//	$1: order_id
+//
+// Returns:
+//
+//	List of active order items
+//
+// Business Logic:
+//   - Excludes soft-deleted entries
 func (q *Queries) GetOrderItemsByOrder(ctx context.Context, orderID int32) ([]*OrderItem, error) {
 	rows, err := q.db.QueryContext(ctx, getOrderItemsByOrder, orderID)
 	if err != nil {
@@ -280,7 +364,23 @@ type GetOrderItemsTrashedRow struct {
 	TotalCount  int64        `json:"total_count"`
 }
 
-// Get Trashed Orders Items with Pagination and Total Count
+// GetOrderItemsTrashed: Retrieves soft-deleted order items with pagination
+// Purpose: Allows review and management of trashed order items
+// Parameters:
+//
+//	$1: Search keyword (order_id or product_id, optional)
+//	$2: Limit (number of rows per page)
+//	$3: Offset (starting point for pagination)
+//
+// Returns:
+//
+//	All matching deleted order item fields
+//	total_count: Total number of trashed results
+//
+// Business Logic:
+//   - Only includes records with non-null deleted_at (trashed)
+//   - Enables optional keyword search and pagination
+//   - Sorted by deletion date for recent trash activity review
 func (q *Queries) GetOrderItemsTrashed(ctx context.Context, arg GetOrderItemsTrashedParams) ([]*GetOrderItemsTrashedRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOrderItemsTrashed, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -323,7 +423,12 @@ WHERE
     deleted_at IS NOT NULL
 `
 
-// Restore All Trashed Order Item
+// RestoreAllOrdersItem: Restores all soft-deleted order items
+// Purpose: Mass recovery of trashed items
+// Parameters: None
+// Returns: None
+// Business Logic:
+//   - Resets deleted_at to NULL for all trashed items
 func (q *Queries) RestoreAllOrdersItem(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, restoreAllOrdersItem)
 	return err
@@ -339,7 +444,18 @@ WHERE
   RETURNING order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at
 `
 
-// Restore Trashed Order Item
+// RestoreOrderItem: Restores a previously trashed order item
+// Purpose: Undoes a soft-delete action
+// Parameters:
+//
+//	$1: order_item_id
+//
+// Returns:
+//
+//	The restored order item
+//
+// Business Logic:
+//   - Only restores items currently soft-deleted
 func (q *Queries) RestoreOrderItem(ctx context.Context, orderID int32) (*OrderItem, error) {
 	row := q.db.QueryRowContext(ctx, restoreOrderItem, orderID)
 	var i OrderItem
@@ -367,7 +483,18 @@ WHERE
     RETURNING order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at
 `
 
-// Trash Order Item
+// TrashOrderItem: Soft-deletes a specific order item
+// Purpose: Marks an item as deleted without removing it from DB
+// Parameters:
+//
+//	$1: order_item_id
+//
+// Returns:
+//
+//	The soft-deleted order item
+//
+// Business Logic:
+//   - Preserves record for potential restoration or audit
 func (q *Queries) TrashOrderItem(ctx context.Context, orderID int32) (*OrderItem, error) {
 	row := q.db.QueryRowContext(ctx, trashOrderItem, orderID)
 	var i OrderItem
@@ -401,6 +528,21 @@ type UpdateOrderItemParams struct {
 	Price       int32 `json:"price"`
 }
 
+// UpdateOrderItem: Updates quantity and price of an existing order item
+// Purpose: Allows modification of product details in an order
+// Parameters:
+//
+//	$1: order_item_id
+//	$2: new quantity
+//	$3: new price
+//
+// Returns:
+//
+//	The updated order item
+//
+// Business Logic:
+//   - Applies changes only to active items
+//   - Automatically updates `updated_at` timestamp
 func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams) (*OrderItem, error) {
 	row := q.db.QueryRowContext(ctx, updateOrderItem, arg.OrderItemID, arg.Quantity, arg.Price)
 	var i OrderItem

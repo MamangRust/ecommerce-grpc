@@ -8,6 +8,7 @@ import (
 	"ecommerce/pkg/auth"
 	"ecommerce/pkg/dotenv"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/upload_image"
 	"flag"
 	"net/http"
 	"os"
@@ -86,6 +87,7 @@ func RunClient() {
 	}
 
 	mapping := response_api.NewResponseApiMapper()
+	image_upload := upload_image.NewImageUpload()
 
 	depsHandler := api.Deps{
 		Conn:    conn,
@@ -93,6 +95,7 @@ func RunClient() {
 		E:       e,
 		Logger:  logger,
 		Mapping: *mapping,
+		Image:   image_upload,
 	}
 
 	api.NewHandler(depsHandler)

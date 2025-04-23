@@ -35,6 +35,11 @@ func (o *orderItemResponseMapper) ToResponsesOrderItem(orderItems []*pb.OrderIte
 }
 
 func (o *orderItemResponseMapper) ToResponseOrderItemDeleteAt(orderItem *pb.OrderItemResponseDeleteAt) *response.OrderItemResponseDeleteAt {
+	var deletedAt string
+	if orderItem.DeletedAt != nil {
+		deletedAt = orderItem.DeletedAt.Value
+	}
+
 	return &response.OrderItemResponseDeleteAt{
 		ID:        int(orderItem.Id),
 		OrderID:   int(orderItem.OrderId),
@@ -43,7 +48,7 @@ func (o *orderItemResponseMapper) ToResponseOrderItemDeleteAt(orderItem *pb.Orde
 		Price:     int(orderItem.Price),
 		CreatedAt: orderItem.CreatedAt,
 		UpdatedAt: orderItem.UpdatedAt,
-		DeleteAt:  orderItem.DeletedAt,
+		DeletedAt: &deletedAt,
 	}
 }
 

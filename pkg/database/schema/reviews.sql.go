@@ -25,6 +25,24 @@ type CreateReviewParams struct {
 	Rating    int32  `json:"rating"`
 }
 
+// CreateReview: Creates a new product review
+// Purpose: Allow users to submit product reviews
+// Parameters:
+//
+//	$1: user_id - ID of the user submitting review
+//	$2: product_id - ID of the product being reviewed
+//	$3: name - Display name for the review
+//	$4: comment - Review text content
+//	$5: rating - Numeric rating (typically 1-5)
+//
+// Returns:
+//
+//	The complete created review record
+//
+// Business Logic:
+//   - Creates a new active review
+//   - Requires user_id and product_id for reference
+//   - Returns full record for immediate display
 func (q *Queries) CreateReview(ctx context.Context, arg CreateReviewParams) (*Review, error) {
 	row := q.db.QueryRowContext(ctx, createReview,
 		arg.UserID,
@@ -53,6 +71,17 @@ DELETE FROM reviews
 WHERE deleted_at IS NOT NULL
 `
 
+// DeleteAllPermanentReviews: Purges all trashed reviews
+// Purpose: Clean up review recycle bin
+// Parameters: None
+// Returns:
+//
+//	Nothing (exec-only)
+//
+// Business Logic:
+//   - Permanent deletion of all trashed reviews
+//   - Admin-level operation
+//   - Irreversible bulk deletion
 func (q *Queries) DeleteAllPermanentReviews(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, deleteAllPermanentReviews)
 	return err
@@ -62,6 +91,20 @@ const deleteReviewPermanently = `-- name: DeleteReviewPermanently :exec
 DELETE FROM reviews WHERE review_id = $1 AND deleted_at IS NOT NULL
 `
 
+// DeleteReviewPermanently: Removes a review from database
+// Purpose: Permanent deletion of trashed reviews
+// Parameters:
+//
+//	$1: review_id - ID of review to delete
+//
+// Returns:
+//
+//	Nothing (exec-only)
+//
+// Business Logic:
+//   - Physical deletion of record
+//   - Only works on already-trashed reviews
+//   - Irreversible operation
 func (q *Queries) DeleteReviewPermanently(ctx context.Context, reviewID int32) error {
 	_, err := q.db.ExecContext(ctx, deleteReviewPermanently, reviewID)
 	return err
@@ -74,6 +117,19 @@ WHERE review_id = $1
   AND deleted_at IS NULL
 `
 
+// GetReviewByID: Retrieves a single active review by ID
+// Purpose: Display review details in UI
+// Parameters:
+//
+//	$1: review_id - ID of the review to retrieve
+//
+// Returns:
+//
+//	Complete review record if found and active
+//
+// Business Logic:
+//   - Only returns non-deleted (active) reviews
+//   - Used for displaying individual review details
 func (q *Queries) GetReviewByID(ctx context.Context, reviewID int32) (*Review, error) {
 	row := q.db.QueryRowContext(ctx, getReviewByID, reviewID)
 	var i Review
@@ -89,6 +145,241 @@ func (q *Queries) GetReviewByID(ctx context.Context, reviewID int32) (*Review, e
 		&i.DeletedAt,
 	)
 	return &i, err
+}
+
+const getReviewByMerchantId = `-- name: GetReviewByMerchantId :many
+SELECT
+    r.review_id,
+    r.user_id,
+    r.product_id,
+    r.name,
+    r.comment,
+    r.rating,
+    r.created_at,
+    r.updated_at,
+    r.deleted_at,
+    COUNT(*) OVER() AS total_count,
+    COALESCE(
+        (SELECT json_agg(
+            jsonb_build_object(
+                'detail_id', rd.detail_id,
+                'type', rd.type,
+                'url', rd.url,
+                'caption', rd.caption,
+                'created_at', rd.created_at
+            )
+        )
+        FROM review_details rd
+        WHERE rd.review_id = r.review_id),
+        '[]'
+    ) AS review_details
+FROM reviews r
+JOIN products p ON r.product_id = p.product_id
+WHERE r.deleted_at IS NULL
+  AND p.merchant_id = $1
+  AND ($2::INT IS NULL OR r.rating = $2)
+ORDER BY r.created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type GetReviewByMerchantIdParams struct {
+	MerchantID int32 `json:"merchant_id"`
+	Column2    int32 `json:"column_2"`
+	Limit      int32 `json:"limit"`
+	Offset     int32 `json:"offset"`
+}
+
+type GetReviewByMerchantIdRow struct {
+	ReviewID      int32        `json:"review_id"`
+	UserID        int32        `json:"user_id"`
+	ProductID     int32        `json:"product_id"`
+	Name          string       `json:"name"`
+	Comment       string       `json:"comment"`
+	Rating        int32        `json:"rating"`
+	CreatedAt     sql.NullTime `json:"created_at"`
+	UpdatedAt     sql.NullTime `json:"updated_at"`
+	DeletedAt     sql.NullTime `json:"deleted_at"`
+	TotalCount    int64        `json:"total_count"`
+	ReviewDetails interface{}  `json:"review_details"`
+}
+
+// Retrieves paginated reviews for all products belonging to a merchant
+//
+// Purpose: Display all reviews for merchant's products in dashboard
+//
+// Parameters:
+//
+//	$1: merchant_id - ID of the merchant whose products' reviews to fetch
+//	$2: rating_filter - Optional rating value to filter by (NULL for all ratings)
+//	$3: limit - Maximum number of records to return
+//	$4: offset - Number of records to skip for pagination
+//
+// Returns:
+//   - Review fields with aggregated review details (images/videos) as JSON array
+//   - Includes total_count for pagination
+//
+// Business Logic:
+//   - Only shows active (non-deleted) reviews
+//   - Filters by merchant's products through JOIN
+//   - Optional rating filter (1-5 stars)
+//   - Aggregates review details (media attachments) as JSON array
+//   - Returns newest reviews first
+//   - Uses JOIN with products table to ensure merchant ownership
+func (q *Queries) GetReviewByMerchantId(ctx context.Context, arg GetReviewByMerchantIdParams) ([]*GetReviewByMerchantIdRow, error) {
+	rows, err := q.db.QueryContext(ctx, getReviewByMerchantId,
+		arg.MerchantID,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*GetReviewByMerchantIdRow
+	for rows.Next() {
+		var i GetReviewByMerchantIdRow
+		if err := rows.Scan(
+			&i.ReviewID,
+			&i.UserID,
+			&i.ProductID,
+			&i.Name,
+			&i.Comment,
+			&i.Rating,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.TotalCount,
+			&i.ReviewDetails,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getReviewByProductId = `-- name: GetReviewByProductId :many
+SELECT
+    r.review_id,
+    r.user_id,
+    r.product_id,
+    r.name,
+    r.comment,
+    r.rating,
+    r.created_at,
+    r.updated_at,
+    r.deleted_at,
+    COUNT(*) OVER() AS total_count,
+    COALESCE(
+        (SELECT json_agg(
+            jsonb_build_object(
+                'detail_id', rd.detail_id,
+                'type', rd.type,
+                'url', rd.url,
+                'caption', rd.caption,
+                'created_at', rd.created_at
+            )
+        )
+        FROM review_details rd
+        WHERE rd.review_id = r.review_id),
+        '[]'
+    ) AS review_details
+FROM reviews r
+WHERE r.deleted_at IS NULL
+  AND r.product_id = $1
+  AND ($2::INT IS NULL OR r.rating = $2)
+ORDER BY r.created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type GetReviewByProductIdParams struct {
+	ProductID int32 `json:"product_id"`
+	Column2   int32 `json:"column_2"`
+	Limit     int32 `json:"limit"`
+	Offset    int32 `json:"offset"`
+}
+
+type GetReviewByProductIdRow struct {
+	ReviewID      int32        `json:"review_id"`
+	UserID        int32        `json:"user_id"`
+	ProductID     int32        `json:"product_id"`
+	Name          string       `json:"name"`
+	Comment       string       `json:"comment"`
+	Rating        int32        `json:"rating"`
+	CreatedAt     sql.NullTime `json:"created_at"`
+	UpdatedAt     sql.NullTime `json:"updated_at"`
+	DeletedAt     sql.NullTime `json:"deleted_at"`
+	TotalCount    int64        `json:"total_count"`
+	ReviewDetails interface{}  `json:"review_details"`
+}
+
+// Retrieves paginated list of product reviews with details and optional rating filter
+//
+// Purpose: Display reviews for a specific product in storefront
+//
+// Parameters:
+//
+//	$1: product_id - ID of the product to get reviews for
+//	$2: rating_filter - Optional rating value to filter by (NULL for all ratings)
+//	$3: limit - Maximum number of records to return
+//	$4: offset - Number of records to skip for pagination
+//
+// Returns:
+//   - Review fields with aggregated review details (images/videos) as JSON array
+//   - Includes total_count for pagination
+//
+// Business Logic:
+//   - Only shows active (non-deleted) reviews
+//   - Filters by specific product only
+//   - Optional rating filter (1-5 stars)
+//   - Aggregates review details (media attachments) as JSON array
+//   - Returns newest reviews first
+//   - Uses LEFT JOIN to include reviews without attachments
+func (q *Queries) GetReviewByProductId(ctx context.Context, arg GetReviewByProductIdParams) ([]*GetReviewByProductIdRow, error) {
+	rows, err := q.db.QueryContext(ctx, getReviewByProductId,
+		arg.ProductID,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*GetReviewByProductIdRow
+	for rows.Next() {
+		var i GetReviewByProductIdRow
+		if err := rows.Scan(
+			&i.ReviewID,
+			&i.UserID,
+			&i.ProductID,
+			&i.Name,
+			&i.Comment,
+			&i.Rating,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.TotalCount,
+			&i.ReviewDetails,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getReviews = `-- name: GetReviews :many
@@ -121,6 +412,23 @@ type GetReviewsRow struct {
 	TotalCount int64        `json:"total_count"`
 }
 
+// GetReviews: Retrieves paginated list of all reviews (both active and trashed) with search capability
+// Purpose: Display reviews in admin dashboard
+// Parameters:
+//
+//	$1: search_term - Optional text to filter reviews by ID or name (NULL for no filter)
+//	$2: limit - Maximum number of records to return
+//	$3: offset - Number of records to skip for pagination
+//
+// Returns:
+//
+//	All review fields plus total_count of matching records
+//
+// Business Logic:
+//   - Includes both active and trashed reviews
+//   - Supports partial text matching on review_id (cast as text) and name fields (case-insensitive)
+//   - Returns newest reviews first (created_at DESC)
+//   - Provides total_count for pagination calculations
 func (q *Queries) GetReviews(ctx context.Context, arg GetReviewsParams) ([]*GetReviewsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getReviews, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -185,6 +493,23 @@ type GetReviewsActiveRow struct {
 	TotalCount int64        `json:"total_count"`
 }
 
+// GetReviewsActive: Retrieves paginated list of active reviews with search capability
+// Purpose: Display active reviews in storefront/admin UI
+// Parameters:
+//
+//	$1: search_term - Optional text to filter reviews by ID or name (NULL for no filter)
+//	$2: limit - Maximum number of records to return
+//	$3: offset - Number of records to skip for pagination
+//
+// Returns:
+//
+//	All review fields plus total_count of matching records
+//
+// Business Logic:
+//   - Excludes soft-deleted reviews (deleted_at IS NULL)
+//   - Supports partial text matching on review_id (cast as text) and name fields (case-insensitive)
+//   - Returns newest reviews first (created_at DESC)
+//   - Provides total_count for pagination calculations
 func (q *Queries) GetReviewsActive(ctx context.Context, arg GetReviewsActiveParams) ([]*GetReviewsActiveRow, error) {
 	rows, err := q.db.QueryContext(ctx, getReviewsActive, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -194,77 +519,6 @@ func (q *Queries) GetReviewsActive(ctx context.Context, arg GetReviewsActivePara
 	var items []*GetReviewsActiveRow
 	for rows.Next() {
 		var i GetReviewsActiveRow
-		if err := rows.Scan(
-			&i.ReviewID,
-			&i.UserID,
-			&i.ProductID,
-			&i.Name,
-			&i.Comment,
-			&i.Rating,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-			&i.TotalCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getReviewsByProductID = `-- name: GetReviewsByProductID :many
-SELECT
-    review_id, user_id, product_id, name, comment, rating, created_at, updated_at, deleted_at,
-    COUNT(*) OVER() AS total_count
-FROM reviews
-WHERE deleted_at IS NULL
-AND product_id = $1
-AND ($2::TEXT IS NULL OR review_id::TEXT ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%')
-ORDER BY created_at DESC
-LIMIT $3 OFFSET $4
-`
-
-type GetReviewsByProductIDParams struct {
-	ProductID int32  `json:"product_id"`
-	Column2   string `json:"column_2"`
-	Limit     int32  `json:"limit"`
-	Offset    int32  `json:"offset"`
-}
-
-type GetReviewsByProductIDRow struct {
-	ReviewID   int32        `json:"review_id"`
-	UserID     int32        `json:"user_id"`
-	ProductID  int32        `json:"product_id"`
-	Name       string       `json:"name"`
-	Comment    string       `json:"comment"`
-	Rating     int32        `json:"rating"`
-	CreatedAt  sql.NullTime `json:"created_at"`
-	UpdatedAt  sql.NullTime `json:"updated_at"`
-	DeletedAt  sql.NullTime `json:"deleted_at"`
-	TotalCount int64        `json:"total_count"`
-}
-
-func (q *Queries) GetReviewsByProductID(ctx context.Context, arg GetReviewsByProductIDParams) ([]*GetReviewsByProductIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, getReviewsByProductID,
-		arg.ProductID,
-		arg.Column2,
-		arg.Limit,
-		arg.Offset,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []*GetReviewsByProductIDRow
-	for rows.Next() {
-		var i GetReviewsByProductIDRow
 		if err := rows.Scan(
 			&i.ReviewID,
 			&i.UserID,
@@ -320,6 +574,23 @@ type GetReviewsTrashedRow struct {
 	TotalCount int64        `json:"total_count"`
 }
 
+// GetReviewsTrashed: Retrieves paginated list of trashed reviews with search capability
+// Purpose: Display deleted reviews in admin recycle bin
+// Parameters:
+//
+//	$1: search_term - Optional text to filter reviews by ID or name (NULL for no filter)
+//	$2: limit - Maximum number of records to return
+//	$3: offset - Number of records to skip for pagination
+//
+// Returns:
+//
+//	All review fields plus total_count of matching records
+//
+// Business Logic:
+//   - Only includes soft-deleted reviews (deleted_at IS NOT NULL)
+//   - Supports partial text matching on review_id (cast as text) and name fields (case-insensitive)
+//   - Returns newest reviews first (created_at DESC)
+//   - Provides total_count for pagination calculations
 func (q *Queries) GetReviewsTrashed(ctx context.Context, arg GetReviewsTrashedParams) ([]*GetReviewsTrashedRow, error) {
 	rows, err := q.db.QueryContext(ctx, getReviewsTrashed, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -360,6 +631,17 @@ SET deleted_at = NULL
 WHERE deleted_at IS NOT NULL
 `
 
+// RestoreAllReviews: Recovers all soft-deleted reviews
+// Purpose: Bulk restore from trash/recycle bin
+// Parameters: None
+// Returns:
+//
+//	Nothing (exec-only)
+//
+// Business Logic:
+//   - Clears deleted_at for all trashed reviews
+//   - Admin-level operation
+//   - Returns all reviews to active status
 func (q *Queries) RestoreAllReviews(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, restoreAllReviews)
 	return err
@@ -373,6 +655,20 @@ AND deleted_at IS NOT NULL
 RETURNING review_id, user_id, product_id, name, comment, rating, created_at, updated_at, deleted_at
 `
 
+// RestoreReview: Recovers a soft-deleted review
+// Purpose: Reactivate previously trashed reviews
+// Parameters:
+//
+//	$1: review_id - ID of review to restore
+//
+// Returns:
+//
+//	The restored review record
+//
+// Business Logic:
+//   - Clears deleted_at timestamp
+//   - Only works on trashed reviews
+//   - Returns review to active status
 func (q *Queries) RestoreReview(ctx context.Context, reviewID int32) (*Review, error) {
 	row := q.db.QueryRowContext(ctx, restoreReview, reviewID)
 	var i Review
@@ -398,6 +694,20 @@ AND deleted_at IS NULL
 RETURNING review_id, user_id, product_id, name, comment, rating, created_at, updated_at, deleted_at
 `
 
+// TrashReview: Soft-deletes a review
+// Purpose: Remove review from public view while preserving data
+// Parameters:
+//
+//	$1: review_id - ID of review to trash
+//
+// Returns:
+//
+//	The trashed review record
+//
+// Business Logic:
+//   - Sets deleted_at timestamp
+//   - Only works on active reviews
+//   - Allows recovery via RestoreReview
 func (q *Queries) TrashReview(ctx context.Context, reviewID int32) (*Review, error) {
 	row := q.db.QueryRowContext(ctx, trashReview, reviewID)
 	var i Review
@@ -434,6 +744,23 @@ type UpdateReviewParams struct {
 	Rating   int32  `json:"rating"`
 }
 
+// UpdateReview: Modifies an existing review
+// Purpose: Allow users to edit their reviews
+// Parameters:
+//
+//	$1: review_id - ID of review to update
+//	$2: name - Updated display name
+//	$3: comment - Updated review text
+//	$4: rating - Updated numeric rating
+//
+// Returns:
+//
+//	The updated review record
+//
+// Business Logic:
+//   - Only updates mutable review fields
+//   - Requires review to be active (not deleted)
+//   - Automatically updates timestamp
 func (q *Queries) UpdateReview(ctx context.Context, arg UpdateReviewParams) (*Review, error) {
 	row := q.db.QueryRowContext(ctx, updateReview,
 		arg.ReviewID,

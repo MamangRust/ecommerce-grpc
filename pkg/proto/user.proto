@@ -3,6 +3,7 @@ syntax = "proto3";
 package pb;
 
 import "api.proto";
+import "google/protobuf/wrappers.proto";
 import "google/protobuf/empty.proto";
 
 
@@ -52,7 +53,7 @@ message UserResponseDeleteAt{
     string email = 4;
     string created_at = 5;
     string updated_at = 6;
-    string deleted_at = 7;
+    google.protobuf.StringValue deleted_at = 7;
 }
 
 message ApiResponseUser {

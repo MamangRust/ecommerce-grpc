@@ -157,12 +157,6 @@ func (s *productRecordMapper) ToProductsRecordTrashedPagination(products []*db.G
 }
 
 func (s *productRecordMapper) ToProductRecordMerchantPagination(product *db.GetProductsByMerchantRow) *record.ProductRecord {
-	var deletedAt *string
-	if product.DeletedAt.Valid {
-		deletedAtStr := product.DeletedAt.Time.Format("2006-01-02 15:04:05.000")
-		deletedAt = &deletedAtStr
-	}
-
 	return &record.ProductRecord{
 		ID:           int(product.ProductID),
 		MerchantID:   int(product.MerchantID),
@@ -178,7 +172,6 @@ func (s *productRecordMapper) ToProductRecordMerchantPagination(product *db.GetP
 		ImageProduct: product.ImageProduct.String,
 		CreatedAt:    product.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
 		UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
-		DeletedAt:    deletedAt,
 	}
 }
 
@@ -193,12 +186,6 @@ func (s *productRecordMapper) ToProductsRecordMerchantPagination(products []*db.
 }
 
 func (s *productRecordMapper) ToProductRecordCategoryPagination(product *db.GetProductsByCategoryNameRow) *record.ProductRecord {
-	var deletedAt *string
-	if product.DeletedAt.Valid {
-		deletedAtStr := product.DeletedAt.Time.Format("2006-01-02 15:04:05.000")
-		deletedAt = &deletedAtStr
-	}
-
 	return &record.ProductRecord{
 		ID:           int(product.ProductID),
 		MerchantID:   int(product.MerchantID),
@@ -214,7 +201,6 @@ func (s *productRecordMapper) ToProductRecordCategoryPagination(product *db.GetP
 		ImageProduct: product.ImageProduct.String,
 		CreatedAt:    product.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
 		UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
-		DeletedAt:    deletedAt,
 	}
 }
 

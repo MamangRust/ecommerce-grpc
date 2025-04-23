@@ -27,29 +27,82 @@ func NewShippingAddressRepository(
 	}
 }
 
-func (r *shippingAdddressRepository) FindAllShippingAddress(search string, page, pageSize int) ([]*record.ShippingAddressRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *shippingAdddressRepository) FindAllShippingAddress(req *requests.FindAllShippingAddress) ([]*record.ShippingAddressRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetShippingAddressParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetShippingAddressParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetShippingAddress(r.ctx, req)
+	res, err := r.db.GetShippingAddress(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, nil, fmt.Errorf("failed to find all shipping address: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToShippingAddresssRecordPagination(res), totalCount, nil
+	return r.mapping.ToShippingAddresssRecordPagination(res), &totalCount, nil
+}
+
+func (r *shippingAdddressRepository) FindByActive(req *requests.FindAllShippingAddress) ([]*record.ShippingAddressRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
+
+	reqDb := db.GetShippingAddressActiveParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
+		Offset:  int32(offset),
+	}
+
+	res, err := r.db.GetShippingAddressActive(r.ctx, reqDb)
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to find active shipping address: %w", err)
+	}
+
+	var totalCount int
+
+	if len(res) > 0 {
+		totalCount = int(res[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	return r.mapping.ToShippingAddresssRecordActivePagination(res), &totalCount, nil
+}
+
+func (r *shippingAdddressRepository) FindByTrashed(req *requests.FindAllShippingAddress) ([]*record.ShippingAddressRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
+
+	reqDb := db.GetShippingAddressTrashedParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
+		Offset:  int32(offset),
+	}
+
+	res, err := r.db.GetShippingAddressTrashed(r.ctx, reqDb)
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to find trashed shipping address: %w", err)
+	}
+
+	var totalCount int
+
+	if len(res) > 0 {
+		totalCount = int(res[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	return r.mapping.ToShippingAddresssRecordTrashedPagination(res), &totalCount, nil
 }
 
 func (r *shippingAdddressRepository) FindById(shipping_id int) (*record.ShippingAddressRecord, error) {
@@ -67,61 +120,10 @@ func (r *shippingAdddressRepository) FindByOrder(order_id int) (*record.Shipping
 	res, err := r.db.GetShippingAddressByOrderID(r.ctx, int32(order_id))
 
 	if err != nil {
-
-		return nil, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, fmt.Errorf("failed to find order shipping address: %w", err)
 	}
 
 	return r.mapping.ToShippingAddressRecord(res), nil
-}
-
-func (r *shippingAdddressRepository) FindByActive(search string, page, pageSize int) ([]*record.ShippingAddressRecord, int, error) {
-	offset := (page - 1) * pageSize
-
-	req := db.GetShippingAddressActiveParams{
-		Column1: search,
-		Limit:   int32(pageSize),
-		Offset:  int32(offset),
-	}
-
-	res, err := r.db.GetShippingAddressActive(r.ctx, req)
-
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
-	}
-
-	var totalCount int
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToShippingAddresssRecordActivePagination(res), totalCount, nil
-}
-
-func (r *shippingAdddressRepository) FindByTrashed(search string, page, pageSize int) ([]*record.ShippingAddressRecord, int, error) {
-	offset := (page - 1) * pageSize
-
-	req := db.GetShippingAddressTrashedParams{
-		Column1: search,
-		Limit:   int32(pageSize),
-		Offset:  int32(offset),
-	}
-
-	res, err := r.db.GetShippingAddressTrashed(r.ctx, req)
-
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
-	}
-
-	var totalCount int
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToShippingAddresssRecordTrashedPagination(res), totalCount, nil
 }
 
 func (r *shippingAdddressRepository) CreateShippingAddress(request *requests.CreateShippingAddressRequest) (*record.ShippingAddressRecord, error) {
@@ -137,6 +139,7 @@ func (r *shippingAdddressRepository) CreateShippingAddress(request *requests.Cre
 	}
 
 	address, err := r.db.CreateShippingAddress(r.ctx, req)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create shipping address: %w", err)
 	}
@@ -146,7 +149,7 @@ func (r *shippingAdddressRepository) CreateShippingAddress(request *requests.Cre
 
 func (r *shippingAdddressRepository) UpdateShippingAddress(request *requests.UpdateShippingAddressRequest) (*record.ShippingAddressRecord, error) {
 	req := db.UpdateShippingAddressParams{
-		ShippingAddressID: int32(request.ShippingID),
+		ShippingAddressID: int32(*request.ShippingID),
 		Alamat:            request.Alamat,
 		Provinsi:          request.Provinsi,
 		Kota:              request.Kota,
@@ -157,6 +160,7 @@ func (r *shippingAdddressRepository) UpdateShippingAddress(request *requests.Upd
 	}
 
 	res, err := r.db.UpdateShippingAddress(r.ctx, req)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to update shipping address: %w", err)
 	}
@@ -178,7 +182,7 @@ func (r *shippingAdddressRepository) RestoreShippingAddress(category_id int) (*r
 	res, err := r.db.RestoreShippingAddress(r.ctx, int32(category_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to shipping address: %w", err)
+		return nil, fmt.Errorf("failed to restore shipping address: %w", err)
 	}
 
 	return r.mapping.ToShippingAddressRecord(res), nil
@@ -188,7 +192,7 @@ func (r *shippingAdddressRepository) DeleteShippingAddressPermanently(category_i
 	err := r.db.DeleteShippingAddressPermanently(r.ctx, int32(category_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete shipping address: %w", err)
+		return false, fmt.Errorf("failed to delete permanent shipping address: %w", err)
 	}
 
 	return true, nil

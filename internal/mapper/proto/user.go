@@ -3,6 +3,8 @@ package protomapper
 import (
 	"ecommerce/internal/domain/response"
 	"ecommerce/internal/pb"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type userProtoMapper struct {
@@ -69,6 +71,12 @@ func (u *userProtoMapper) ToProtoResponsePaginationUser(pagination *pb.Paginatio
 }
 
 func (u *userProtoMapper) mapResponseUserDeleteAt(user *response.UserResponseDeleteAt) *pb.UserResponseDeleteAt {
+	var deletedAt *wrapperspb.StringValue
+
+	if user.DeletedAt != nil {
+		deletedAt = wrapperspb.String(*user.DeletedAt)
+	}
+
 	return &pb.UserResponseDeleteAt{
 		Id:        int32(user.ID),
 		Firstname: user.FirstName,
@@ -76,7 +84,7 @@ func (u *userProtoMapper) mapResponseUserDeleteAt(user *response.UserResponseDel
 		Email:     user.Email,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
-		DeletedAt: user.DeletedAt,
+		DeletedAt: deletedAt,
 	}
 }
 
@@ -102,6 +110,12 @@ func (u *userProtoMapper) mapResponsesUser(users []*response.UserResponse) []*pb
 }
 
 func (u *userProtoMapper) mapResponseUserDelete(user *response.UserResponseDeleteAt) *pb.UserResponseDeleteAt {
+	var deletedAt *wrapperspb.StringValue
+
+	if user.DeletedAt != nil {
+		deletedAt = wrapperspb.String(*user.DeletedAt)
+	}
+
 	return &pb.UserResponseDeleteAt{
 		Id:        int32(user.ID),
 		Firstname: user.FirstName,
@@ -109,7 +123,7 @@ func (u *userProtoMapper) mapResponseUserDelete(user *response.UserResponseDelet
 		Email:     user.Email,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
-		DeletedAt: user.DeletedAt,
+		DeletedAt: deletedAt,
 	}
 }
 

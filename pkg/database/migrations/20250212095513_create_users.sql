@@ -11,29 +11,29 @@ CREATE TABLE IF NOT EXISTS "users" (
     "deleted_at" TIMESTAMP DEFAULT NULL
 );
 
-CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX "idx_users_email" ON "users" ("email");
 
-CREATE INDEX idx_users_firstname ON users (firstname);
+CREATE INDEX "idx_users_firstname" ON "users" ("firstname");
 
-CREATE INDEX idx_users_lastname ON users (lastname);
+CREATE INDEX "idx_users_lastname" ON "users" ("lastname");
 
-CREATE INDEX idx_users_firstname_lastname ON users (firstname, lastname);
+CREATE INDEX "idx_users_firstname_lastname" ON "users" ("firstname", "lastname");
 
-CREATE INDEX idx_users_created_at ON users (created_at);
-
+CREATE INDEX "idx_users_created_at" ON "users" ("created_at");
 -- +goose StatementEnd
+
+
 -- +goose Down
 -- +goose StatementBegin
-DROP INDEX IF EXISTS idx_users_email;
+DROP INDEX IF EXISTS "idx_users_email";
 
-DROP INDEX IF EXISTS idx_users_firstname;
+DROP INDEX IF EXISTS "idx_users_firstname";
 
-DROP INDEX IF EXISTS idx_users_lastname;
+DROP INDEX IF EXISTS "idx_users_lastname";
 
-DROP INDEX IF EXISTS idx_users_firstname_lastname;
+DROP INDEX IF EXISTS "idx_users_firstname_lastname";
 
-DROP INDEX IF EXISTS idx_users_created_at;
+DROP INDEX IF EXISTS "idx_users_created_at";
 
 DROP TABLE IF EXISTS "users";
-
 -- +goose StatementEnd

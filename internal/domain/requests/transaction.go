@@ -2,23 +2,55 @@ package requests
 
 import "github.com/go-playground/validator/v10"
 
+type MonthAmountTransaction struct {
+	Year  int `json:"year" validate:"required"`
+	Month int `json:"month" validate:"required"`
+}
+
+type MonthAmountTransactionMerchant struct {
+	MerchantID int `json:"merchant_id" validate:"required"`
+	Year       int `json:"year" validate:"required"`
+	Month      int `json:"month" validate:"required"`
+}
+
+type YearAmountTransactionMerchant struct {
+	MerchantID int `json:"merchant_id" validate:"required"`
+	Year       int `json:"year" validate:"required"`
+}
+
+type MonthlyYearTransactionMethodMerchant struct {
+	MerchantID int `json:"merchant_id" validate:"required"`
+	Year       int `json:"year" validate:"required"`
+}
+
+type FindAllTransactions struct {
+	Search   string `json:"search" validate:"required"`
+	Page     int    `json:"page" validate:"min=1"`
+	PageSize int    `json:"page_size" validate:"min=1,max=100"`
+}
+
+type FindAllTransactionByMerchant struct {
+	MerchantID int    `json:"merchant_id" validate:"required"`
+	Search     string `json:"search" validate:"required"`
+	Page       int    `json:"page" validate:"min=1"`
+	PageSize   int    `json:"page_size" validate:"min=1,max=100"`
+}
+
 type CreateTransactionRequest struct {
-	OrderID       int    `json:"order_id" validate:"required"`
-	MerchantID    int    `json:"merchant_id" validate:"required"`
-	PaymentMethod string `json:"payment_method" validate:"required"`
-	Amount        int    `json:"amount" validate:"required"`
-	ChangeAmount  int    `json:"change_amount" validate:"required"`
-	PaymentStatus string `json:"payment_status" validate:"required"`
+	OrderID       int     `json:"order_id" validate:"required"`
+	MerchantID    int     `json:"merchant_id" validate:"required"`
+	PaymentMethod string  `json:"payment_method" validate:"required"`
+	Amount        int     `json:"amount" validate:"required"`
+	PaymentStatus *string `json:"payment_status"`
 }
 
 type UpdateTransactionRequest struct {
-	TransactionID int    `json:"transaction_id" validate:"required"`
-	OrderID       int    `json:"order_id" validate:"required"`
-	MerchantID    int    `json:"merchant_id" validate:"required"`
-	PaymentMethod string `json:"payment_method" validate:"required"`
-	Amount        int    `json:"amount" validate:"required"`
-	ChangeAmount  int    `json:"change_amount" validate:"required"`
-	PaymentStatus string `json:"payment_status" validate:"required"`
+	TransactionID *int    `json:"transaction_id"`
+	OrderID       int     `json:"order_id" validate:"required"`
+	MerchantID    int     `json:"merchant_id" validate:"required"`
+	PaymentMethod string  `json:"payment_method" validate:"required"`
+	Amount        int     `json:"amount" validate:"required"`
+	PaymentStatus *string `json:"payment_status"`
 }
 
 func (r *CreateTransactionRequest) Validate() error {

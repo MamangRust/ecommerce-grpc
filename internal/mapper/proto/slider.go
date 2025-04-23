@@ -3,6 +3,8 @@ package protomapper
 import (
 	"ecommerce/internal/domain/response"
 	"ecommerce/internal/pb"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type sliderProtoMapper struct {
@@ -89,13 +91,19 @@ func (s *sliderProtoMapper) mapResponsesSlider(sliders []*response.SliderRespons
 }
 
 func (s *sliderProtoMapper) mapResponseSliderDeleteAt(slider *response.SliderResponseDeleteAt) *pb.SliderResponseDeleteAt {
+	var deletedAt *wrapperspb.StringValue
+
+	if slider.DeletedAt != nil {
+		deletedAt = wrapperspb.String(*slider.DeletedAt)
+	}
+
 	return &pb.SliderResponseDeleteAt{
 		Id:        int32(slider.ID),
 		Name:      slider.Name,
 		Image:     slider.Image,
 		CreatedAt: slider.CreatedAt,
 		UpdatedAt: slider.UpdatedAt,
-		DeletedAt: slider.DeletedAt,
+		DeletedAt: deletedAt,
 	}
 }
 

@@ -41,7 +41,7 @@ func (s *orderResponseMapper) ToOrderResponseDeleteAt(order *record.OrderRecord)
 		TotalPrice: order.TotalPrice,
 		CreatedAt:  order.CreatedAt,
 		UpdatedAt:  order.UpdatedAt,
-		DeleteAt:   *order.DeletedAt,
+		DeletedAt:  order.DeletedAt,
 	}
 }
 
@@ -53,4 +53,79 @@ func (s *orderResponseMapper) ToOrdersResponseDeleteAt(orders []*record.OrderRec
 	}
 
 	return responses
+}
+
+func (s *orderResponseMapper) ToOrderMonthlyPrice(category *record.OrderMonthlyRecord) *response.OrderMonthlyResponse {
+	return &response.OrderMonthlyResponse{
+		Month:          category.Month,
+		OrderCount:     int(category.OrderCount),
+		TotalRevenue:   int(category.TotalRevenue),
+		TotalItemsSold: int(category.TotalItemsSold),
+	}
+}
+
+func (s *orderResponseMapper) ToOrderMonthlyPrices(c []*record.OrderMonthlyRecord) []*response.OrderMonthlyResponse {
+	var categoryRecords []*response.OrderMonthlyResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.ToOrderMonthlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *orderResponseMapper) ToOrderYearlyPrice(category *record.OrderYearlyRecord) *response.OrderYearlyResponse {
+	return &response.OrderYearlyResponse{
+		Year:               category.Year,
+		OrderCount:         int(category.OrderCount),
+		TotalRevenue:       int(category.TotalRevenue),
+		TotalItemsSold:     int(category.TotalItemsSold),
+		ActiveCashiers:     int(category.ActiveCashiers),
+		UniqueProductsSold: int(category.UniqueProductsSold),
+	}
+}
+
+func (s *orderResponseMapper) ToOrderYearlyPrices(c []*record.OrderYearlyRecord) []*response.OrderYearlyResponse {
+	var categoryRecords []*response.OrderYearlyResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.ToOrderYearlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *orderResponseMapper) ToOrderMonthlyTotalRevenue(c *record.OrderMonthlyTotalRevenueRecord) *response.OrderMonthlyTotalRevenueResponse {
+	return &response.OrderMonthlyTotalRevenueResponse{
+		Year:         c.Year,
+		Month:        c.Month,
+		TotalRevenue: int(c.TotalRevenue),
+	}
+}
+
+func (s *orderResponseMapper) ToOrderMonthlyTotalRevenues(c []*record.OrderMonthlyTotalRevenueRecord) []*response.OrderMonthlyTotalRevenueResponse {
+	var orderRecords []*response.OrderMonthlyTotalRevenueResponse
+
+	for _, row := range c {
+		orderRecords = append(orderRecords, s.ToOrderMonthlyTotalRevenue(row))
+	}
+
+	return orderRecords
+}
+
+func (s *orderResponseMapper) ToOrderYearlyTotalRevenue(c *record.OrderYearlyTotalRevenueRecord) *response.OrderYearlyTotalRevenueResponse {
+	return &response.OrderYearlyTotalRevenueResponse{
+		Year:         c.Year,
+		TotalRevenue: int(c.TotalRevenue),
+	}
+}
+
+func (s *orderResponseMapper) ToOrderYearlyTotalRevenues(c []*record.OrderYearlyTotalRevenueRecord) []*response.OrderYearlyTotalRevenueResponse {
+	var orderRecords []*response.OrderYearlyTotalRevenueResponse
+
+	for _, row := range c {
+		orderRecords = append(orderRecords, s.ToOrderYearlyTotalRevenue(row))
+	}
+
+	return orderRecords
 }

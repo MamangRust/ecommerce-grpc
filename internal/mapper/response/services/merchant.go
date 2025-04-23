@@ -49,6 +49,7 @@ func (s *merchantResponseMapper) ToMerchantResponseDeleteAt(merchant *record.Mer
 		Status:       merchant.Status,
 		CreatedAt:    merchant.CreatedAt,
 		UpdatedAt:    merchant.UpdatedAt,
+		DeletedAt:    merchant.DeletedAt,
 	}
 }
 

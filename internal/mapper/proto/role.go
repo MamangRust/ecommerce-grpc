@@ -3,6 +3,8 @@ package protomapper
 import (
 	"ecommerce/internal/domain/response"
 	"ecommerce/internal/pb"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type roleProtoMapper struct {
@@ -80,12 +82,18 @@ func (s *roleProtoMapper) mapResponsesRole(roles []*response.RoleResponse) []*pb
 }
 
 func (s *roleProtoMapper) mapResponseRoleDeleteAt(role *response.RoleResponseDeleteAt) *pb.RoleResponseDeleteAt {
+	var deletedAt *wrapperspb.StringValue
+
+	if role.DeletedAt != nil {
+		deletedAt = wrapperspb.String(*role.DeletedAt)
+	}
+
 	return &pb.RoleResponseDeleteAt{
 		Id:        int32(role.ID),
 		Name:      role.Name,
 		CreatedAt: role.CreatedAt,
 		UpdatedAt: role.UpdatedAt,
-		DeletedAt: role.DeletedAt,
+		DeletedAt: deletedAt,
 	}
 }
 

@@ -42,6 +42,11 @@ func (p *productResponseMapper) ToResponsesProduct(products []*pb.ProductRespons
 }
 
 func (p *productResponseMapper) ToResponseProductDeleteAt(product *pb.ProductResponseDeleteAt) *response.ProductResponseDeleteAt {
+	var deletedAt string
+	if product.DeletedAt != nil {
+		deletedAt = product.DeletedAt.Value
+	}
+
 	return &response.ProductResponseDeleteAt{
 		ID:           int(product.Id),
 		MerchantID:   int(product.MerchantId),
@@ -57,7 +62,7 @@ func (p *productResponseMapper) ToResponseProductDeleteAt(product *pb.ProductRes
 		ImageProduct: product.ImageProduct,
 		CreatedAt:    product.CreatedAt,
 		UpdatedAt:    product.UpdatedAt,
-		DeleteAt:     product.DeletedAt,
+		DeletedAt:    &deletedAt,
 	}
 }
 

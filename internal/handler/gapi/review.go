@@ -6,6 +6,7 @@ import (
 	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors_custom"
 	"math"
 
 	"google.golang.org/grpc/codes"
@@ -41,29 +42,39 @@ func (s *reviewHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllRevie
 		pageSize = 10
 	}
 
-	Review, totalRecords, err := s.reviewService.FindAllReviews(search, page, pageSize)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch reviews: ",
-		})
+	reqService := requests.FindAllReview{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+	review, totalRecords, err := s.reviewService.FindAllReviews(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
 
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
 		TotalPages:   int32(totalPages),
-		TotalRecords: int32(totalRecords),
+		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationReview(paginationMeta, "success", "Successfully fetched categories", Review)
+	so := s.mapping.ToProtoResponsePaginationReview(paginationMeta, "success", "Successfully fetched categories", review)
 	return so, nil
 }
 
-func (s *reviewHandleGrpc) FindByProduct(ctx context.Context, request *pb.FindAllReviewProductRequest) (*pb.ApiResponsePaginationReview, error) {
+func (s *reviewHandleGrpc) FindByProduct(ctx context.Context, request *pb.FindAllReviewProductRequest) (*pb.ApiResponsePaginationReviewDetail, error) {
 	product_id := int(request.GetProductId())
 	page := int(request.GetPage())
 	pageSize := int(request.GetPageSize())
@@ -75,26 +86,81 @@ func (s *reviewHandleGrpc) FindByProduct(ctx context.Context, request *pb.FindAl
 	if pageSize <= 0 {
 		pageSize = 10
 	}
-
-	Review, totalRecords, err := s.reviewService.FindByProduct(product_id, search, page, pageSize)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch reviews: ",
-		})
+	reqService := requests.FindAllReviewByProduct{
+		ProductID: product_id,
+		Page:      page,
+		PageSize:  pageSize,
+		Search:    search,
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+	review, totalRecords, err := s.reviewService.FindByProduct(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
 
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
 		TotalPages:   int32(totalPages),
-		TotalRecords: int32(totalRecords),
+		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationReview(paginationMeta, "success", "Successfully fetched categories", Review)
+	so := s.mapping.ToProtoResponsePaginationReviewsDetail(paginationMeta, "success", "Successfully fetched review product", review)
+	return so, nil
+}
+
+func (s *reviewHandleGrpc) FindByMerchant(ctx context.Context, request *pb.FindAllReviewMerchantRequest) (*pb.ApiResponsePaginationReviewDetail, error) {
+	merchant_id := int(request.GetMerchantId())
+	page := int(request.GetPage())
+	pageSize := int(request.GetPageSize())
+	search := request.GetSearch()
+
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	reqService := requests.FindAllReviewByMerchant{
+		MerchantID: merchant_id,
+		Page:       page,
+		PageSize:   pageSize,
+		Search:     search,
+	}
+
+	review, totalRecords, err := s.reviewService.FindByMerchant(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
+
+	paginationMeta := &pb.PaginationMeta{
+		CurrentPage:  int32(page),
+		PageSize:     int32(pageSize),
+		TotalPages:   int32(totalPages),
+		TotalRecords: int32(*totalRecords),
+	}
+
+	so := s.mapping.ToProtoResponsePaginationReviewsDetail(paginationMeta, "success", "Successfully fetched review merchant", review)
 	return so, nil
 }
 
@@ -110,24 +176,34 @@ func (s *reviewHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAll
 		pageSize = 10
 	}
 
-	users, totalRecords, err := s.reviewService.FindByActive(search, page, pageSize)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch active reviews: " + err.Message,
-		})
+	reqService := requests.FindAllReview{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+	users, totalRecords, err := s.reviewService.FindByActive(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
 
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
 		TotalPages:   int32(totalPages),
-		TotalRecords: int32(0),
+		TotalRecords: int32(*totalRecords),
 	}
-	so := s.mapping.ToProtoResponsePaginationReviewDeleteAt(paginationMeta, "success", "Successfully fetched active categories", users)
+	so := s.mapping.ToProtoResponsePaginationReviewDeleteAt(paginationMeta, "success", "Successfully fetched active reviews", users)
 
 	return so, nil
 }
@@ -144,22 +220,32 @@ func (s *reviewHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAl
 		pageSize = 10
 	}
 
-	users, totalRecords, err := s.reviewService.FindByTrashed(search, page, pageSize)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch trashed reviews: " + err.Message,
-		})
+	reqService := requests.FindAllReview{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+	users, totalRecords, err := s.reviewService.FindByTrashed(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
 
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
 		TotalPages:   int32(totalPages),
-		TotalRecords: int32(0),
+		TotalRecords: int32(*totalRecords),
 	}
 
 	so := s.mapping.ToProtoResponsePaginationReviewDeleteAt(paginationMeta, "success", "Successfully fetched trashed categories", users)
@@ -176,57 +262,104 @@ func (s *reviewHandleGrpc) Create(ctx context.Context, request *pb.CreateReviewR
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Validation failed: %v", err.Error())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Unable to create new product. Please check your input.",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
 	review, err := s.reviewService.CreateReview(req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to create review: ")
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	return s.mapping.ToProtoResponseReview("success", "Successfully created review", review), nil
 }
 
 func (s *reviewHandleGrpc) Update(ctx context.Context, request *pb.UpdateReviewRequest) (*pb.ApiResponseReview, error) {
-	if request.GetReviewId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid review ID")
+	id := int(request.GetReviewId())
+
+	if id == 0 {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Product ID parameter cannot be empty and must be a positive number",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
 	req := &requests.UpdateReviewRequest{
-		ReviewID: int(request.GetReviewId()),
+		ReviewID: &id,
 		Name:     request.GetName(),
 		Rating:   int(request.GetRating()),
 		Comment:  request.GetComment(),
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Validation failed: %v", err.Error())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Unable to process product update. Please review your data.",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
 	review, err := s.reviewService.UpdateReview(req)
-	if err != nil {
 
-		return nil, status.Errorf(codes.Internal, "Failed to update review: ")
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	return s.mapping.ToProtoResponseReview("success", "Successfully updated review", review), nil
 }
 
 func (s *reviewHandleGrpc) TrashedReview(ctx context.Context, request *pb.FindByIdReviewRequest) (*pb.ApiResponseReviewDeleteAt, error) {
-	if request.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid Review id",
-		})
+	id := int(request.GetId())
+
+	if id == 0 {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Review ID parameter cannot be empty and must be a positive number",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
-	Review, err := s.reviewService.TrashedReview(int(request.GetId()))
+	Review, err := s.reviewService.TrashedReview(id)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to trashed Review: " + err.Message,
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseReviewDeleteAt("success", "Successfully trashed Review", Review)
@@ -235,20 +368,30 @@ func (s *reviewHandleGrpc) TrashedReview(ctx context.Context, request *pb.FindBy
 }
 
 func (s *reviewHandleGrpc) RestoreReview(ctx context.Context, request *pb.FindByIdReviewRequest) (*pb.ApiResponseReviewDeleteAt, error) {
-	if request.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid Review id",
-		})
+	id := int(request.GetId())
+
+	if id == 0 {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Review ID parameter cannot be empty and must be a positive number",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
-	Review, err := s.reviewService.RestoreReview(int(request.GetId()))
+	Review, err := s.reviewService.RestoreReview(id)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore Review: " + err.Message,
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseReviewDeleteAt("success", "Successfully restored Review", Review)
@@ -257,20 +400,30 @@ func (s *reviewHandleGrpc) RestoreReview(ctx context.Context, request *pb.FindBy
 }
 
 func (s *reviewHandleGrpc) DeleteReviewPermanent(ctx context.Context, request *pb.FindByIdReviewRequest) (*pb.ApiResponseReviewDelete, error) {
-	if request.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid Review id",
-		})
+	id := int(request.GetId())
+
+	if id == 0 {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Review ID parameter cannot be empty and must be a positive number",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
-	_, err := s.reviewService.DeleteReviewPermanent(int(request.GetId()))
+	_, err := s.reviewService.DeleteReviewPermanent(id)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to delete Review permanently: " + err.Message,
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseReviewDelete("success", "Successfully deleted Review permanently")
@@ -282,10 +435,14 @@ func (s *reviewHandleGrpc) RestoreAllReview(ctx context.Context, _ *emptypb.Empt
 	_, err := s.reviewService.RestoreAllReviews()
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all Review: ",
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseReviewAll("success", "Successfully restore all Review")
@@ -297,10 +454,14 @@ func (s *reviewHandleGrpc) DeleteAllReviewPermanent(ctx context.Context, _ *empt
 	_, err := s.reviewService.DeleteAllReviewsPermanent()
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to delete Review permanent: ",
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseReviewAll("success", "Successfully delete Review permanen")

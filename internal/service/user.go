@@ -9,6 +9,8 @@ import (
 	"ecommerce/pkg/hash"
 	"ecommerce/pkg/logger"
 	"errors"
+	"fmt"
+	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -34,43 +36,44 @@ func NewUserService(
 	}
 }
 
-func (s *userService) FindAll(page int, pageSize int, search string) ([]*response.UserResponse, int, *response.ErrorResponse) {
+func (s *userService) FindAll(req *requests.FindAllUsers) ([]*response.UserResponse, *int, *response.ErrorResponse) {
 	s.logger.Debug("Fetching users",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+		zap.Int("page", req.Page),
+		zap.Int("pageSize", req.PageSize),
+		zap.String("search", req.Search))
 
-	if page <= 0 {
-		page = 1
+	if req.Page <= 0 {
+		req.Page = 1
 	}
 
-	if pageSize <= 0 {
-		pageSize = 10
+	if req.PageSize <= 0 {
+		req.PageSize = 10
 	}
 
-	users, totalRecords, err := s.userRepository.FindAllUsers(search, page, pageSize)
+	users, totalRecords, err := s.userRepository.FindAllUsers(req)
 
 	if err != nil {
 		s.logger.Error("Failed to fetch user",
 			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
+			zap.Int("page", req.Page),
+			zap.Int("pageSize", req.PageSize),
+			zap.String("search", req.Search))
 
-		return nil, 0, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch users",
+		return nil, nil, &response.ErrorResponse{
+			Status:  "fail",
+			Message: "Unable to retrieve user list at this time",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
 	userResponses := s.mapping.ToUsersResponse(users)
 
 	s.logger.Debug("Successfully fetched user",
-		zap.Int("totalRecords", totalRecords),
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize))
+		zap.Int("totalRecords", *totalRecords),
+		zap.Int("page", req.Page),
+		zap.Int("pageSize", req.PageSize))
 
-	return userResponses, int(totalRecords), nil
+	return userResponses, totalRecords, nil
 }
 
 func (s *userService) FindByID(id int) (*response.UserResponse, *response.ErrorResponse) {
@@ -93,76 +96,83 @@ func (s *userService) FindByID(id int) (*response.UserResponse, *response.ErrorR
 	return so, nil
 }
 
-func (s *userService) FindByActive(page int, pageSize int, search string) ([]*response.UserResponseDeleteAt, int, *response.ErrorResponse) {
+func (s *userService) FindByActive(req *requests.FindAllUsers) ([]*response.UserResponseDeleteAt, *int, *response.ErrorResponse) {
 	s.logger.Debug("Fetching active user",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+		zap.Int("page", req.Page),
+		zap.Int("pageSize", req.PageSize),
+		zap.String("search", req.Search))
 
-	if page <= 0 {
-		page = 1
+	if req.Page <= 0 {
+		req.Page = 1
 	}
 
-	if pageSize <= 0 {
-		pageSize = 10
+	if req.PageSize <= 0 {
+		req.PageSize = 10
 	}
 
-	users, totalRecords, err := s.userRepository.FindByActive(search, page, pageSize)
+	users, totalRecords, err := s.userRepository.FindByActive(req)
 
 	if err != nil {
-		s.logger.Error("Failed to fetch active user",
-			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
-
-		return nil, 0, &response.ErrorResponse{
+		s.logger.Error("Failed to retrieve active users from database",
+			zap.String("search", req.Search),
+			zap.Int("page", req.Page),
+			zap.Int("page_size", req.PageSize),
+			zap.Error(err))
+		return nil, nil, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to find active users",
+			Message: "Failed to retrieve active users",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
 	so := s.mapping.ToUsersResponseDeleteAt(users)
 
 	s.logger.Debug("Successfully fetched active user",
-		zap.Int("totalRecords", totalRecords),
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize))
+		zap.Int("totalRecords", *totalRecords),
+		zap.Int("page", req.Page),
+		zap.Int("pageSize", req.PageSize))
 
 	return so, totalRecords, nil
 }
 
-func (s *userService) FindByTrashed(page int, pageSize int, search string) ([]*response.UserResponseDeleteAt, int, *response.ErrorResponse) {
+func (s *userService) FindByTrashed(req *requests.FindAllUsers) ([]*response.UserResponseDeleteAt, *int, *response.ErrorResponse) {
 	s.logger.Debug("Fetching trashed user",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+		zap.Int("page", req.Page),
+		zap.Int("pageSize", req.PageSize),
+		zap.String("search", req.Search))
 
-	if page <= 0 {
-		page = 1
+	if req.Page <= 0 {
+		req.Page = 1
 	}
 
-	if pageSize <= 0 {
-		pageSize = 10
+	if req.PageSize <= 0 {
+		req.PageSize = 10
 	}
 
-	users, totalRecords, err := s.userRepository.FindByTrashed(search, page, pageSize)
+	users, totalRecords, err := s.userRepository.FindByTrashed(req)
 
 	if err != nil {
-		s.logger.Error("Failed to find trashed users", zap.Error(err))
+		s.logger.Error("Failed to retrieve archived users",
+			zap.Error(err),
+			zap.String("search", req.Search),
+			zap.Int("page", req.Page),
+			zap.Int("page_size", req.PageSize),
+		)
 
-		return nil, 0, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to find trashed users",
+		return nil, nil, &response.ErrorResponse{
+			Status:  "fail",
+			Message: "Unable to retrieve archived user accounts",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
 	so := s.mapping.ToUsersResponseDeleteAt(users)
 
 	s.logger.Debug("Successfully fetched trashed user",
-		zap.Int("totalRecords", totalRecords),
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize))
+		zap.Int("totalRecords", *totalRecords),
+		zap.Int("page", req.Page),
+		zap.Int("page_size", req.PageSize),
+	)
 
 	return so, totalRecords, nil
 }
@@ -171,104 +181,145 @@ func (s *userService) CreateUser(request *requests.CreateUserRequest) (*response
 	s.logger.Debug("Creating new user", zap.String("email", request.Email), zap.Any("request", request))
 
 	existingUser, err := s.userRepository.FindByEmail(request.Email)
-	if err != nil {
-
-		if errors.Is(err, sql.ErrNoRows) {
-			s.logger.Debug("Email is available, proceeding to create user", zap.String("email", request.Email))
-		} else {
-			s.logger.Error("Error checking existing email", zap.String("email", request.Email), zap.Error(err))
-			return nil, &response.ErrorResponse{
-				Status:  "error",
-				Message: "Error checking existing email",
-			}
-		}
-	} else if existingUser != nil {
-		s.logger.Error("Email is already in use", zap.String("email", request.Email))
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		s.logger.Error("Error while checking email availability",
+			zap.String("email", request.Email),
+			zap.Error(err))
 		return nil, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Email is already in use",
+			Message: "System error while validating email",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
-	// Hash password
+	if existingUser != nil {
+		s.logger.Fatal("Email already registered",
+			zap.String("email", request.Email))
+		return nil, &response.ErrorResponse{
+			Status:  "error",
+			Message: "This email address is already registered",
+			Code:    http.StatusConflict,
+		}
+	}
+
 	hash, err := s.hashing.HashPassword(request.Password)
 	if err != nil {
-		s.logger.Error("Failed to hash password", zap.Error(err))
+		s.logger.Error("Password hashing failed",
+			zap.Error(err))
 		return nil, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to hash password",
+			Message: "System error during account creation",
+			Code:    http.StatusInternalServerError,
 		}
 	}
-
 	request.Password = hash
 
 	res, err := s.userRepository.CreateUser(request)
 	if err != nil {
-		s.logger.Error("Failed to create user", zap.Error(err))
+		s.logger.Error("User creation failed",
+			zap.String("email", request.Email),
+			zap.Error(err))
 		return nil, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to create user",
+			Message: "Failed to create user account",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
-	// Mapping hasil ke response
 	so := s.mapping.ToUserResponse(res)
 
-	s.logger.Debug("Successfully created new user", zap.String("email", so.Email), zap.Int("user", so.ID))
+	s.logger.Debug("User created successfully",
+		zap.String("email", so.Email),
+		zap.Int("user_id", so.ID))
 
 	return so, nil
 }
 
 func (s *userService) UpdateUser(request *requests.UpdateUserRequest) (*response.UserResponse, *response.ErrorResponse) {
-	s.logger.Debug("Updating user", zap.Int("user_id", request.UserID), zap.Any("request", request))
+	s.logger.Debug("Updating user",
+		zap.Int("user_id", *request.UserID),
+		zap.Any("request", request))
 
-	existingUser, err := s.userRepository.FindById(request.UserID)
+	existingUser, err := s.userRepository.FindById(*request.UserID)
 
 	if err != nil {
-		s.logger.Error("Failed to find user by ID", zap.Error(err))
+		if errors.Is(err, sql.ErrNoRows) {
+			s.logger.Error("User not found for update",
+				zap.Int("user_id", *request.UserID))
+			return nil, &response.ErrorResponse{
+				Status:  "error",
+				Message: "User account not found",
+				Code:    http.StatusNotFound,
+			}
+		}
+		s.logger.Error("Error finding user",
+			zap.Int("user_id", *request.UserID),
+			zap.Error(err))
 		return nil, &response.ErrorResponse{
 			Status:  "error",
-			Message: "User not found",
+			Message: "System error while retrieving user",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
-	if request.Email != "" && request.Email != existingUser.Email {
-		duplicateUser, _ := s.userRepository.FindByEmail(request.Email)
+	if request.Email != existingUser.Email {
+		duplicateUser, err := s.userRepository.FindByEmail(request.Email)
 
-		if duplicateUser != nil {
-			return nil, &response.ErrorResponse{
-				Status:  "error",
-				Message: "Email is already in use",
-			}
-		}
-
-		existingUser.Email = request.Email
-	}
-
-	if request.Password != "" {
-		hash, err := s.hashing.HashPassword(request.Password)
 		if err != nil {
-			s.logger.Error("Failed to hash password", zap.Error(err))
-			return nil, &response.ErrorResponse{
-				Status:  "error",
-				Message: "Failed to hash password",
+			if !errors.Is(err, sql.ErrNoRows) {
+				s.logger.Error("Error checking email availability",
+					zap.String("email", request.Email),
+					zap.Error(err))
+				return nil, &response.ErrorResponse{
+					Status:  "error",
+					Message: "System error while validating email",
+					Code:    http.StatusInternalServerError,
+				}
 			}
 		}
-		existingUser.Password = hash
+
+		if duplicateUser != nil && duplicateUser.ID != existingUser.ID {
+			s.logger.Debug("Email already in use by another user",
+				zap.String("email", request.Email),
+				zap.Int("existing_user_id", existingUser.ID),
+				zap.Int("duplicate_user_id", duplicateUser.ID))
+
+			return nil, &response.ErrorResponse{
+				Status:  "conflict",
+				Message: "This email address is already registered by another user",
+				Code:    http.StatusConflict,
+			}
+		}
 	}
+
+	hash, err := s.hashing.HashPassword(request.Password)
+	if err != nil {
+		s.logger.Error("Password hashing failed",
+			zap.Error(err))
+		return nil, &response.ErrorResponse{
+			Status:  "error",
+			Message: "System error during password update",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	existingUser.Password = hash
 
 	res, err := s.userRepository.UpdateUser(request)
+
 	if err != nil {
-		s.logger.Error("Failed to update user", zap.Error(err))
+		s.logger.Error("User update failed",
+			zap.Int("user_id", *request.UserID),
+			zap.Error(err))
 		return nil, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to update user",
+			Message: "Failed to update user account",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
 	so := s.mapping.ToUserResponse(res)
-
-	s.logger.Debug("Successfully updated user", zap.Int("user_id", so.ID))
+	s.logger.Debug("User updated successfully",
+		zap.Int("user_id", so.ID))
 
 	return so, nil
 }
@@ -279,10 +330,21 @@ func (s *userService) TrashedUser(user_id int) (*response.UserResponseDeleteAt, 
 	res, err := s.userRepository.TrashedUser(user_id)
 
 	if err != nil {
-		s.logger.Error("Failed to trash user", zap.Error(err), zap.Int("user_id", user_id))
+		s.logger.Error("Failed to move user to trash",
+			zap.Int("user_id", user_id),
+			zap.Error(err))
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, &response.ErrorResponse{
+				Status:  "not_found",
+				Message: fmt.Sprintf("user with ID %d not found", user_id),
+				Code:    http.StatusNotFound,
+			}
+		}
 		return nil, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to trash user",
+			Message: "Failed to move user to trash",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
@@ -299,11 +361,20 @@ func (s *userService) RestoreUser(user_id int) (*response.UserResponseDeleteAt, 
 	res, err := s.userRepository.RestoreUser(user_id)
 
 	if err != nil {
-		s.logger.Error("Failed to restore user", zap.Error(err), zap.Int("user_id", user_id))
-
+		s.logger.Error("Failed to restore user from trash",
+			zap.Int("user_id", user_id),
+			zap.Error(err))
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, &response.ErrorResponse{
+				Status:  "not_found",
+				Message: fmt.Sprintf("user with ID %d not found in trash", user_id),
+				Code:    http.StatusNotFound,
+			}
+		}
 		return nil, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to restore user",
+			Message: "Failed to restore user from trash",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
@@ -320,11 +391,20 @@ func (s *userService) DeleteUserPermanent(user_id int) (bool, *response.ErrorRes
 	_, err := s.userRepository.DeleteUserPermanent(user_id)
 
 	if err != nil {
-		s.logger.Error("Failed to delete user permanently", zap.Error(err), zap.Int("user_id", user_id))
-
+		s.logger.Error("Failed to permanently delete user",
+			zap.Int("user_id", user_id),
+			zap.Error(err))
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, &response.ErrorResponse{
+				Status:  "not_found",
+				Message: fmt.Sprintf("user with ID %d not found", user_id),
+				Code:    http.StatusNotFound,
+			}
+		}
 		return false, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to delete user permanently",
+			Message: "Failed to permanently delete user",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
@@ -339,10 +419,12 @@ func (s *userService) RestoreAllUser() (bool, *response.ErrorResponse) {
 	_, err := s.userRepository.RestoreAllUser()
 
 	if err != nil {
-		s.logger.Error("Failed to restore all users", zap.Error(err))
+		s.logger.Error("Failed to restore all trashed users",
+			zap.Error(err))
 		return false, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to restore all users: " + err.Error(),
+			Message: "Failed to restore all users",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
@@ -357,10 +439,12 @@ func (s *userService) DeleteAllUserPermanent() (bool, *response.ErrorResponse) {
 	_, err := s.userRepository.DeleteAllUserPermanent()
 
 	if err != nil {
-		s.logger.Error("Failed to permanently delete all users", zap.Error(err))
+		s.logger.Error("Failed to permanently delete all trashed users",
+			zap.Error(err))
 		return false, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to permanently delete all users: " + err.Error(),
+			Message: "Failed to permanently delete all users",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 

@@ -3,6 +3,7 @@ syntax = "proto3";
 package pb;
 
 import "api.proto";
+import "google/protobuf/wrappers.proto";
 import "google/protobuf/empty.proto";
 
 
@@ -48,7 +49,7 @@ message SliderResponseDeleteAt {
     string image = 3;
     string created_at = 4;
     string updated_at = 5;
-    string deleted_at = 6;
+    google.protobuf.StringValue deleted_at = 6;
 }
 
 

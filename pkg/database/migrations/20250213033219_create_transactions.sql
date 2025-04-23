@@ -11,17 +11,16 @@ CREATE TABLE "transactions" (
     "updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" TIMESTAMP DEFAULT NULL
 );
-CREATE INDEX idx_transactions_order_id ON transactions(order_id);
-CREATE INDEX idx_transactions_merchant_id ON transactions(merchant_id);
-CREATE INDEX idx_transactions_payment_status ON transactions(payment_status);
+CREATE INDEX "idx_transactions_order_id" ON "transactions"("order_id");
+CREATE INDEX "idx_transactions_merchant_id" ON "transactions"("merchant_id");
+CREATE INDEX "idx_transactions_payment_status" ON "transactions"("payment_status");
 
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP INDEX IF EXISTS idx_transactions_order_id;
-DROP INDEX IF EXISTS idx_transactions_merchant_id;
-DROP INDEX IF EXISTS idx_transactions_payment_status;
-
+DROP INDEX IF EXISTS "idx_transactions_order_id";
+DROP INDEX IF EXISTS "idx_transactions_merchant_id";
+DROP INDEX IF EXISTS "idx_transactions_payment_status";
 DROP TABLE IF EXISTS "transactions";
 -- +goose StatementEnd

@@ -3,6 +3,8 @@ package protomapper
 import (
 	"ecommerce/internal/domain/response"
 	"ecommerce/internal/pb"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type productProtoMapper struct{}
@@ -97,6 +99,12 @@ func (p *productProtoMapper) mapResponsesProduct(products []*response.ProductRes
 }
 
 func (p *productProtoMapper) mapResponseProductDeleteAt(product *response.ProductResponseDeleteAt) *pb.ProductResponseDeleteAt {
+	var deletedAt *wrapperspb.StringValue
+
+	if product.DeletedAt != nil {
+		deletedAt = wrapperspb.String(*product.DeletedAt)
+	}
+
 	return &pb.ProductResponseDeleteAt{
 		Id:           int32(product.ID),
 		MerchantId:   int32(product.MerchantID),
@@ -112,7 +120,7 @@ func (p *productProtoMapper) mapResponseProductDeleteAt(product *response.Produc
 		ImageProduct: product.ImageProduct,
 		CreatedAt:    product.CreatedAt,
 		UpdatedAt:    product.UpdatedAt,
-		DeletedAt:    product.DeleteAt,
+		DeletedAt:    deletedAt,
 	}
 }
 

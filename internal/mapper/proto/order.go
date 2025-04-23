@@ -3,6 +3,8 @@ package protomapper
 import (
 	"ecommerce/internal/domain/response"
 	"ecommerce/internal/pb"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type orderProtoMapper struct{}
@@ -67,6 +69,38 @@ func (o *orderProtoMapper) ToProtoResponsePaginationOrder(pagination *pb.Paginat
 	}
 }
 
+func (o *orderProtoMapper) ToProtoResponseMonthlyRevenue(status string, message string, row []*response.OrderMonthlyResponse) *pb.ApiResponseOrderMonthly {
+	return &pb.ApiResponseOrderMonthly{
+		Status:  status,
+		Message: message,
+		Data:    o.mapResponsesOrderMonthlyPrices(row),
+	}
+}
+
+func (o *orderProtoMapper) ToProtoResponseYearlyRevenue(status string, message string, row []*response.OrderYearlyResponse) *pb.ApiResponseOrderYearly {
+	return &pb.ApiResponseOrderYearly{
+		Status:  status,
+		Message: message,
+		Data:    o.mapResponsesOrderYearlyPrices(row),
+	}
+}
+
+func (o *orderProtoMapper) ToProtoResponseMonthlyTotalRevenue(status string, message string, row []*response.OrderMonthlyTotalRevenueResponse) *pb.ApiResponseOrderMonthlyTotalRevenue {
+	return &pb.ApiResponseOrderMonthlyTotalRevenue{
+		Status:  status,
+		Message: message,
+		Data:    o.mapResponseOrderMonthlyTotalRevenues(row),
+	}
+}
+
+func (o *orderProtoMapper) ToProtoResponseYearlyTotalRevenue(status string, message string, row []*response.OrderYearlyTotalRevenueResponse) *pb.ApiResponseOrderYearlyTotalRevenue {
+	return &pb.ApiResponseOrderYearlyTotalRevenue{
+		Status:  status,
+		Message: message,
+		Data:    o.mapResponseOrderYearlyTotalRevenues(row),
+	}
+}
+
 func (o *orderProtoMapper) mapResponseOrder(order *response.OrderResponse) *pb.OrderResponse {
 	return &pb.OrderResponse{
 		Id:         int32(order.ID),
@@ -89,6 +123,12 @@ func (o *orderProtoMapper) mapResponsesOrder(orders []*response.OrderResponse) [
 }
 
 func (o *orderProtoMapper) mapResponseOrderDeleteAt(order *response.OrderResponseDeleteAt) *pb.OrderResponseDeleteAt {
+	var deletedAt *wrapperspb.StringValue
+
+	if order.DeletedAt != nil {
+		deletedAt = wrapperspb.String(*order.DeletedAt)
+	}
+
 	return &pb.OrderResponseDeleteAt{
 		Id:         int32(order.ID),
 		MerchantId: int32(order.MerchantID),
@@ -96,7 +136,7 @@ func (o *orderProtoMapper) mapResponseOrderDeleteAt(order *response.OrderRespons
 		TotalPrice: int32(order.TotalPrice),
 		CreatedAt:  order.CreatedAt,
 		UpdatedAt:  order.UpdatedAt,
-		DeletedAt:  order.DeleteAt,
+		DeletedAt:  deletedAt,
 	}
 }
 
@@ -108,4 +148,80 @@ func (o *orderProtoMapper) mapResponsesOrderDeleteAt(orders []*response.OrderRes
 	}
 
 	return mappedOrders
+}
+
+func (s *orderProtoMapper) mapResponseOrderMonthlyPrice(category *response.OrderMonthlyResponse) *pb.OrderMonthlyResponse {
+	return &pb.OrderMonthlyResponse{
+		Month:          category.Month,
+		OrderCount:     int32(category.OrderCount),
+		TotalRevenue:   int32(category.TotalRevenue),
+		TotalItemsSold: int32(category.TotalItemsSold),
+	}
+}
+
+func (s *orderProtoMapper) mapResponsesOrderMonthlyPrices(c []*response.OrderMonthlyResponse) []*pb.OrderMonthlyResponse {
+	var categoryRecords []*pb.OrderMonthlyResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.mapResponseOrderMonthlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *orderProtoMapper) mapResponseOrderYearlyPrice(category *response.OrderYearlyResponse) *pb.OrderYearlyResponse {
+	return &pb.OrderYearlyResponse{
+		Year:               category.Year,
+		OrderCount:         int32(category.OrderCount),
+		TotalRevenue:       int32(category.TotalRevenue),
+		TotalItemsSold:     int32(category.TotalItemsSold),
+		ActiveCashiers:     int32(category.ActiveCashiers),
+		UniqueProductsSold: int32(category.UniqueProductsSold),
+	}
+}
+
+func (s *orderProtoMapper) mapResponsesOrderYearlyPrices(c []*response.OrderYearlyResponse) []*pb.OrderYearlyResponse {
+	var categoryRecords []*pb.OrderYearlyResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.mapResponseOrderYearlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *orderProtoMapper) mapResponseOrderMonthlyTotalRevenue(c *response.OrderMonthlyTotalRevenueResponse) *pb.OrderMonthlyTotalRevenueResponse {
+	return &pb.OrderMonthlyTotalRevenueResponse{
+		Year:           c.Year,
+		Month:          c.Month,
+		TotalRevenue:   int32(c.TotalRevenue),
+		TotalItemsSold: int32(c.TotalItemsSold),
+	}
+}
+
+func (s *orderProtoMapper) mapResponseOrderMonthlyTotalRevenues(c []*response.OrderMonthlyTotalRevenueResponse) []*pb.OrderMonthlyTotalRevenueResponse {
+	var orderRecords []*pb.OrderMonthlyTotalRevenueResponse
+
+	for _, row := range c {
+		orderRecords = append(orderRecords, s.mapResponseOrderMonthlyTotalRevenue(row))
+	}
+
+	return orderRecords
+}
+
+func (s *orderProtoMapper) mapResponseOrderYearlyTotalRevenue(c *response.OrderYearlyTotalRevenueResponse) *pb.OrderYearlyTotalRevenueResponse {
+	return &pb.OrderYearlyTotalRevenueResponse{
+		Year:         c.Year,
+		TotalRevenue: int32(c.TotalRevenue),
+	}
+}
+
+func (s *orderProtoMapper) mapResponseOrderYearlyTotalRevenues(c []*response.OrderYearlyTotalRevenueResponse) []*pb.OrderYearlyTotalRevenueResponse {
+	var orderRecords []*pb.OrderYearlyTotalRevenueResponse
+
+	for _, row := range c {
+		orderRecords = append(orderRecords, s.mapResponseOrderYearlyTotalRevenue(row))
+	}
+
+	return orderRecords
 }

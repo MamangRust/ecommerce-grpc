@@ -14,9 +14,9 @@ type AuthService interface {
 }
 
 type RoleService interface {
-	FindAll(page int, pageSize int, search string) ([]*response.RoleResponse, int, *response.ErrorResponse)
-	FindByActiveRole(page int, pageSize int, search string) ([]*response.RoleResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashedRole(page int, pageSize int, search string) ([]*response.RoleResponseDeleteAt, int, *response.ErrorResponse)
+	FindAll(req *requests.FindAllRole) ([]*response.RoleResponse, *int, *response.ErrorResponse)
+	FindByActiveRole(req *requests.FindAllRole) ([]*response.RoleResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashedRole(req *requests.FindAllRole) ([]*response.RoleResponseDeleteAt, *int, *response.ErrorResponse)
 	FindById(role_id int) (*response.RoleResponse, *response.ErrorResponse)
 	FindByUserId(id int) ([]*response.RoleResponse, *response.ErrorResponse)
 	CreateRole(request *requests.CreateRoleRequest) (*response.RoleResponse, *response.ErrorResponse)
@@ -30,10 +30,10 @@ type RoleService interface {
 }
 
 type UserService interface {
-	FindAll(page int, pageSize int, search string) ([]*response.UserResponse, int, *response.ErrorResponse)
+	FindAll(req *requests.FindAllUsers) ([]*response.UserResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllUsers) ([]*response.UserResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllUsers) ([]*response.UserResponseDeleteAt, *int, *response.ErrorResponse)
 	FindByID(id int) (*response.UserResponse, *response.ErrorResponse)
-	FindByActive(page int, pageSize int, search string) ([]*response.UserResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(page int, pageSize int, search string) ([]*response.UserResponseDeleteAt, int, *response.ErrorResponse)
 	CreateUser(request *requests.CreateUserRequest) (*response.UserResponse, *response.ErrorResponse)
 	UpdateUser(request *requests.UpdateUserRequest) (*response.UserResponse, *response.ErrorResponse)
 	TrashedUser(user_id int) (*response.UserResponseDeleteAt, *response.ErrorResponse)
@@ -44,11 +44,39 @@ type UserService interface {
 	DeleteAllUserPermanent() (bool, *response.ErrorResponse)
 }
 
+type BannerService interface {
+	FindAll(req *requests.FindAllBanner) ([]*response.BannerResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllBanner) ([]*response.BannerResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllBanner) ([]*response.BannerResponseDeleteAt, *int, *response.ErrorResponse)
+	FindById(BannerID int) (*response.BannerResponse, *response.ErrorResponse)
+	CreateBanner(req *requests.CreateBannerRequest) (*response.BannerResponse, *response.ErrorResponse)
+	UpdateBanner(req *requests.UpdateBannerRequest) (*response.BannerResponse, *response.ErrorResponse)
+	TrashedBanner(BannerID int) (*response.BannerResponseDeleteAt, *response.ErrorResponse)
+	RestoreBanner(BannerID int) (*response.BannerResponseDeleteAt, *response.ErrorResponse)
+	DeleteBannerPermanent(BannerID int) (bool, *response.ErrorResponse)
+	RestoreAllBanner() (bool, *response.ErrorResponse)
+	DeleteAllBannerPermanent() (bool, *response.ErrorResponse)
+}
+
 type CategoryService interface {
-	FindAll(page int, pageSize int, search string) ([]*response.CategoryResponse, int, *response.ErrorResponse)
+	FindMonthlyTotalPrice(req *requests.MonthTotalPrice) ([]*response.CategoriesMonthlyTotalPriceResponse, *response.ErrorResponse)
+	FindYearlyTotalPrice(year int) ([]*response.CategoriesYearlyTotalPriceResponse, *response.ErrorResponse)
+	FindMonthlyTotalPriceById(req *requests.MonthTotalPriceCategory) ([]*response.CategoriesMonthlyTotalPriceResponse, *response.ErrorResponse)
+	FindYearlyTotalPriceById(req *requests.YearTotalPriceCategory) ([]*response.CategoriesYearlyTotalPriceResponse, *response.ErrorResponse)
+	FindMonthlyTotalPriceByMerchant(req *requests.MonthTotalPriceMerchant) ([]*response.CategoriesMonthlyTotalPriceResponse, *response.ErrorResponse)
+	FindYearlyTotalPriceByMerchant(req *requests.YearTotalPriceMerchant) ([]*response.CategoriesYearlyTotalPriceResponse, *response.ErrorResponse)
+
+	FindMonthPrice(year int) ([]*response.CategoryMonthPriceResponse, *response.ErrorResponse)
+	FindYearPrice(year int) ([]*response.CategoryYearPriceResponse, *response.ErrorResponse)
+	FindMonthPriceByMerchant(req *requests.MonthPriceMerchant) ([]*response.CategoryMonthPriceResponse, *response.ErrorResponse)
+	FindYearPriceByMerchant(req *requests.YearPriceMerchant) ([]*response.CategoryYearPriceResponse, *response.ErrorResponse)
+	FindMonthPriceById(req *requests.MonthPriceId) ([]*response.CategoryMonthPriceResponse, *response.ErrorResponse)
+	FindYearPriceById(req *requests.YearPriceId) ([]*response.CategoryYearPriceResponse, *response.ErrorResponse)
+
+	FindAll(req *requests.FindAllCategory) ([]*response.CategoryResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllCategory) ([]*response.CategoryResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllCategory) ([]*response.CategoryResponseDeleteAt, *int, *response.ErrorResponse)
 	FindById(category_id int) (*response.CategoryResponse, *response.ErrorResponse)
-	FindByActive(search string, page, pageSize int) ([]*response.CategoryResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(search string, page, pageSize int) ([]*response.CategoryResponseDeleteAt, int, *response.ErrorResponse)
 	CreateCategory(req *requests.CreateCategoryRequest) (*response.CategoryResponse, *response.ErrorResponse)
 	UpdateCategory(req *requests.UpdateCategoryRequest) (*response.CategoryResponse, *response.ErrorResponse)
 	TrashedCategory(category_id int) (*response.CategoryResponseDeleteAt, *response.ErrorResponse)
@@ -59,9 +87,9 @@ type CategoryService interface {
 }
 
 type MerchantService interface {
-	FindAll(page, pageSize int, search string) ([]*response.MerchantResponse, int, *response.ErrorResponse)
-	FindByActive(search string, page, pageSize int) ([]*response.MerchantResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(search string, page, pageSize int) ([]*response.MerchantResponseDeleteAt, int, *response.ErrorResponse)
+	FindAll(req *requests.FindAllMerchant) ([]*response.MerchantResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllMerchant) ([]*response.MerchantResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllMerchant) ([]*response.MerchantResponseDeleteAt, *int, *response.ErrorResponse)
 	FindById(merchantID int) (*response.MerchantResponse, *response.ErrorResponse)
 	CreateMerchant(req *requests.CreateMerchantRequest) (*response.MerchantResponse, *response.ErrorResponse)
 	UpdateMerchant(req *requests.UpdateMerchantRequest) (*response.MerchantResponse, *response.ErrorResponse)
@@ -72,18 +100,87 @@ type MerchantService interface {
 	DeleteAllMerchantPermanent() (bool, *response.ErrorResponse)
 }
 
+type MerchantAwardService interface {
+	FindAll(req *requests.FindAllMerchant) ([]*response.MerchantAwardResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllMerchant) ([]*response.MerchantAwardResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllMerchant) ([]*response.MerchantAwardResponseDeleteAt, *int, *response.ErrorResponse)
+	FindById(merchantID int) (*response.MerchantAwardResponse, *response.ErrorResponse)
+	CreateMerchant(req *requests.CreateMerchantCertificationOrAwardRequest) (*response.MerchantAwardResponse, *response.ErrorResponse)
+	UpdateMerchant(req *requests.UpdateMerchantCertificationOrAwardRequest) (*response.MerchantAwardResponse, *response.ErrorResponse)
+	TrashedMerchant(merchantID int) (*response.MerchantAwardResponseDeleteAt, *response.ErrorResponse)
+	RestoreMerchant(merchantID int) (*response.MerchantAwardResponseDeleteAt, *response.ErrorResponse)
+	DeleteMerchantPermanent(merchantID int) (bool, *response.ErrorResponse)
+	RestoreAllMerchant() (bool, *response.ErrorResponse)
+	DeleteAllMerchantPermanent() (bool, *response.ErrorResponse)
+}
+
+type MerchantBusinessService interface {
+	FindAll(req *requests.FindAllMerchant) ([]*response.MerchantBusinessResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllMerchant) ([]*response.MerchantBusinessResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllMerchant) ([]*response.MerchantBusinessResponseDeleteAt, *int, *response.ErrorResponse)
+	FindById(merchantID int) (*response.MerchantBusinessResponse, *response.ErrorResponse)
+	CreateMerchant(req *requests.CreateMerchantBusinessInformationRequest) (*response.MerchantBusinessResponse, *response.ErrorResponse)
+	UpdateMerchant(req *requests.UpdateMerchantBusinessInformationRequest) (*response.MerchantBusinessResponse, *response.ErrorResponse)
+	TrashedMerchant(merchantID int) (*response.MerchantBusinessResponseDeleteAt, *response.ErrorResponse)
+	RestoreMerchant(merchantID int) (*response.MerchantBusinessResponseDeleteAt, *response.ErrorResponse)
+	DeleteMerchantPermanent(merchantID int) (bool, *response.ErrorResponse)
+	RestoreAllMerchant() (bool, *response.ErrorResponse)
+	DeleteAllMerchantPermanent() (bool, *response.ErrorResponse)
+}
+
+type MerchantDetailService interface {
+	FindAll(req *requests.FindAllMerchant) ([]*response.MerchantDetailResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllMerchant) ([]*response.MerchantDetailResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllMerchant) ([]*response.MerchantDetailResponseDeleteAt, *int, *response.ErrorResponse)
+	FindById(merchantID int) (*response.MerchantDetailResponse, *response.ErrorResponse)
+	CreateMerchant(req *requests.CreateMerchantDetailRequest) (*response.MerchantDetailResponse, *response.ErrorResponse)
+	UpdateMerchant(req *requests.UpdateMerchantDetailRequest) (*response.MerchantDetailResponse, *response.ErrorResponse)
+	TrashedMerchant(merchantID int) (*response.MerchantDetailResponseDeleteAt, *response.ErrorResponse)
+	RestoreMerchant(merchantID int) (
+		*response.MerchantDetailResponseDeleteAt, *response.ErrorResponse)
+	DeleteMerchantPermanent(merchantID int) (bool, *response.ErrorResponse)
+	RestoreAllMerchant() (bool, *response.ErrorResponse)
+	DeleteAllMerchantPermanent() (bool, *response.ErrorResponse)
+}
+
+type MerchantPoliciesService interface {
+	FindAll(req *requests.FindAllMerchant) ([]*response.MerchantPoliciesResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllMerchant) ([]*response.MerchantPoliciesResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllMerchant) ([]*response.MerchantPoliciesResponseDeleteAt, *int, *response.ErrorResponse)
+	FindById(merchantID int) (*response.MerchantPoliciesResponse, *response.ErrorResponse)
+	CreateMerchant(req *requests.CreateMerchantPolicyRequest) (*response.MerchantPoliciesResponse, *response.ErrorResponse)
+	UpdateMerchant(req *requests.UpdateMerchantPolicyRequest) (*response.MerchantPoliciesResponse, *response.ErrorResponse)
+	TrashedMerchant(merchantID int) (*response.MerchantPoliciesResponseDeleteAt, *response.ErrorResponse)
+	RestoreMerchant(merchantID int) (*response.MerchantPoliciesResponseDeleteAt, *response.ErrorResponse)
+	DeleteMerchantPermanent(merchantID int) (bool, *response.ErrorResponse)
+	RestoreAllMerchant() (bool, *response.ErrorResponse)
+	DeleteAllMerchantPermanent() (bool, *response.ErrorResponse)
+}
+
 type OrderItemService interface {
-	FindAllOrderItems(search string, page, pageSize int) ([]*response.OrderItemResponse, int, *response.ErrorResponse)
-	FindByActive(search string, page, pageSize int) ([]*response.OrderItemResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(search string, page, pageSize int) ([]*response.OrderItemResponseDeleteAt, int, *response.ErrorResponse)
+	FindAllOrderItems(req *requests.FindAllOrderItems) ([]*response.OrderItemResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllOrderItems) ([]*response.OrderItemResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllOrderItems) ([]*response.OrderItemResponseDeleteAt, *int, *response.ErrorResponse)
 	FindOrderItemByOrder(orderID int) ([]*response.OrderItemResponse, *response.ErrorResponse)
 }
 
 type OrderService interface {
-	FindAll(page int, pageSize int, search string) ([]*response.OrderResponse, int, *response.ErrorResponse)
+	FindMonthlyTotalRevenue(req *requests.MonthTotalRevenue) ([]*response.OrderMonthlyTotalRevenueResponse, *response.ErrorResponse)
+	FindYearlyTotalRevenue(year int) ([]*response.OrderYearlyTotalRevenueResponse, *response.ErrorResponse)
+	FindMonthlyTotalRevenueById(req *requests.MonthTotalRevenueOrder) ([]*response.OrderMonthlyTotalRevenueResponse, *response.ErrorResponse)
+	FindYearlyTotalRevenueById(req *requests.YearTotalRevenueOrder) ([]*response.OrderYearlyTotalRevenueResponse, *response.ErrorResponse)
+	FindMonthlyTotalRevenueByMerchant(req *requests.MonthTotalRevenueMerchant) ([]*response.OrderMonthlyTotalRevenueResponse, *response.ErrorResponse)
+	FindYearlyTotalRevenueByMerchant(req *requests.YearTotalRevenueMerchant) ([]*response.OrderYearlyTotalRevenueResponse, *response.ErrorResponse)
+
+	FindMonthlyOrder(year int) ([]*response.OrderMonthlyResponse, *response.ErrorResponse)
+	FindYearlyOrder(year int) ([]*response.OrderYearlyResponse, *response.ErrorResponse)
+	FindMonthlyOrderByMerchant(req *requests.MonthOrderMerchant) ([]*response.OrderMonthlyResponse, *response.ErrorResponse)
+	FindYearlyOrderByMerchant(req *requests.YearOrderMerchant) ([]*response.OrderYearlyResponse, *response.ErrorResponse)
+
+	FindAll(req *requests.FindAllOrder) ([]*response.OrderResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllOrder) ([]*response.OrderResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllOrder) ([]*response.OrderResponseDeleteAt, *int, *response.ErrorResponse)
 	FindById(order_id int) (*response.OrderResponse, *response.ErrorResponse)
-	FindByActive(page int, pageSize int, search string) ([]*response.OrderResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(page int, pageSize int, search string) ([]*response.OrderResponseDeleteAt, int, *response.ErrorResponse)
 	CreateOrder(req *requests.CreateOrderRequest) (*response.OrderResponse, *response.ErrorResponse)
 	UpdateOrder(req *requests.UpdateOrderRequest) (*response.OrderResponse, *response.ErrorResponse)
 	TrashedOrder(order_id int) (*response.OrderResponseDeleteAt, *response.ErrorResponse)
@@ -94,12 +191,12 @@ type OrderService interface {
 }
 
 type ProductService interface {
-	FindAll(page, pageSize int, search string) ([]*response.ProductResponse, int, *response.ErrorResponse)
-	FindByMerchant(merchant_id int, page, pageSize int, search string) ([]*response.ProductResponse, int, *response.ErrorResponse)
-	FindByCategory(category_name string, page, pageSize int, search string) ([]*response.ProductResponse, int, *response.ErrorResponse)
+	FindAll(req *requests.FindAllProduct) ([]*response.ProductResponse, *int, *response.ErrorResponse)
+	FindByMerchant(req *requests.FindAllProductByMerchant) ([]*response.ProductResponse, *int, *response.ErrorResponse)
+	FindByCategory(req *requests.FindAllProductByCategory) ([]*response.ProductResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllProduct) ([]*response.ProductResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllProduct) ([]*response.ProductResponseDeleteAt, *int, *response.ErrorResponse)
 	FindById(productID int) (*response.ProductResponse, *response.ErrorResponse)
-	FindByActive(search string, page, pageSize int) ([]*response.ProductResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(search string, page, pageSize int) ([]*response.ProductResponseDeleteAt, int, *response.ErrorResponse)
 	CreateProduct(req *requests.CreateProductRequest) (*response.ProductResponse, *response.ErrorResponse)
 	UpdateProduct(req *requests.UpdateProductRequest) (*response.ProductResponse, *response.ErrorResponse)
 	TrashProduct(productID int) (*response.ProductResponseDeleteAt, *response.ErrorResponse)
@@ -110,10 +207,25 @@ type ProductService interface {
 }
 
 type TransactionService interface {
-	FindAllTransactions(search string, page, pageSize int) ([]*response.TransactionResponse, int, *response.ErrorResponse)
-	FindByMerchant(merchant_id int, search string, page, pageSize int) ([]*response.TransactionResponse, int, *response.ErrorResponse)
-	FindByActive(search string, page, pageSize int) ([]*response.TransactionResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(search string, page, pageSize int) ([]*response.TransactionResponseDeleteAt, int, *response.ErrorResponse)
+	FindMonthlyAmountSuccess(req *requests.MonthAmountTransaction) ([]*response.TransactionMonthlyAmountSuccessResponse, *response.ErrorResponse)
+	FindYearlyAmountSuccess(year int) ([]*response.TransactionYearlyAmountSuccessResponse, *response.ErrorResponse)
+	FindMonthlyAmountFailed(req *requests.MonthAmountTransaction) ([]*response.TransactionMonthlyAmountFailedResponse, *response.ErrorResponse)
+	FindYearlyAmountFailed(year int) ([]*response.TransactionYearlyAmountFailedResponse, *response.ErrorResponse)
+
+	FindMonthlyAmountSuccessByMerchant(req *requests.MonthAmountTransactionMerchant) ([]*response.TransactionMonthlyAmountSuccessResponse, *response.ErrorResponse)
+	FindYearlyAmountSuccessByMerchant(req *requests.YearAmountTransactionMerchant) ([]*response.TransactionYearlyAmountSuccessResponse, *response.ErrorResponse)
+	FindMonthlyAmountFailedByMerchant(req *requests.MonthAmountTransactionMerchant) ([]*response.TransactionMonthlyAmountFailedResponse, *response.ErrorResponse)
+	FindYearlyAmountFailedByMerchant(req *requests.YearAmountTransactionMerchant) ([]*response.TransactionYearlyAmountFailedResponse, *response.ErrorResponse)
+
+	FindMonthlyMethod(year int) ([]*response.TransactionMonthlyMethodResponse, *response.ErrorResponse)
+	FindYearlyMethod(year int) ([]*response.TransactionYearlyMethodResponse, *response.ErrorResponse)
+	FindMonthlyMethodByMerchant(req *requests.MonthlyYearTransactionMethodMerchant) ([]*response.TransactionMonthlyMethodResponse, *response.ErrorResponse)
+	FindYearlyMethodByMerchant(req *requests.MonthlyYearTransactionMethodMerchant) ([]*response.TransactionYearlyMethodResponse, *response.ErrorResponse)
+
+	FindAllTransactions(req *requests.FindAllTransactions) ([]*response.TransactionResponse, *int, *response.ErrorResponse)
+	FindByMerchant(req *requests.FindAllTransactionByMerchant) ([]*response.TransactionResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllTransactions) ([]*response.TransactionResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllTransactions) ([]*response.TransactionResponseDeleteAt, *int, *response.ErrorResponse)
 	FindById(transactionID int) (*response.TransactionResponse, *response.ErrorResponse)
 	FindByOrderId(orderID int) (*response.TransactionResponse, *response.ErrorResponse)
 	CreateTransaction(req *requests.CreateTransactionRequest) (*response.TransactionResponse, *response.ErrorResponse)
@@ -126,17 +238,18 @@ type TransactionService interface {
 }
 
 type CartService interface {
-	FindAll(user_id int, page int, pageSize int, search string) ([]*response.CartResponse, int, *response.ErrorResponse)
-	CreateCart(req *requests.CreateCartRequest) (*response.CartResponse, error)
+	FindAll(req *requests.FindAllCarts) ([]*response.CartResponse, *int, *response.ErrorResponse)
+	CreateCart(req *requests.CreateCartRequest) (*response.CartResponse, *response.ErrorResponse)
 	DeletePermanent(cart_id int) (bool, *response.ErrorResponse)
 	DeleteAllPermanently(req *requests.DeleteCartRequest) (bool, *response.ErrorResponse)
 }
 
 type ReviewService interface {
-	FindAllReviews(search string, page, pageSize int) ([]*response.ReviewResponse, int, *response.ErrorResponse)
-	FindByActive(search string, page, pageSize int) ([]*response.ReviewResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(search string, page, pageSize int) ([]*response.ReviewResponseDeleteAt, int, *response.ErrorResponse)
-	FindByProduct(product_id int, search string, page, pageSize int) ([]*response.ReviewResponse, int, *response.ErrorResponse)
+	FindAllReviews(req *requests.FindAllReview) ([]*response.ReviewResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllReview) ([]*response.ReviewResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllReview) ([]*response.ReviewResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByProduct(req *requests.FindAllReviewByProduct) ([]*response.ReviewsDetailResponse, *int, *response.ErrorResponse)
+	FindByMerchant(req *requests.FindAllReviewByMerchant) ([]*response.ReviewsDetailResponse, *int, *response.ErrorResponse)
 	CreateReview(req *requests.CreateReviewRequest) (*response.ReviewResponse, *response.ErrorResponse)
 	UpdateReview(req *requests.UpdateReviewRequest) (*response.ReviewResponse, *response.ErrorResponse)
 	TrashedReview(reviewID int) (*response.ReviewResponseDeleteAt, *response.ErrorResponse)
@@ -146,12 +259,26 @@ type ReviewService interface {
 	DeleteAllReviewsPermanent() (bool, *response.ErrorResponse)
 }
 
+type ReviewDetailService interface {
+	FindAll(req *requests.FindAllReview) ([]*response.ReviewDetailsResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllReview) ([]*response.ReviewDetailsResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllReview) ([]*response.ReviewDetailsResponseDeleteAt, *int, *response.ErrorResponse)
+	FindById(review_id int) (*response.ReviewDetailsResponse, *response.ErrorResponse)
+	CreateReviewDetail(req *requests.CreateReviewDetailRequest) (*response.ReviewDetailsResponse, *response.ErrorResponse)
+	UpdateReviewDetail(req *requests.UpdateReviewDetailRequest) (*response.ReviewDetailsResponse, *response.ErrorResponse)
+	TrashedReviewDetail(review_id int) (*response.ReviewDetailsResponseDeleteAt, *response.ErrorResponse)
+	RestoreReviewDetail(review_id int) (*response.ReviewDetailsResponseDeleteAt, *response.ErrorResponse)
+	DeleteReviewDetailPermanent(review_id int) (bool, *response.ErrorResponse)
+	RestoreAllReviewDetail() (bool, *response.ErrorResponse)
+	DeleteAllReviewDetailPermanent() (bool, *response.ErrorResponse)
+}
+
 type ShippingAddressService interface {
-	FindAll(page int, pageSize int, search string) ([]*response.ShippingAddressResponse, int, *response.ErrorResponse)
+	FindAll(req *requests.FindAllShippingAddress) ([]*response.ShippingAddressResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllShippingAddress) ([]*response.ShippingAddressResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllShippingAddress) ([]*response.ShippingAddressResponseDeleteAt, *int, *response.ErrorResponse)
 	FindById(shipping_id int) (*response.ShippingAddressResponse, *response.ErrorResponse)
 	FindByOrder(order_id int) (*response.ShippingAddressResponse, *response.ErrorResponse)
-	FindByActive(search string, page, pageSize int) ([]*response.ShippingAddressResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(search string, page, pageSize int) ([]*response.ShippingAddressResponseDeleteAt, int, *response.ErrorResponse)
 	TrashShippingAddress(shipping_id int) (*response.ShippingAddressResponseDeleteAt, *response.ErrorResponse)
 	RestoreShippingAddress(shipping_id int) (*response.ShippingAddressResponseDeleteAt, *response.ErrorResponse)
 	DeleteShippingAddressPermanently(categoryID int) (bool, *response.ErrorResponse)
@@ -160,9 +287,9 @@ type ShippingAddressService interface {
 }
 
 type SliderService interface {
-	FindAll(page int, pageSize int, search string) ([]*response.SliderResponse, int, *response.ErrorResponse)
-	FindByActive(search string, page, pageSize int) ([]*response.SliderResponseDeleteAt, int, *response.ErrorResponse)
-	FindByTrashed(search string, page, pageSize int) ([]*response.SliderResponseDeleteAt, int, *response.ErrorResponse)
+	FindAll(req *requests.FindAllSlider) ([]*response.SliderResponse, *int, *response.ErrorResponse)
+	FindByActive(req *requests.FindAllSlider) ([]*response.SliderResponseDeleteAt, *int, *response.ErrorResponse)
+	FindByTrashed(req *requests.FindAllSlider) ([]*response.SliderResponseDeleteAt, *int, *response.ErrorResponse)
 	CreateSlider(req *requests.CreateSliderRequest) (*response.SliderResponse, *response.ErrorResponse)
 	UpdateSlider(req *requests.UpdateSliderRequest) (*response.SliderResponse, *response.ErrorResponse)
 	TrashedSlider(slider_id int) (*response.SliderResponseDeleteAt, *response.ErrorResponse)

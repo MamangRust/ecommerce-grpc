@@ -38,6 +38,11 @@ func (m *merchantResponseMapper) ToResponsesMerchant(merchants []*pb.MerchantRes
 }
 
 func (m *merchantResponseMapper) ToResponseMerchantDeleteAt(merchant *pb.MerchantResponseDeleteAt) *response.MerchantResponseDeleteAt {
+	var deletedAt string
+	if merchant.DeletedAt != nil {
+		deletedAt = merchant.DeletedAt.Value
+	}
+
 	return &response.MerchantResponseDeleteAt{
 		ID:           int(merchant.Id),
 		UserID:       int(merchant.UserId),
@@ -49,7 +54,7 @@ func (m *merchantResponseMapper) ToResponseMerchantDeleteAt(merchant *pb.Merchan
 		Status:       merchant.Status,
 		CreatedAt:    merchant.CreatedAt,
 		UpdatedAt:    merchant.UpdatedAt,
-		DeletedAt:    merchant.DeletedAt,
+		DeletedAt:    &deletedAt,
 	}
 }
 

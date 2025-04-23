@@ -9,12 +9,12 @@ CREATE TABLE "sliders" (
     "deleted_at" TIMESTAMP DEFAULT NULL
 );
 
-CREATE INDEX idx_sliders_name ON sliders(name);
+CREATE INDEX "idx_sliders_name" ON "sliders"("name");
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP INDEX IF EXISTS idx_sliders_name;
+DROP INDEX IF EXISTS "idx_sliders_name";
 
 DROP TABLE IF EXISTS "sliders";
 -- +goose StatementEnd

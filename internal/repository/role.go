@@ -23,28 +23,29 @@ func NewRoleRepository(db *db.Queries, ctx context.Context, mapping recordmapper
 	}
 }
 
-func (r *roleRepository) FindAllRoles(page int, pageSize int, search string) ([]*record.RoleRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *roleRepository) FindAllRoles(req *requests.FindAllRole) ([]*record.RoleRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetRolesParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetRolesParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetRoles(r.ctx, req)
+	res, err := r.db.GetRoles(r.ctx, reqDb)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find roles: %w", err)
+		return nil, nil, fmt.Errorf("failed to find roles: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToRolesRecordAll(res), totalCount, nil
+	return r.mapping.ToRolesRecordAll(res), &totalCount, nil
 }
 
 func (r *roleRepository) FindById(id int) (*record.RoleRecord, error) {
@@ -77,54 +78,56 @@ func (r *roleRepository) FindByUserId(user_id int) ([]*record.RoleRecord, error)
 	return r.mapping.ToRolesRecord(res), nil
 }
 
-func (r *roleRepository) FindByActiveRole(page int, pageSize int, search string) ([]*record.RoleRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *roleRepository) FindByActiveRole(req *requests.FindAllRole) ([]*record.RoleRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetActiveRolesParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetActiveRolesParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetActiveRoles(r.ctx, req)
+	res, err := r.db.GetActiveRoles(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find active roles: %w", err)
+		return nil, nil, fmt.Errorf("failed to find active roles: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToRolesRecordActive(res), totalCount, nil
+	return r.mapping.ToRolesRecordActive(res), &totalCount, nil
 }
 
-func (r *roleRepository) FindByTrashedRole(page int, pageSize int, search string) ([]*record.RoleRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *roleRepository) FindByTrashedRole(req *requests.FindAllRole) ([]*record.RoleRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetTrashedRolesParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetTrashedRolesParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetTrashedRoles(r.ctx, req)
+	res, err := r.db.GetTrashedRoles(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find trashed roles: %w", err)
+		return nil, nil, fmt.Errorf("failed to find trashed roles: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToRolesRecordTrashed(res), totalCount, nil
+	return r.mapping.ToRolesRecordTrashed(res), &totalCount, nil
 }
 
 func (r *roleRepository) CreateRole(req *requests.CreateRoleRequest) (*record.RoleRecord, error) {
@@ -139,7 +142,7 @@ func (r *roleRepository) CreateRole(req *requests.CreateRoleRequest) (*record.Ro
 
 func (r *roleRepository) UpdateRole(req *requests.UpdateRoleRequest) (*record.RoleRecord, error) {
 	res, err := r.db.UpdateRole(r.ctx, db.UpdateRoleParams{
-		RoleID:   int32(req.ID),
+		RoleID:   int32(*req.ID),
 		RoleName: req.Name,
 	})
 
@@ -151,35 +154,23 @@ func (r *roleRepository) UpdateRole(req *requests.UpdateRoleRequest) (*record.Ro
 }
 
 func (r *roleRepository) TrashedRole(id int) (*record.RoleRecord, error) {
-	err := r.db.TrashRole(r.ctx, int32(id))
+	res, err := r.db.TrashRole(r.ctx, int32(id))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to trash role: %w", err)
 	}
 
-	role, err := r.FindById(id)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to find role after restore: %w", err)
-	}
-
-	return role, nil
+	return r.mapping.ToRoleRecord(res), nil
 }
 
 func (r *roleRepository) RestoreRole(id int) (*record.RoleRecord, error) {
-	err := r.db.RestoreRole(r.ctx, int32(id))
+	res, err := r.db.RestoreRole(r.ctx, int32(id))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to restore role: %w", err)
 	}
 
-	role, err := r.FindById(id)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to find role after restore: %w", err)
-	}
-
-	return role, nil
+	return r.mapping.ToRoleRecord(res), nil
 }
 
 func (r *roleRepository) DeleteRolePermanent(role_id int) (bool, error) {

@@ -26,7 +26,23 @@ type CreateMerchantParams struct {
 	Status       string         `json:"status"`
 }
 
-// Create Merchant
+// CreateMerchant: Creates a new merchant account
+// Purpose: Register a new merchant in the system
+// Parameters:
+//
+//	$1: user_id - Associated user account ID
+//	$2: name - Business name
+//	$3: description - Business description
+//	$4: address - Physical address
+//	$5: contact_email - Business email
+//	$6: contact_phone - Business phone
+//	$7: status - Account status (active/inactive)
+//
+// Returns: The created merchant record
+// Business Logic:
+//   - Sets created_at timestamp automatically
+//   - Requires all mandatory merchant fields
+//   - Status defaults to 'active' unless specified otherwise
 func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) (*Merchant, error) {
 	row := q.db.QueryRowContext(ctx, createMerchant,
 		arg.UserID,
@@ -60,7 +76,13 @@ WHERE
     deleted_at IS NOT NULL
 `
 
-// Delete All Trashed Merchant Permanently
+// DeleteAllPermanentMerchants: Purges all trashed merchants
+// Purpose: Clean up all soft-deleted merchant records
+// Business Logic:
+//   - Irreversible bulk deletion operation
+//   - Only affects already soft-deleted records
+//   - Typically used during database maintenance
+//   - Should be restricted to admin users
 func (q *Queries) DeleteAllPermanentMerchants(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, deleteAllPermanentMerchants)
 	return err
@@ -70,7 +92,17 @@ const deleteMerchantPermanently = `-- name: DeleteMerchantPermanently :exec
 DELETE FROM merchants WHERE merchant_id = $1 AND deleted_at IS NOT NULL
 `
 
-// Delete Merchant Permanently
+// DeleteMerchantPermanently: Hard-deletes a merchant
+// Purpose: Completely remove merchant from database
+// Parameters:
+//
+//	$1: merchant_id - ID of merchant to delete
+//
+// Business Logic:
+//   - Permanent deletion of already soft-deleted records
+//   - No return value (exec-only operation)
+//   - Irreversible action - use with caution
+//   - Should trigger cleanup of related records
 func (q *Queries) DeleteMerchantPermanently(ctx context.Context, merchantID int32) error {
 	_, err := q.db.ExecContext(ctx, deleteMerchantPermanently, merchantID)
 	return err
@@ -83,6 +115,17 @@ WHERE merchant_id = $1
   AND deleted_at IS NULL
 `
 
+// GetMerchantByID: Retrieves active merchant by ID
+// Purpose: Fetch merchant details for display/editing
+// Parameters:
+//
+//	$1: merchant_id - ID of merchant to retrieve
+//
+// Returns: Full merchant record if found and active
+// Business Logic:
+//   - Excludes soft-deleted records
+//   - Returns single record or nothing
+//   - Used for merchant profile viewing and editing
 func (q *Queries) GetMerchantByID(ctx context.Context, merchantID int32) (*Merchant, error) {
 	row := q.db.QueryRowContext(ctx, getMerchantByID, merchantID)
 	var i Merchant
@@ -134,6 +177,24 @@ type GetMerchantsRow struct {
 	TotalCount   int64          `json:"total_count"`
 }
 
+// GetMerchants: Retrieves paginated list of active merchants with search capability
+// Purpose: List all active merchants for management UI
+// Parameters:
+//
+//	$1: search_term - Optional text to filter merchants by name or email (NULL for no filter)
+//	$2: limit - Maximum number of records to return (pagination limit)
+//	$3: offset - Number of records to skip (pagination offset)
+//
+// Returns:
+//
+//	All merchant fields plus total_count of matching records
+//
+// Business Logic:
+//   - Excludes soft-deleted merchants (deleted_at IS NULL)
+//   - Supports partial text matching on name and contact_email fields (case-insensitive ILIKE)
+//   - Returns newest merchants first (created_at DESC)
+//   - Provides total_count for client-side pagination calculations
+//   - Uses window function COUNT(*) OVER() for efficient total count
 func (q *Queries) GetMerchants(ctx context.Context, arg GetMerchantsParams) ([]*GetMerchantsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getMerchants, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -202,7 +263,23 @@ type GetMerchantsActiveRow struct {
 	TotalCount   int64          `json:"total_count"`
 }
 
-// Get Active Merchants with Pagination and Total Count
+// GetMerchantsActive: Retrieves paginated list of active merchants (identical to GetMerchants)
+// Purpose: Maintains consistent API pattern with other active/trashed endpoints
+// Parameters:
+//
+//	$1: search_term - Optional filter text for name/email
+//	$2: limit - Pagination limit
+//	$3: offset - Pagination offset
+//
+// Returns:
+//
+//	Active merchant records with total_count
+//
+// Business Logic:
+//   - Same functionality as GetMerchants
+//   - Exists for consistency in API design patterns
+//
+// Note: Could be consolidated with GetMerchants if duplicate functionality is undesired
 func (q *Queries) GetMerchantsActive(ctx context.Context, arg GetMerchantsActiveParams) ([]*GetMerchantsActiveRow, error) {
 	rows, err := q.db.QueryContext(ctx, getMerchantsActive, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -271,7 +348,24 @@ type GetMerchantsTrashedRow struct {
 	TotalCount   int64          `json:"total_count"`
 }
 
-// Get Trashed Merchants with Pagination and Total Count
+// GetMerchantsTrashed: Retrieves paginated list of soft-deleted merchants
+// Purpose: View and manage deleted merchants for potential restoration
+// Parameters:
+//
+//	$1: search_term - Optional text to filter trashed merchants
+//	$2: limit - Maximum records per page
+//	$3: offset - Records to skip
+//
+// Returns:
+//
+//	Trashed merchant records with total_count
+//
+// Business Logic:
+//   - Only returns soft-deleted records (deleted_at IS NOT NULL)
+//   - Maintains same search functionality as active merchant queries
+//   - Preserves chronological sorting (newest first)
+//   - Used in merchant recovery/audit interfaces
+//   - Includes total_count for pagination in trash management UI
 func (q *Queries) GetMerchantsTrashed(ctx context.Context, arg GetMerchantsTrashedParams) ([]*GetMerchantsTrashedRow, error) {
 	rows, err := q.db.QueryContext(ctx, getMerchantsTrashed, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -316,7 +410,13 @@ WHERE
     deleted_at IS NOT NULL
 `
 
-// Restore All Trashed Merchant
+// RestoreAllMerchants: Mass restoration of deleted merchants
+// Purpose: Recover all trashed merchants at once
+// Business Logic:
+//   - Reactivates all soft-deleted merchants
+//   - No parameters needed (bulk operation)
+//   - Typically used during system recovery
+//   - Maintains original merchant data
 func (q *Queries) RestoreAllMerchants(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, restoreAllMerchants)
 	return err
@@ -332,7 +432,18 @@ WHERE
   RETURNING merchant_id, user_id, name, description, address, contact_email, contact_phone, status, created_at, updated_at, deleted_at
 `
 
-// Restore Trashed Merchant
+// RestoreMerchant: Recovers a soft-deleted merchant
+// Purpose: Reactivate a previously deactivated merchant
+// Parameters:
+//
+//	$1: merchant_id - ID of merchant to restore
+//
+// Returns: The restored merchant record
+// Business Logic:
+//   - Nullifies the deleted_at field
+//   - Only works on previously deleted records
+//   - Preserves all original merchant data
+//   - Reactivates associated services
 func (q *Queries) RestoreMerchant(ctx context.Context, merchantID int32) (*Merchant, error) {
 	row := q.db.QueryRowContext(ctx, restoreMerchant, merchantID)
 	var i Merchant
@@ -362,7 +473,18 @@ WHERE
     RETURNING merchant_id, user_id, name, description, address, contact_email, contact_phone, status, created_at, updated_at, deleted_at
 `
 
-// Trash Merchant
+// TrashMerchant: Soft-deletes a merchant account
+// Purpose: Deactivate merchant without permanent deletion
+// Parameters:
+//
+//	$1: merchant_id - ID of merchant to deactivate
+//
+// Returns: The soft-deleted merchant record
+// Business Logic:
+//   - Sets deleted_at timestamp to current time
+//   - Only processes currently active records
+//   - Allows recovery via restore function
+//   - Maintains referential integrity
 func (q *Queries) TrashMerchant(ctx context.Context, merchantID int32) (*Merchant, error) {
 	row := q.db.QueryRowContext(ctx, trashMerchant, merchantID)
 	var i Merchant
@@ -406,7 +528,24 @@ type UpdateMerchantParams struct {
 	Status       string         `json:"status"`
 }
 
-// Update Merchant
+// UpdateMerchant: Modifies merchant information
+// Purpose: Update merchant profile details
+// Parameters:
+//
+//	$1: merchant_id - Target merchant ID
+//	$2: name - Updated business name
+//	$3: description - Updated description
+//	$4: address - Updated physical address
+//	$5: contact_email - Updated email
+//	$6: contact_phone - Updated phone
+//	$7: status - Updated account status
+//
+// Returns: Updated merchant record
+// Business Logic:
+//   - Automatically updates updated_at timestamp
+//   - Only affects active (non-deleted) records
+//   - Validates all required fields
+//   - Returns modified record for confirmation
 func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) (*Merchant, error) {
 	row := q.db.QueryRowContext(ctx, updateMerchant,
 		arg.MerchantID,

@@ -37,7 +37,21 @@ type CreateUserParams struct {
 	Password  string `json:"password"`
 }
 
-// Create User
+// CreateUser: Creates a new user account
+// Purpose: Register a new user in the system
+// Parameters:
+//
+//	$1: firstname - User's first name
+//	$2: lastname - User's last name
+//	$3: email - User's email address (must be unique)
+//	$4: password - Hashed password string
+//
+// Returns: The complete created user record
+// Business Logic:
+//   - Sets created_at and updated_at timestamps automatically
+//   - Requires all mandatory user fields
+//   - Email must be unique across the system
+//   - Password should be pre-hashed before insertion
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, error) {
 	row := q.db.QueryRowContext(ctx, createUser,
 		arg.Firstname,
@@ -65,7 +79,13 @@ WHERE
     deleted_at IS NOT NULL
 `
 
-// Delete All Trashed Users Permanently
+// DeleteAllPermanentUsers: Purges all trashed users
+// Purpose: Clean up all soft-deleted user records
+// Business Logic:
+//   - Irreversible bulk deletion operation
+//   - Only affects already soft-deleted users
+//   - Typically used during database maintenance
+//   - Should be restricted to admin users
 func (q *Queries) DeleteAllPermanentUsers(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, deleteAllPermanentUsers)
 	return err
@@ -75,7 +95,17 @@ const deleteUserPermanently = `-- name: DeleteUserPermanently :exec
 DELETE FROM users WHERE user_id = $1 AND deleted_at IS NOT NULL
 `
 
-// Delete User Permanently
+// DeleteUserPermanently: Hard-deletes a user account
+// Purpose: Completely remove user from database
+// Parameters:
+//
+//	$1: user_id - ID of user to delete
+//
+// Business Logic:
+//   - Permanent deletion of already soft-deleted users
+//   - No return value (exec-only operation)
+//   - Irreversible action - use with caution
+//   - Should trigger cleanup of related records
 func (q *Queries) DeleteUserPermanently(ctx context.Context, userID int32) error {
 	_, err := q.db.ExecContext(ctx, deleteUserPermanently, userID)
 	return err
@@ -85,7 +115,18 @@ const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT user_id, firstname, lastname, email, password, created_at, updated_at, deleted_at FROM users WHERE email = $1 AND deleted_at IS NULL
 `
 
-// Get User by Email
+// GetUserByEmail: Retrieves active user by email
+// Purpose: Lookup user by email address (for authentication)
+// Parameters:
+//
+//	$1: email - Exact email address to search for
+//
+// Returns: User record if found and active
+// Business Logic:
+//   - Case-sensitive exact match on email
+//   - Excludes deleted users
+//   - Used during login/authentication flows
+//   - Helps prevent duplicate accounts
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
 	var i User
@@ -106,7 +147,17 @@ const getUserByID = `-- name: GetUserByID :one
 SELECT user_id, firstname, lastname, email, password, created_at, updated_at, deleted_at FROM users WHERE user_id = $1 AND deleted_at IS NULL
 `
 
-// Get User by ID
+// GetUserByID: Retrieves active user by ID
+// Purpose: Fetch specific user details
+// Parameters:
+//
+//	$1: user_id - ID of user to retrieve
+//
+// Returns: Full user record if found and active
+// Business Logic:
+//   - Excludes deleted users
+//   - Used for user profile viewing/editing
+//   - Primary lookup for user management
 func (q *Queries) GetUserByID(ctx context.Context, userID int32) (*User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByID, userID)
 	var i User
@@ -152,7 +203,24 @@ type GetUserTrashedRow struct {
 	TotalCount int64        `json:"total_count"`
 }
 
-// Get Trashed Users with Pagination and Total Count
+// GetUserTrashed: Retrieves paginated list of soft-deleted users
+// Purpose: View and manage deleted users for potential restoration
+// Parameters:
+//
+//	$1: search_term - Optional text to filter trashed users
+//	$2: limit - Maximum records per page
+//	$3: offset - Records to skip
+//
+// Returns:
+//
+//	Trashed user records with total_count
+//
+// Business Logic:
+//   - Only returns soft-deleted records (deleted_at IS NOT NULL)
+//   - Maintains same search functionality as active user queries
+//   - Preserves chronological sorting (newest first)
+//   - Used in user recovery/audit interfaces
+//   - Includes total_count for pagination in trash management UI
 func (q *Queries) GetUserTrashed(ctx context.Context, arg GetUserTrashedParams) ([]*GetUserTrashedRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUserTrashed, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -215,7 +283,24 @@ type GetUsersRow struct {
 	TotalCount int64        `json:"total_count"`
 }
 
-// Get Users with Pagination and Total Count
+// GetUsers: Retrieves paginated list of active users with search capability
+// Purpose: List all active users for management UI
+// Parameters:
+//
+//	$1: search_term - Optional text to filter users by name or email (NULL for no filter)
+//	$2: limit - Maximum number of records to return (pagination limit)
+//	$3: offset - Number of records to skip (pagination offset)
+//
+// Returns:
+//
+//	All user fields plus total_count of matching records
+//
+// Business Logic:
+//   - Excludes soft-deleted users (deleted_at IS NULL)
+//   - Supports partial text matching on firstname, lastname, and email fields (case-insensitive)
+//   - Returns newest users first (created_at DESC)
+//   - Provides total_count for client-side pagination
+//   - Uses window function COUNT(*) OVER() for efficient total count
 func (q *Queries) GetUsers(ctx context.Context, arg GetUsersParams) ([]*GetUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUsers, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -278,7 +363,23 @@ type GetUsersActiveRow struct {
 	TotalCount int64        `json:"total_count"`
 }
 
-// Get Active Users with Pagination and Total Count
+// GetUsersActive: Retrieves paginated list of active users (identical to GetUsers)
+// Purpose: Maintains consistent API pattern with other active/trashed endpoints
+// Parameters:
+//
+//	$1: search_term - Optional filter text for name/email
+//	$2: limit - Pagination limit
+//	$3: offset - Pagination offset
+//
+// Returns:
+//
+//	Active user records with total_count
+//
+// Business Logic:
+//   - Same functionality as GetUsers
+//   - Exists for consistency in API design patterns
+//
+// Note: Could be consolidated with GetUsers if duplicate functionality is undesired
 func (q *Queries) GetUsersActive(ctx context.Context, arg GetUsersActiveParams) ([]*GetUsersActiveRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUsersActive, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -320,7 +421,13 @@ WHERE
     deleted_at IS NOT NULL
 `
 
-// Restore All Trashed Users
+// RestoreAllUsers: Mass restoration of deleted users
+// Purpose: Recover all trashed users at once
+// Business Logic:
+//   - Reactivates all soft-deleted users
+//   - No parameters needed (bulk operation)
+//   - Typically used during system recovery
+//   - Maintains all original user data
 func (q *Queries) RestoreAllUsers(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, restoreAllUsers)
 	return err
@@ -336,7 +443,18 @@ WHERE
     RETURNING user_id, firstname, lastname, email, password, created_at, updated_at, deleted_at
 `
 
-// Restore Trashed User
+// RestoreUser: Recovers a soft-deleted user
+// Purpose: Reactivate a previously deactivated user
+// Parameters:
+//
+//	$1: user_id - ID of user to restore
+//
+// Returns: The restored user record
+// Business Logic:
+//   - Nullifies the deleted_at field
+//   - Only works on previously deleted users
+//   - Restores full account access
+//   - Maintains all original user data
 func (q *Queries) RestoreUser(ctx context.Context, userID int32) (*User, error) {
 	row := q.db.QueryRowContext(ctx, restoreUser, userID)
 	var i User
@@ -363,7 +481,18 @@ WHERE
     RETURNING user_id, firstname, lastname, email, password, created_at, updated_at, deleted_at
 `
 
-// Trash User
+// TrashUser: Soft-deletes a user account
+// Purpose: Deactivate user without permanent deletion
+// Parameters:
+//
+//	$1: user_id - ID of user to deactivate
+//
+// Returns: The soft-deleted user record
+// Business Logic:
+//   - Sets deleted_at timestamp to current time
+//   - Only processes currently active users
+//   - Preserves all user data for potential restoration
+//   - Prevents login while deleted
 func (q *Queries) TrashUser(ctx context.Context, userID int32) (*User, error) {
 	row := q.db.QueryRowContext(ctx, trashUser, userID)
 	var i User
@@ -402,7 +531,22 @@ type UpdateUserParams struct {
 	Password  string `json:"password"`
 }
 
-// Update User
+// UpdateUser: Modifies user account information
+// Purpose: Update user profile details
+// Parameters:
+//
+//	$1: user_id - ID of user to update
+//	$2: firstname - Updated first name
+//	$3: lastname - Updated last name
+//	$4: email - Updated email address
+//	$5: password - New hashed password (optional)
+//
+// Returns: Updated user record
+// Business Logic:
+//   - Auto-updates updated_at timestamp
+//   - Only modifies active (non-deleted) users
+//   - Validates email uniqueness
+//   - Password field optional (can maintain existing)
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (*User, error) {
 	row := q.db.QueryRowContext(ctx, updateUser,
 		arg.UserID,

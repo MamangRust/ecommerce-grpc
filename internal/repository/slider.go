@@ -27,79 +27,82 @@ func NewSliderRepository(
 	}
 }
 
-func (r *sliderRepository) FindAllSlider(search string, page, pageSize int) ([]*record.SliderRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *sliderRepository) FindAllSlider(req *requests.FindAllSlider) ([]*record.SliderRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetSlidersParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetSlidersParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetSliders(r.ctx, req)
+	res, err := r.db.GetSliders(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, nil, fmt.Errorf("failed to find all shipping address: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToSlidersRecordPagination(res), totalCount, nil
+	return r.mapping.ToSlidersRecordPagination(res), &totalCount, nil
 }
 
-func (r *sliderRepository) FindByActive(search string, page, pageSize int) ([]*record.SliderRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *sliderRepository) FindByActive(req *requests.FindAllSlider) ([]*record.SliderRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetSlidersActiveParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetSlidersActiveParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetSlidersActive(r.ctx, req)
+	res, err := r.db.GetSlidersActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, nil, fmt.Errorf("failed to find active shipping address: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToSlidersRecordActivePagination(res), totalCount, nil
+	return r.mapping.ToSlidersRecordActivePagination(res), &totalCount, nil
 }
 
-func (r *sliderRepository) FindByTrashed(search string, page, pageSize int) ([]*record.SliderRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *sliderRepository) FindByTrashed(req *requests.FindAllSlider) ([]*record.SliderRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetSlidersTrashedParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetSlidersTrashedParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetSlidersTrashed(r.ctx, req)
+	res, err := r.db.GetSlidersTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, nil, fmt.Errorf("failed to find trashed shipping address: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToSlidersRecordTrashedPagination(res), totalCount, nil
+	return r.mapping.ToSlidersRecordTrashedPagination(res), &totalCount, nil
 }
 
 func (r *sliderRepository) CreateSlider(request *requests.CreateSliderRequest) (*record.SliderRecord, error) {
@@ -109,6 +112,7 @@ func (r *sliderRepository) CreateSlider(request *requests.CreateSliderRequest) (
 	}
 
 	slider, err := r.db.CreateSlider(r.ctx, req)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create slider: %w", err)
 	}
@@ -118,12 +122,13 @@ func (r *sliderRepository) CreateSlider(request *requests.CreateSliderRequest) (
 
 func (r *sliderRepository) UpdateSlider(request *requests.UpdateSliderRequest) (*record.SliderRecord, error) {
 	req := db.UpdateSliderParams{
-		SliderID: int32(request.ID),
+		SliderID: int32(*request.ID),
 		Name:     request.Nama,
 		Image:    request.FilePath,
 	}
 
 	res, err := r.db.UpdateSlider(r.ctx, req)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to update slider: %w", err)
 	}

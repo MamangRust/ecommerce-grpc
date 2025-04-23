@@ -20,6 +20,12 @@ type ApiResponseCartPagination struct {
 	Pagination PaginationMeta  `json:"pagination"`
 }
 
+type ApiResponseCart struct {
+	Status  string       `json:"status"`
+	Message string       `json:"message"`
+	Data    CartResponse `json:"data"`
+}
+
 type ApiResponseCartAll struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`

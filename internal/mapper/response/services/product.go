@@ -57,7 +57,7 @@ func (s *productResponseMapper) ToProductResponseDeleteAt(product *record.Produc
 		ImageProduct: product.ImageProduct,
 		CreatedAt:    product.CreatedAt,
 		UpdatedAt:    product.UpdatedAt,
-		DeleteAt:     *product.DeletedAt,
+		DeletedAt:    product.DeletedAt,
 	}
 }
 

@@ -12,15 +12,37 @@ type ReviewResponse struct {
 }
 
 type ReviewResponseDeleteAt struct {
+	ID        int     `json:"id"`
+	UserID    int     `json:"user_id"`
+	ProductID int     `json:"product_id"`
+	Name      string  `json:"name"`
+	Comment   string  `json:"comment"`
+	Rating    int     `json:"rating"`
+	CreatedAt string  `json:"created_at"`
+	UpdatedAt string  `json:"updated_at"`
+	DeletedAt *string `json:"deleted_at"`
+}
+
+type ReviewsDetailResponse struct {
+	ID           int                   `json:"id"`
+	UserID       int                   `json:"user_id"`
+	ProductID    int                   `json:"product_id"`
+	Name         string                `json:"name"`
+	Comment      string                `json:"comment"`
+	Rating       int                   `json:"rating"`
+	ReviewDetail *ReviewDetailResponse `json:"review_detail"`
+	CreatedAt    string                `json:"created_at"`
+	UpdatedAt    string                `json:"updated_at"`
+	DeletedAt    *string               `json:"deleted_at"`
+}
+
+type ReviewDetailResponse struct {
 	ID        int    `json:"id"`
-	UserID    int    `json:"user_id"`
-	ProductID int    `json:"product_id"`
-	Name      string `json:"name"`
-	Comment   string `json:"comment"`
-	Rating    int    `json:"rating"`
+	Type      string `json:"type"`
+	Url       string `json:"url"`
+	Caption   string `json:"string"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
-	DeletedAt string `json:"deleted_at"`
 }
 
 type ApiResponseReview struct {
@@ -63,4 +85,11 @@ type ApiResponsePaginationReview struct {
 	Message    string            `json:"message"`
 	Data       []*ReviewResponse `json:"data"`
 	Pagination PaginationMeta    `json:"pagination"`
+}
+
+type ApiResponsePaginationReviewsDetail struct {
+	Status     string                   `json:"status"`
+	Message    string                   `json:"message"`
+	Data       []*ReviewsDetailResponse `json:"data"`
+	Pagination PaginationMeta           `json:"pagination"`
 }

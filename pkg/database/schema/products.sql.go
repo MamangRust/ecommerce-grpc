@@ -30,6 +30,30 @@ type CreateProductParams struct {
 	ImageProduct sql.NullString  `json:"image_product"`
 }
 
+// CreateProduct: Creates a new product entry
+// Purpose: Add new products to merchant's catalog
+// Parameters:
+//
+//	$1: merchant_id - ID of the merchant owning the product
+//	$2: category_id - Product category ID
+//	$3: name - Product display name
+//	$4: description - Detailed product description
+//	$5: price - Product selling price
+//	$6: count_in_stock - Available inventory quantity
+//	$7: brand - Product brand name
+//	$8: weight - Product weight in grams/kg
+//	$9: rating - Initial product rating (0-5)
+//	$10: slug_product - URL-friendly product identifier
+//	$11: image_product - Main product image URL
+//
+// Returns:
+//
+//	The complete created product record
+//
+// Business Logic:
+//   - Creates a new active product
+//   - Requires all essential product information
+//   - Returns full record for immediate use
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (*Product, error) {
 	row := q.db.QueryRowContext(ctx, createProduct,
 		arg.MerchantID,
@@ -71,7 +95,17 @@ WHERE
     deleted_at IS NOT NULL
 `
 
-// Delete All Trashed Product Permanently
+// DeleteAllPermanentProducts: Purges all trashed products
+// Purpose: Clean up recycle bin
+// Parameters: None
+// Returns:
+//
+//	Nothing (exec-only)
+//
+// Business Logic:
+//   - Permanent deletion of all trashed items
+//   - Admin-level operation
+//   - Irreversible bulk deletion
 func (q *Queries) DeleteAllPermanentProducts(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, deleteAllPermanentProducts)
 	return err
@@ -81,7 +115,20 @@ const deleteProductPermanently = `-- name: DeleteProductPermanently :exec
 DELETE FROM products WHERE product_id = $1 AND deleted_at IS NOT NULL
 `
 
-// Delete Product Permanently
+// DeleteProductPermanently: Removes a product from database
+// Purpose: Permanent deletion of trashed products
+// Parameters:
+//
+//	$1: product_id - ID of product to delete
+//
+// Returns:
+//
+//	Nothing (exec-only)
+//
+// Business Logic:
+//   - Physical deletion of record
+//   - Only works on already-trashed products
+//   - Irreversible operation
 func (q *Queries) DeleteProductPermanently(ctx context.Context, productID int32) error {
 	_, err := q.db.ExecContext(ctx, deleteProductPermanently, productID)
 	return err
@@ -94,8 +141,61 @@ WHERE product_id = $1
   AND deleted_at IS NULL
 `
 
+// GetProductByID: Retrieves an active product by ID
+// Purpose: Display product details in storefront/merchant UI
+// Parameters:
+//
+//	$1: product_id - ID of the product to retrieve
+//
+// Returns:
+//
+//	Complete product record if found and active
+//
+// Business Logic:
+//   - Only returns non-deleted (active) products
+//   - Used for normal product display operations
 func (q *Queries) GetProductByID(ctx context.Context, productID int32) (*Product, error) {
 	row := q.db.QueryRowContext(ctx, getProductByID, productID)
+	var i Product
+	err := row.Scan(
+		&i.ProductID,
+		&i.MerchantID,
+		&i.CategoryID,
+		&i.Name,
+		&i.Description,
+		&i.Price,
+		&i.CountInStock,
+		&i.Brand,
+		&i.Weight,
+		&i.Rating,
+		&i.SlugProduct,
+		&i.ImageProduct,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return &i, err
+}
+
+const getProductByIdTrashed = `-- name: GetProductByIdTrashed :one
+SELECT product_id, merchant_id, category_id, name, description, price, count_in_stock, brand, weight, rating, slug_product, image_product, created_at, updated_at, deleted_at FROM products WHERE product_id = $1
+`
+
+// GetProductByIdTrashed: Retrieves product including soft-deleted ones
+// Purpose: Access products in trash/recycle bin
+// Parameters:
+//
+//	$1: product_id - ID of the product to retrieve
+//
+// Returns:
+//
+//	Complete product record regardless of deletion status
+//
+// Business Logic:
+//   - Bypasses soft-delete filter
+//   - Used for admin/recovery operations
+func (q *Queries) GetProductByIdTrashed(ctx context.Context, productID int32) (*Product, error) {
+	row := q.db.QueryRowContext(ctx, getProductByIdTrashed, productID)
 	var i Product
 	err := row.Scan(
 		&i.ProductID,
@@ -157,6 +257,23 @@ type GetProductsRow struct {
 	TotalCount   int64           `json:"total_count"`
 }
 
+// GetProducts: Retrieves paginated list of active products with search capability
+// Purpose: List all active (non-deleted) products for display in UI
+// Parameters:
+//
+//	$1: search_term - Optional text to filter products (NULL for no filter)
+//	$2: limit - Maximum number of records to return
+//	$3: offset - Number of records to skip for pagination
+//
+// Returns:
+//
+//	All product fields plus total_count of matching records
+//
+// Business Logic:
+//   - Excludes soft-deleted products (deleted_at IS NULL)
+//   - Supports partial, case-insensitive search on name, description, brand, slug, and barcode
+//   - Orders results by newest first (created_at DESC)
+//   - Uses COUNT(*) OVER() to include total matching record count for pagination UI
 func (q *Queries) GetProducts(ctx context.Context, arg GetProductsParams) ([]*GetProductsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getProducts, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -237,7 +354,23 @@ type GetProductsActiveRow struct {
 	TotalCount   int64           `json:"total_count"`
 }
 
-// Get Active Products with Pagination and Total Count
+// GetProductsActive: Retrieves paginated list of active products (duplicate of GetProducts)
+// Purpose: Explicitly return active (non-deleted) products with search capability
+// Parameters:
+//
+//	$1: search_term - Optional text to filter products (NULL for no filter)
+//	$2: limit - Maximum number of records to return
+//	$3: offset - Number of records to skip for pagination
+//
+// Returns:
+//
+//	All product fields plus total_count of matching records
+//
+// Business Logic:
+//   - Excludes soft-deleted products (deleted_at IS NULL)
+//   - Supports partial, case-insensitive search on name, description, brand, slug, and barcode
+//   - Ordered by newest first (created_at DESC)
+//   - Useful if frontend/backend wants clearer distinction in naming
 func (q *Queries) GetProductsActive(ctx context.Context, arg GetProductsActiveParams) ([]*GetProductsActiveRow, error) {
 	rows, err := q.db.QueryContext(ctx, getProductsActive, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -279,53 +412,106 @@ func (q *Queries) GetProductsActive(ctx context.Context, arg GetProductsActivePa
 }
 
 const getProductsByCategoryName = `-- name: GetProductsByCategoryName :many
-SELECT
-    p.product_id, p.merchant_id, p.category_id, p.name, p.description, p.price, p.count_in_stock, p.brand, p.weight, p.rating, p.slug_product, p.image_product, p.created_at, p.updated_at, p.deleted_at,
-    COUNT(*) OVER() AS total_count
-FROM products p
-JOIN categories c ON p.category_id = c.category_id
-WHERE c.deleted_at IS NULL
-  AND c.name = $1 
-  AND ($2::TEXT IS NULL 
-       OR p.name ILIKE '%' || $2 || '%'
-       OR p.description ILIKE '%' || $2 || '%'
-       OR p.brand ILIKE '%' || $2 || '%'
-       OR p.slug_product ILIKE '%' || $2 || '%')
-ORDER BY p.created_at DESC
-LIMIT $3 OFFSET $4
+WITH filtered_products AS (
+    SELECT 
+        p.product_id,
+        p.merchant_id,
+        p.category_id,
+        p.weight,
+        p.rating,
+        p.slug_product,
+        p.name,
+        p.description,
+        p.price,
+        p.count_in_stock,
+        p.brand,
+        p.image_product,
+        p.created_at,  
+        p.updated_at,
+        c.name AS category_name
+    FROM 
+        products p
+    JOIN 
+        categories c ON p.category_id = c.category_id
+    WHERE 
+        p.deleted_at IS NULL
+        AND c.name = $1  
+        AND (
+            $2 IS NULL 
+            OR p.name ILIKE '%' || $2 || '%' 
+            OR p.description ILIKE '%' || $2 || '%'
+        )
+        AND (
+            ($3 IS NULL OR p.price >= $3)
+            AND ($4 IS NULL OR p.price <= $4)
+        )
+)
+SELECT 
+    (SELECT COUNT(*) FROM filtered_products) AS total_count,
+    fp.product_id, fp.merchant_id, fp.category_id, fp.weight, fp.rating, fp.slug_product, fp.name, fp.description, fp.price, fp.count_in_stock, fp.brand, fp.image_product, fp.created_at, fp.updated_at, fp.category_name
+FROM 
+    filtered_products fp
+ORDER BY 
+    fp.created_at DESC
+LIMIT $5 OFFSET $6
 `
 
 type GetProductsByCategoryNameParams struct {
-	Name    string `json:"name"`
-	Column2 string `json:"column_2"`
-	Limit   int32  `json:"limit"`
-	Offset  int32  `json:"offset"`
+	Name    string      `json:"name"`
+	Column2 interface{} `json:"column_2"`
+	Column3 interface{} `json:"column_3"`
+	Column4 interface{} `json:"column_4"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
 }
 
 type GetProductsByCategoryNameRow struct {
+	TotalCount   int64           `json:"total_count"`
 	ProductID    int32           `json:"product_id"`
 	MerchantID   int32           `json:"merchant_id"`
 	CategoryID   int32           `json:"category_id"`
+	Weight       sql.NullInt32   `json:"weight"`
+	Rating       sql.NullFloat64 `json:"rating"`
+	SlugProduct  sql.NullString  `json:"slug_product"`
 	Name         string          `json:"name"`
 	Description  sql.NullString  `json:"description"`
 	Price        int32           `json:"price"`
 	CountInStock int32           `json:"count_in_stock"`
 	Brand        sql.NullString  `json:"brand"`
-	Weight       sql.NullInt32   `json:"weight"`
-	Rating       sql.NullFloat64 `json:"rating"`
-	SlugProduct  sql.NullString  `json:"slug_product"`
 	ImageProduct sql.NullString  `json:"image_product"`
 	CreatedAt    sql.NullTime    `json:"created_at"`
 	UpdatedAt    sql.NullTime    `json:"updated_at"`
-	DeletedAt    sql.NullTime    `json:"deleted_at"`
-	TotalCount   int64           `json:"total_count"`
+	CategoryName string          `json:"category_name"`
 }
 
-// Get Products by Category Name with Filters
+// GetProductsByCategoryName: Retrieves paginated and filtered products under a specific category name
+// Purpose: Display products by category for customers or category-focused pages
+// Parameters:
+//
+//	$1: category_name - The name of the category to filter by
+//	$2: search_term - Optional text to filter by product name or description
+//	$3: min_price - Minimum price filter (0 to ignore)
+//	$4: max_price - Maximum price filter (0 to ignore, defaults to very high value)
+//	$5: limit - Number of products to return (pagination)
+//	$6: offset - Number of products to skip (pagination)
+//
+// Returns:
+//   - Filtered list of product fields including category name
+//   - total_count of all matching products for pagination UI
+//
+// Business Logic:
+//   - Excludes soft-deleted products (deleted_at IS NULL)
+//   - Matches category name exactly
+//   - Supports case-insensitive partial search on name and description
+//   - Filters by category ID only if provided
+//   - Filters by price range only if values provided
+//   - Ordered by newest products first (created_at DESC)
 func (q *Queries) GetProductsByCategoryName(ctx context.Context, arg GetProductsByCategoryNameParams) ([]*GetProductsByCategoryNameRow, error) {
 	rows, err := q.db.QueryContext(ctx, getProductsByCategoryName,
 		arg.Name,
 		arg.Column2,
+		arg.Column3,
+		arg.Column4,
 		arg.Limit,
 		arg.Offset,
 	)
@@ -337,22 +523,22 @@ func (q *Queries) GetProductsByCategoryName(ctx context.Context, arg GetProducts
 	for rows.Next() {
 		var i GetProductsByCategoryNameRow
 		if err := rows.Scan(
+			&i.TotalCount,
 			&i.ProductID,
 			&i.MerchantID,
 			&i.CategoryID,
+			&i.Weight,
+			&i.Rating,
+			&i.SlugProduct,
 			&i.Name,
 			&i.Description,
 			&i.Price,
 			&i.CountInStock,
 			&i.Brand,
-			&i.Weight,
-			&i.Rating,
-			&i.SlugProduct,
 			&i.ImageProduct,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.DeletedAt,
-			&i.TotalCount,
+			&i.CategoryName,
 		); err != nil {
 			return nil, err
 		}
@@ -368,52 +554,112 @@ func (q *Queries) GetProductsByCategoryName(ctx context.Context, arg GetProducts
 }
 
 const getProductsByMerchant = `-- name: GetProductsByMerchant :many
-SELECT
-    product_id, merchant_id, category_id, name, description, price, count_in_stock, brand, weight, rating, slug_product, image_product, created_at, updated_at, deleted_at,
-    COUNT(*) OVER() AS total_count
-FROM products
-WHERE merchant_id = $1
-AND deleted_at IS NULL
-AND ($2::TEXT IS NULL 
-       OR p.name ILIKE '%' || $2 || '%'
-       OR p.description ILIKE '%' || $2 || '%'
-       OR p.brand ILIKE '%' || $2 || '%'
-       OR p.slug_product ILIKE '%' || $2 || '%'
-       OR p.barcode ILIKE '%' || $2 || '%')
-ORDER BY created_at DESC
-LIMIT $3 OFFSET $4
+WITH filtered_products AS (
+    SELECT 
+        p.product_id,
+        p.merchant_id,
+        p.category_id,
+        p.weight,
+        p.rating,
+        p.slug_product,
+        p.name,
+        p.description,
+        p.price,
+        p.count_in_stock,
+        p.brand,
+        p.image_product,
+        p.created_at,  
+        p.updated_at,
+        c.name AS category_name
+    FROM 
+        products p
+    JOIN 
+        categories c ON p.category_id = c.category_id
+    WHERE 
+        p.deleted_at IS NULL
+        AND p.merchant_id = $1  
+        AND (
+            p.name ILIKE '%' || COALESCE($2, '') || '%' 
+            OR p.description ILIKE '%' || COALESCE($2, '') || '%'
+            OR $2 IS NULL
+        )
+        AND (
+            c.category_id = NULLIF($3, 0) 
+            OR NULLIF($3, 0) IS NULL
+        )
+        AND (
+            p.price >= COALESCE(NULLIF($4, 0), 0)
+            AND p.price <= COALESCE(NULLIF($5, 0), 999999999)
+        )
+)
+SELECT 
+    (SELECT COUNT(*) FROM filtered_products) AS total_count,
+    fp.product_id, fp.merchant_id, fp.category_id, fp.weight, fp.rating, fp.slug_product, fp.name, fp.description, fp.price, fp.count_in_stock, fp.brand, fp.image_product, fp.created_at, fp.updated_at, fp.category_name
+FROM 
+    filtered_products fp
+ORDER BY 
+    fp.created_at DESC
+LIMIT $6 OFFSET $7
 `
 
 type GetProductsByMerchantParams struct {
-	MerchantID int32  `json:"merchant_id"`
-	Column2    string `json:"column_2"`
-	Limit      int32  `json:"limit"`
-	Offset     int32  `json:"offset"`
+	MerchantID int32          `json:"merchant_id"`
+	Column2    sql.NullString `json:"column_2"`
+	Column3    interface{}    `json:"column_3"`
+	Column4    interface{}    `json:"column_4"`
+	Column5    interface{}    `json:"column_5"`
+	Limit      int32          `json:"limit"`
+	Offset     int32          `json:"offset"`
 }
 
 type GetProductsByMerchantRow struct {
+	TotalCount   int64           `json:"total_count"`
 	ProductID    int32           `json:"product_id"`
 	MerchantID   int32           `json:"merchant_id"`
 	CategoryID   int32           `json:"category_id"`
+	Weight       sql.NullInt32   `json:"weight"`
+	Rating       sql.NullFloat64 `json:"rating"`
+	SlugProduct  sql.NullString  `json:"slug_product"`
 	Name         string          `json:"name"`
 	Description  sql.NullString  `json:"description"`
 	Price        int32           `json:"price"`
 	CountInStock int32           `json:"count_in_stock"`
 	Brand        sql.NullString  `json:"brand"`
-	Weight       sql.NullInt32   `json:"weight"`
-	Rating       sql.NullFloat64 `json:"rating"`
-	SlugProduct  sql.NullString  `json:"slug_product"`
 	ImageProduct sql.NullString  `json:"image_product"`
 	CreatedAt    sql.NullTime    `json:"created_at"`
 	UpdatedAt    sql.NullTime    `json:"updated_at"`
-	DeletedAt    sql.NullTime    `json:"deleted_at"`
-	TotalCount   int64           `json:"total_count"`
+	CategoryName string          `json:"category_name"`
 }
 
+// GetProductsByMerchant: Retrieves paginated and filtered products owned by a specific merchant
+// Purpose: Allow merchants to view and manage their own products with advanced filtering options
+// Parameters:
+//
+//	$1: merchant_id - Filter products belonging to this merchant
+//	$2: search_term - Optional text to filter by product name or description
+//	$3: category_id - Optional category filter (0 or NULL to ignore)
+//	$4: min_price - Minimum price filter (0 to ignore)
+//	$5: max_price - Maximum price filter (0 to ignore, defaults to very high value)
+//	$6: limit - Number of products to return (pagination)
+//	$7: offset - Number of products to skip (pagination)
+//
+// Returns:
+//   - Filtered list of product fields including category name
+//   - total_count of all matching products for pagination UI
+//
+// Business Logic:
+//   - Excludes soft-deleted products (deleted_at IS NULL)
+//   - Supports case-insensitive partial search on name and description
+//   - Filters by category ID only if provided
+//   - Filters by price range only if values provided (>= min_price and <= max_price)
+//   - Ordered by newest products first (created_at DESC)
 func (q *Queries) GetProductsByMerchant(ctx context.Context, arg GetProductsByMerchantParams) ([]*GetProductsByMerchantRow, error) {
 	rows, err := q.db.QueryContext(ctx, getProductsByMerchant,
 		arg.MerchantID,
 		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
 		arg.Limit,
 		arg.Offset,
 	)
@@ -425,22 +671,22 @@ func (q *Queries) GetProductsByMerchant(ctx context.Context, arg GetProductsByMe
 	for rows.Next() {
 		var i GetProductsByMerchantRow
 		if err := rows.Scan(
+			&i.TotalCount,
 			&i.ProductID,
 			&i.MerchantID,
 			&i.CategoryID,
+			&i.Weight,
+			&i.Rating,
+			&i.SlugProduct,
 			&i.Name,
 			&i.Description,
 			&i.Price,
 			&i.CountInStock,
 			&i.Brand,
-			&i.Weight,
-			&i.Rating,
-			&i.SlugProduct,
 			&i.ImageProduct,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.DeletedAt,
-			&i.TotalCount,
+			&i.CategoryName,
 		); err != nil {
 			return nil, err
 		}
@@ -495,7 +741,23 @@ type GetProductsTrashedRow struct {
 	TotalCount   int64           `json:"total_count"`
 }
 
-// Get Trashed Products with Pagination and Total Count
+// GetProductsTrashed: Retrieves paginated list of trashed (soft-deleted) products
+// Purpose: List deleted products for admin to manage recovery or audit
+// Parameters:
+//
+//	$1: search_term - Optional text to filter trashed products (NULL for no filter)
+//	$2: limit - Maximum number of records to return
+//	$3: offset - Number of records to skip for pagination
+//
+// Returns:
+//
+//	All product fields plus total_count of matching trashed records
+//
+// Business Logic:
+//   - Includes only soft-deleted products (deleted_at IS NOT NULL)
+//   - Supports partial, case-insensitive search on name, description, brand, slug, and barcode
+//   - Returns by newest first (created_at DESC)
+//   - Used for "Trash Bin" UI or soft-delete management
 func (q *Queries) GetProductsTrashed(ctx context.Context, arg GetProductsTrashedParams) ([]*GetProductsTrashedRow, error) {
 	rows, err := q.db.QueryContext(ctx, getProductsTrashed, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -544,7 +806,17 @@ WHERE
     deleted_at IS NOT NULL
 `
 
-// Restore All Trashed Product
+// RestoreAllProducts: Recovers all soft-deleted products
+// Purpose: Bulk restore from trash/recycle bin
+// Parameters: None
+// Returns:
+//
+//	Nothing (exec-only)
+//
+// Business Logic:
+//   - Clears deleted_at for all trashed products
+//   - Admin-level operation
+//   - Returns all products to active status
 func (q *Queries) RestoreAllProducts(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, restoreAllProducts)
 	return err
@@ -557,10 +829,23 @@ SET
 WHERE
     product_id = $1
     AND deleted_at IS NOT NULL
-  RETURNING product_id, merchant_id, category_id, name, description, price, count_in_stock, brand, weight, rating, slug_product, image_product, created_at, updated_at, deleted_at
+RETURNING product_id, merchant_id, category_id, name, description, price, count_in_stock, brand, weight, rating, slug_product, image_product, created_at, updated_at, deleted_at
 `
 
-// Restore Trashed Product
+// RestoreProduct: Recovers a soft-deleted product
+// Purpose: Reactivate previously trashed products
+// Parameters:
+//
+//	$1: product_id - ID of product to restore
+//
+// Returns:
+//
+//	The restored product record
+//
+// Business Logic:
+//   - Clears deleted_at timestamp
+//   - Only works on trashed products
+//   - Returns product to active status
 func (q *Queries) RestoreProduct(ctx context.Context, productID int32) (*Product, error) {
 	row := q.db.QueryRowContext(ctx, restoreProduct, productID)
 	var i Product
@@ -591,10 +876,23 @@ SET
 WHERE
     product_id = $1
     AND deleted_at IS NULL
-    RETURNING product_id, merchant_id, category_id, name, description, price, count_in_stock, brand, weight, rating, slug_product, image_product, created_at, updated_at, deleted_at
+RETURNING product_id, merchant_id, category_id, name, description, price, count_in_stock, brand, weight, rating, slug_product, image_product, created_at, updated_at, deleted_at
 `
 
-// Trash Product
+// TrashProduct: Soft-deletes a product
+// Purpose: Remove product from storefront while preserving data
+// Parameters:
+//
+//	$1: product_id - ID of product to trash
+//
+// Returns:
+//
+//	The trashed product record
+//
+// Business Logic:
+//   - Sets deleted_at timestamp
+//   - Only works on active products
+//   - Allows recovery via RestoreProduct
 func (q *Queries) TrashProduct(ctx context.Context, productID int32) (*Product, error) {
 	row := q.db.QueryRowContext(ctx, trashProduct, productID)
 	var i Product
@@ -633,7 +931,7 @@ SET category_id = $2,
     updated_at = CURRENT_TIMESTAMP
 WHERE product_id = $1
   AND deleted_at IS NULL
-  RETURNING product_id, merchant_id, category_id, name, description, price, count_in_stock, brand, weight, rating, slug_product, image_product, created_at, updated_at, deleted_at
+RETURNING product_id, merchant_id, category_id, name, description, price, count_in_stock, brand, weight, rating, slug_product, image_product, created_at, updated_at, deleted_at
 `
 
 type UpdateProductParams struct {
@@ -650,6 +948,21 @@ type UpdateProductParams struct {
 	ImageProduct sql.NullString  `json:"image_product"`
 }
 
+// UpdateProduct: Modifies all product details
+// Purpose: Edit product information in merchant dashboard
+// Parameters:
+//
+//	$1: product_id - ID of product to update
+//	$2-$11: All product fields (category_id through image_product)
+//
+// Returns:
+//
+//	The updated product record
+//
+// Business Logic:
+//   - Updates all mutable product fields
+//   - Only works on active (non-deleted) products
+//   - Automatically sets updated_at timestamp
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (*Product, error) {
 	row := q.db.QueryRowContext(ctx, updateProduct,
 		arg.ProductID,
@@ -698,6 +1011,21 @@ type UpdateProductCountStockParams struct {
 	CountInStock int32 `json:"count_in_stock"`
 }
 
+// UpdateProductCountStock: Adjusts product inventory count
+// Purpose: Update stock levels after purchases/restocking
+// Parameters:
+//
+//	$1: product_id - ID of product to update
+//	$2: count_in_stock - New inventory quantity
+//
+// Returns:
+//
+//	The updated product record
+//
+// Business Logic:
+//   - Only modifies stock count
+//   - Verifies product is active
+//   - Used during order processing
 func (q *Queries) UpdateProductCountStock(ctx context.Context, arg UpdateProductCountStockParams) (*Product, error) {
 	row := q.db.QueryRowContext(ctx, updateProductCountStock, arg.ProductID, arg.CountInStock)
 	var i Product

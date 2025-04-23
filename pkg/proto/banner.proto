@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package pb;
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+import "api.proto";
+
+option go_package = "ecommerce/internal/pb";
+
+
+message FindAllBannerRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+}
+
+
+message FindByIdBannerRequest{
+    int32 id = 1;
+}
+
+message CreateBannerRequest {
+    string name = 1;
+    string start_date = 2; 
+    string end_date = 3;
+    string start_time = 4; 
+    string end_time = 5;
+    bool is_active = 6;
+}
+  
+message UpdateBannerRequest {
+    int32 banner_id = 1;
+    string name = 2;
+    string start_date = 3;
+    string end_date = 4;
+    string start_time = 5;
+    string end_time = 6;
+    bool is_active = 7;
+}
+  
+
+
+message BannerResponse {
+    int32 banner_id = 1;
+    string name = 2;
+    string start_date = 3;
+    string end_date = 4;
+    string start_time = 5;
+    string end_time = 6;
+    bool is_active = 7;
+    string created_at = 8;
+    string updated_at = 9;
+}
+  
+message BannerResponseDeleteAt {
+    int32 banner_id = 1;
+    string name = 2;
+    string start_date = 3;
+    string end_date = 4;
+    string start_time = 5;
+    string end_time = 6;
+    bool is_active = 7;
+    string created_at = 8;
+    string updated_at = 9;
+    google.protobuf.StringValue deleted_at = 10; 
+}
+  
+message ApiResponseBanner {
+    string status = 1;
+    string message = 2;
+    BannerResponse data = 3;
+}
+  
+message ApiResponseBannerDeleteAt {
+    string status = 1;
+    string message = 2;
+    BannerResponseDeleteAt data = 3;
+}
+  
+message ApiResponsesBanner {
+    string status = 1;
+    string message = 2;
+    repeated BannerResponse data = 3;
+}
+  
+message ApiResponseBannerDelete {
+    string status = 1;
+    string message = 2;
+}
+  
+message ApiResponseBannerAll {
+    string status = 1;
+    string message = 2;
+}
+  
+  
+message ApiResponsePaginationBannerDeleteAt {
+    string status = 1;
+    string message = 2;
+    repeated BannerResponseDeleteAt data = 3;
+    PaginationMeta pagination = 4;
+}
+  
+message ApiResponsePaginationBanner {
+    string status = 1;
+    string message = 2;
+    repeated BannerResponse data = 3;
+    PaginationMeta pagination = 4;
+}
+
+service BannerService{
+    rpc FindAll(FindAllBannerRequest) returns (ApiResponsePaginationBanner);
+    rpc FindById(FindByIdBannerRequest) returns (ApiResponseBanner);
+
+    rpc FindByActive(FindAllBannerRequest) returns (ApiResponsePaginationBannerDeleteAt) {}
+    rpc FindByTrashed(FindAllBannerRequest) returns (ApiResponsePaginationBannerDeleteAt) {}
+
+
+    rpc Create(CreateBannerRequest) returns (ApiResponseBanner);
+    rpc Update(UpdateBannerRequest) returns (ApiResponseBanner);
+    rpc TrashedBanner(FindByIdBannerRequest) returns (ApiResponseBannerDeleteAt);
+    rpc RestoreBanner(FindByIdBannerRequest) returns (ApiResponseBannerDeleteAt);
+    rpc DeleteBannerPermanent(FindByIdBannerRequest) returns (ApiResponseBannerDelete);
+
+    rpc RestoreAllBanner(google.protobuf.Empty) returns (ApiResponseBannerAll){}
+    rpc DeleteAllBannerPermanent(google.protobuf.Empty) returns (ApiResponseBannerAll){}
+}

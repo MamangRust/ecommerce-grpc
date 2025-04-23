@@ -6,7 +6,6 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"errors"
 	"fmt"
 )
 
@@ -24,91 +23,92 @@ func NewUserRepository(db *db.Queries, ctx context.Context, mapping recordmapper
 	}
 }
 
-func (r *userRepository) FindAllUsers(search string, page, pageSize int) ([]*record.UserRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *userRepository) FindAllUsers(req *requests.FindAllUsers) ([]*record.UserRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetUsersParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetUsersParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetUsers(r.ctx, req)
+	res, err := r.db.GetUsers(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find users: %w", err)
+		return nil, nil, fmt.Errorf("failed to find all users: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToUsersRecordPagination(res), totalCount, nil
+	return r.mapping.ToUsersRecordPagination(res), &totalCount, nil
 }
 
 func (r *userRepository) FindById(user_id int) (*record.UserRecord, error) {
 	res, err := r.db.GetUserByID(r.ctx, int32(user_id))
 
 	if err != nil {
-		fmt.Printf("Error fetching user: %v\n", err)
-
-		return nil, fmt.Errorf("failed to find users: %w", err)
+		return nil, fmt.Errorf("failed to find id users: %w", err)
 	}
 
 	return r.mapping.ToUserRecord(res), nil
 }
 
-func (r *userRepository) FindByActive(search string, page, pageSize int) ([]*record.UserRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *userRepository) FindByActive(req *requests.FindAllUsers) ([]*record.UserRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetUsersActiveParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetUsersActiveParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetUsersActive(r.ctx, req)
+	res, err := r.db.GetUsersActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find users: %w", err)
+		return nil, nil, fmt.Errorf("failed to find active users: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToUsersRecordActivePagination(res), totalCount, nil
+	return r.mapping.ToUsersRecordActivePagination(res), &totalCount, nil
 }
 
-func (r *userRepository) FindByTrashed(search string, page, pageSize int) ([]*record.UserRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *userRepository) FindByTrashed(req *requests.FindAllUsers) ([]*record.UserRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetUserTrashedParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetUserTrashedParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetUserTrashed(r.ctx, req)
+	res, err := r.db.GetUserTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find users: %w", err)
+		return nil, nil, fmt.Errorf("failed to find users: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToUsersRecordTrashedPagination(res), totalCount, nil
+	return r.mapping.ToUsersRecordTrashedPagination(res), &totalCount, nil
 }
 
 func (r *userRepository) FindByEmail(email string) (*record.UserRecord, error) {
@@ -132,7 +132,7 @@ func (r *userRepository) CreateUser(request *requests.CreateUserRequest) (*recor
 	user, err := r.db.CreateUser(r.ctx, req)
 
 	if err != nil {
-		return nil, errors.New("failed create user")
+		return nil, fmt.Errorf("failed create user: %w", err)
 	}
 
 	return r.mapping.ToUserRecord(user), nil
@@ -140,7 +140,7 @@ func (r *userRepository) CreateUser(request *requests.CreateUserRequest) (*recor
 
 func (r *userRepository) UpdateUser(request *requests.UpdateUserRequest) (*record.UserRecord, error) {
 	req := db.UpdateUserParams{
-		UserID:    int32(request.UserID),
+		UserID:    int32(*request.UserID),
 		Firstname: request.FirstName,
 		Lastname:  request.LastName,
 		Email:     request.Email,

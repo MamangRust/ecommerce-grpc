@@ -3,6 +3,8 @@ package protomapper
 import (
 	"ecommerce/internal/domain/response"
 	"ecommerce/internal/pb"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type shippingAddressProtoMapper struct {
@@ -92,6 +94,12 @@ func (s *shippingAddressProtoMapper) mapResponsesShippingAddress(addresses []*re
 }
 
 func (s *shippingAddressProtoMapper) mapResponseShippingAddressDeleteAt(address *response.ShippingAddressResponseDeleteAt) *pb.ShippingResponseDeleteAt {
+	var deletedAt *wrapperspb.StringValue
+
+	if address.DeletedAt != nil {
+		deletedAt = wrapperspb.String(*address.DeletedAt)
+	}
+
 	return &pb.ShippingResponseDeleteAt{
 		Id:        int32(address.ID),
 		OrderId:   int32(address.OrderID),
@@ -101,7 +109,7 @@ func (s *shippingAddressProtoMapper) mapResponseShippingAddressDeleteAt(address 
 		Kota:      address.Kota,
 		CreatedAt: address.CreatedAt,
 		UpdatedAt: address.UpdatedAt,
-		DeletedAt: address.DeletedAt,
+		DeletedAt: deletedAt,
 	}
 }
 

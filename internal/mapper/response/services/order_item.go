@@ -43,7 +43,7 @@ func (s *orderItemResponseMapper) ToOrderItemResponseDeleteAt(order *record.Orde
 		Price:     order.Price,
 		CreatedAt: order.CreatedAt,
 		UpdatedAt: order.UpdatedAt,
-		DeleteAt:  *order.DeletedAt,
+		DeletedAt: order.DeletedAt,
 	}
 }
 

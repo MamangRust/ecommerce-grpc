@@ -7,7 +7,6 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"errors"
 	"fmt"
 )
 
@@ -25,88 +24,89 @@ func NewMerchantRepository(db *db.Queries, ctx context.Context, mapping recordma
 	}
 }
 
-func (r *merchantRepository) FindAllMerchants(search string, page, pageSize int) ([]*record.MerchantRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *merchantRepository) FindAllMerchants(req *requests.FindAllMerchant) ([]*record.MerchantRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetMerchantsParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetMerchantsParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetMerchants(r.ctx, req)
+	res, err := r.db.GetMerchants(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find Merchants: %w", err)
+		return nil, nil, fmt.Errorf("failed to fetch merchants: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToMerchantsRecordPagination(res), totalCount, nil
+	return r.mapping.ToMerchantsRecordPagination(res), &totalCount, nil
 }
 
-func (r *merchantRepository) FindByActive(search string, page, pageSize int) ([]*record.MerchantRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *merchantRepository) FindByActive(req *requests.FindAllMerchant) ([]*record.MerchantRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetMerchantsActiveParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetMerchantsActiveParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetMerchantsActive(r.ctx, req)
+	res, err := r.db.GetMerchantsActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find Merchants: %w", err)
+		return nil, nil, fmt.Errorf("failed to fetch merchants active: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToMerchantsRecordActivePagination(res), totalCount, nil
+	return r.mapping.ToMerchantsRecordActivePagination(res), &totalCount, nil
 }
 
-func (r *merchantRepository) FindByTrashed(search string, page, pageSize int) ([]*record.MerchantRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *merchantRepository) FindByTrashed(req *requests.FindAllMerchant) ([]*record.MerchantRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetMerchantsTrashedParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetMerchantsTrashedParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetMerchantsTrashed(r.ctx, req)
+	res, err := r.db.GetMerchantsTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find Merchants: %w", err)
+		return nil, nil, fmt.Errorf("failed to fetch merchants trashed: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToMerchantsRecordTrashedPagination(res), totalCount, nil
+	return r.mapping.ToMerchantsRecordTrashedPagination(res), &totalCount, nil
 }
 
 func (r *merchantRepository) FindById(user_id int) (*record.MerchantRecord, error) {
 	res, err := r.db.GetMerchantByID(r.ctx, int32(user_id))
 
 	if err != nil {
-		fmt.Printf("Error fetching user: %v\n", err)
-
-		return nil, fmt.Errorf("failed to find users: %w", err)
+		return nil, fmt.Errorf("failed to find merchant: %w", err)
 	}
 
 	return r.mapping.ToMerchantRecord(res), nil
@@ -116,16 +116,17 @@ func (r *merchantRepository) CreateMerchant(request *requests.CreateMerchantRequ
 	req := db.CreateMerchantParams{
 		UserID:       int32(request.UserID),
 		Name:         request.Name,
-		Description:  sql.NullString{String: request.Description, Valid: request.Description != ""},
-		Address:      sql.NullString{String: request.Address, Valid: request.Address != ""},
-		ContactEmail: sql.NullString{String: request.ContactEmail, Valid: request.ContactEmail != ""},
-		ContactPhone: sql.NullString{String: request.ContactPhone, Valid: request.ContactPhone != ""},
+		Description:  sql.NullString{String: request.Description, Valid: true},
+		Address:      sql.NullString{String: request.Address, Valid: true},
+		ContactEmail: sql.NullString{String: request.ContactEmail, Valid: true},
+		ContactPhone: sql.NullString{String: request.ContactPhone, Valid: true},
 		Status:       "active",
 	}
 
 	merchant, err := r.db.CreateMerchant(r.ctx, req)
+
 	if err != nil {
-		return nil, errors.New("failed to create Merchant")
+		return nil, fmt.Errorf("failed to create merchant: %w", err)
 	}
 
 	return r.mapping.ToMerchantRecord(merchant), nil
@@ -133,16 +134,17 @@ func (r *merchantRepository) CreateMerchant(request *requests.CreateMerchantRequ
 
 func (r *merchantRepository) UpdateMerchant(request *requests.UpdateMerchantRequest) (*record.MerchantRecord, error) {
 	req := db.UpdateMerchantParams{
-		MerchantID:   int32(request.MerchantID),
+		MerchantID:   int32(*request.MerchantID),
 		Name:         request.Name,
-		Description:  sql.NullString{String: request.Description, Valid: request.Description != ""},
-		Address:      sql.NullString{String: request.Address, Valid: request.Address != ""},
-		ContactEmail: sql.NullString{String: request.ContactEmail, Valid: request.ContactEmail != ""},
-		ContactPhone: sql.NullString{String: request.ContactPhone, Valid: request.ContactPhone != ""},
+		Description:  sql.NullString{String: request.Description, Valid: true},
+		Address:      sql.NullString{String: request.Address, Valid: true},
+		ContactEmail: sql.NullString{String: request.ContactEmail, Valid: true},
+		ContactPhone: sql.NullString{String: request.ContactPhone, Valid: true},
 		Status:       request.Status,
 	}
 
 	res, err := r.db.UpdateMerchant(r.ctx, req)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to update Merchant: %w", err)
 	}

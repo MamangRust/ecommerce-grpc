@@ -34,6 +34,11 @@ func (u *userResponseMapper) ToResponsesUser(users []*pb.UserResponse) []*respon
 }
 
 func (u *userResponseMapper) ToResponseUserDeleteAt(user *pb.UserResponseDeleteAt) *response.UserResponseDeleteAt {
+	var deletedAt string
+	if user.DeletedAt != nil {
+		deletedAt = user.DeletedAt.Value
+	}
+
 	return &response.UserResponseDeleteAt{
 		ID:        int(user.Id),
 		FirstName: user.Firstname,
@@ -41,7 +46,7 @@ func (u *userResponseMapper) ToResponseUserDeleteAt(user *pb.UserResponseDeleteA
 		Email:     user.Email,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
-		DeletedAt: user.DeletedAt,
+		DeletedAt: &deletedAt,
 	}
 }
 

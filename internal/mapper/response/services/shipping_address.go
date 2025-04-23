@@ -45,7 +45,7 @@ func (s *shippingAddressResponseMapper) ToShippingAddressResponseDeleteAt(addres
 		Kota:      address.Kota,
 		CreatedAt: address.CreatedAt,
 		UpdatedAt: address.UpdatedAt,
-		DeletedAt: *address.DeletedAt,
+		DeletedAt: address.DeletedAt,
 	}
 }
 

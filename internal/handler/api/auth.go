@@ -11,6 +11,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type authHandleApi struct {
@@ -54,7 +56,7 @@ func (h *authHandleApi) HandleHello(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param request body requests.CreateUserRequest true "User registration data"
-// @Success 200 {object} pb.ApiResponseRegister "Success"
+// @Success 200 {object} response.ApiResponseRegister "Success"
 // @Failure 400 {object} response.ErrorResponse "Bad Request"
 // @Failure 500 {object} response.ErrorResponse "Internal Server Error"
 // @Router /api/auth/register [post]
@@ -62,18 +64,20 @@ func (h *authHandleApi) Register(c echo.Context) error {
 	var body requests.CreateUserRequest
 
 	if err := c.Bind(&body); err != nil {
-		h.logger.Debug("Bad Request", zap.Error(err))
+		h.logger.Debug("Invalid request format", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: ",
+			Status:  "invalid_request",
+			Message: "Invalid request format. Please check your input.",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
 	if err := body.Validate(); err != nil {
-		h.logger.Debug("Validation Error", zap.Error(err))
+		h.logger.Debug("Validation failed", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Validation Error: ",
+			Status:  "validation_error",
+			Message: "Please correct the invalid fields in your registration.",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -85,21 +89,18 @@ func (h *authHandleApi) Register(c echo.Context) error {
 		ConfirmPassword: body.ConfirmPassword,
 	}
 
-	ctx := c.Request().Context()
-
-	res, err := h.client.RegisterUser(ctx, data)
+	res, err := h.client.RegisterUser(c.Request().Context(), data)
 
 	if err != nil {
-		h.logger.Debug("Internal Server Error", zap.Error(err))
+		h.logger.Error("Registration failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Internal Server Error: " + err.Error(),
+			Status:  "registration_failed",
+			Message: "We couldn't complete your registration. Please try again.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
-	so := h.mapping.ToResponseRegister(res)
-
-	return c.JSON(http.StatusOK, so)
+	return c.JSON(http.StatusCreated, h.mapping.ToResponseRegister(res))
 }
 
 // Login godoc
@@ -109,7 +110,7 @@ func (h *authHandleApi) Register(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param request body requests.AuthRequest true "User login credentials"
-// @Success 200 {object} pb.ApiResponseLogin "Success"
+// @Success 200 {object} response.ApiResponseLogin "Success"
 // @Failure 400 {object} response.ErrorResponse "Bad Request"
 // @Failure 500 {object} response.ErrorResponse "Internal Server Error"
 // @Router /api/auth/login [post]
@@ -117,42 +118,67 @@ func (h *authHandleApi) Login(c echo.Context) error {
 	var body requests.AuthRequest
 
 	if err := c.Bind(&body); err != nil {
-		h.logger.Debug("Validation Error", zap.Error(err))
+		h.logger.Debug("Invalid request format", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: ",
+			Status:  "invalid_request",
+			Message: "Invalid request format. Please check your input.",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
 	if err := body.Validate(); err != nil {
-		h.logger.Debug("Validation Error", zap.Error(err))
+		h.logger.Debug("Validation failed", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Validation Error: ",
+			Status:  "validation_error",
+			Message: err.Error(),
+			Code:    http.StatusBadRequest,
 		})
 	}
 
-	data := &pb.LoginRequest{
+	res, err := h.client.LoginUser(c.Request().Context(), &pb.LoginRequest{
 		Email:    body.Email,
 		Password: body.Password,
-	}
-
-	ctx := c.Request().Context()
-
-	res, err := h.client.LoginUser(ctx, data)
+	})
 
 	if err != nil {
-		h.logger.Debug("Failed to login user", zap.Error(err))
+		if status.Code(err) == codes.Unauthenticated {
+			h.logger.Debug("Invalid login attempt", zap.String("email", body.Email))
+			return c.JSON(http.StatusUnauthorized, response.ErrorResponse{
+				Status:  "unauthorized",
+				Message: "Invalid email or password",
+				Code:    http.StatusUnauthorized,
+			})
+		}
+
+		h.logger.Error("Login failed", zap.Error(err))
+
+		if status.Code(err) == codes.Internal && strings.Contains(err.Error(), "empty token") {
+			return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+				Status:  "token_generation_failed",
+				Message: "Failed to generate authentication token",
+				Code:    http.StatusInternalServerError,
+			})
+		}
 
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Internal Server Error: ",
+			Status:  "server_error",
+			Message: "An error occurred while processing your request",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
-	so := h.mapping.ToResponseLogin(res)
+	mappedResponse := h.mapping.ToResponseLogin(res)
 
-	return c.JSON(http.StatusOK, so)
+	if mappedResponse.Data == nil || mappedResponse.Data.AccessToken == "" {
+		h.logger.Error("Empty token in final response", zap.Any("response", mappedResponse))
+		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+			Status:  "token_generation_failed",
+			Message: "Failed to generate valid authentication token",
+			Code:    http.StatusInternalServerError,
+		})
+	}
+
+	return c.JSON(http.StatusOK, mappedResponse)
 }
 
 // RefreshToken godoc
@@ -163,7 +189,7 @@ func (h *authHandleApi) Login(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param request body requests.RefreshTokenRequest true "Refresh token data"
-// @Success 200 {object} pb.ApiResponseRefreshToken "Success"
+// @Success 200 {object} response.ApiResponseRefreshToken "Success"
 // @Failure 400 {object} response.ErrorResponse "Bad Request"
 // @Failure 500 {object} response.ErrorResponse "Internal Server Error"
 // @Router /api/auth/refresh-token [post]
@@ -171,18 +197,20 @@ func (h *authHandleApi) RefreshToken(c echo.Context) error {
 	var body requests.RefreshTokenRequest
 
 	if err := c.Bind(&body); err != nil {
-		h.logger.Debug("Validation Error", zap.Error(err))
+		h.logger.Debug("Invalid request format", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid request body",
+			Status:  "invalid_request",
+			Message: "Invalid request format. Please check your input.",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
 	if err := body.Validate(); err != nil {
-		h.logger.Debug("Validation Error", zap.Error(err))
+		h.logger.Debug("Validation failed", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Validation Error: " + err.Error(),
+			Status:  "validation_error",
+			Message: "Please provide a valid refresh token.",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -210,20 +238,18 @@ func (h *authHandleApi) RefreshToken(c echo.Context) error {
 // @Description Retrieves the current user's information using a valid access token from the Authorization header.
 // @Produce json
 // @Security BearerToken
-// @Success 200 {object} pb.ApiResponseGetMe "Success"
+// @Success 200 {object} response.ApiResponseGetMe "Success"
 // @Failure 401 {object} response.ErrorResponse "Unauthorized"
 // @Failure 500 {object} response.ErrorResponse "Internal Server Error"
 // @Router /api/auth/me [get]
 func (h *authHandleApi) GetMe(c echo.Context) error {
 	authHeader := c.Request().Header.Get("Authorization")
 
-	h.logger.Debug("Authorization header: ", zap.String("authHeader", authHeader))
-
-	if !strings.HasPrefix(authHeader, "Bearer ") {
-		h.logger.Debug("Authorization header is missing or invalid format")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 		return c.JSON(http.StatusUnauthorized, response.ErrorResponse{
-			Status:  "error",
-			Message: "Unauthorized: Missing or invalid Authorization header",
+			Status:  "unauthorized",
+			Message: "Please provide a valid authorization token.",
+			Code:    http.StatusUnauthorized,
 		})
 	}
 
@@ -234,10 +260,10 @@ func (h *authHandleApi) GetMe(c echo.Context) error {
 	})
 
 	if err != nil {
-		h.logger.Debug("Failed to get user information", zap.Error(err))
+		h.logger.Error("Failed to get user information", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Internal Server Error: " + err.Error(),
+			Status:  "fetch_user_failed",
+			Message: "We couldn't retrieve your account information.",
 		})
 	}
 

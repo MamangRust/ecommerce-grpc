@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ReviewService_FindAll_FullMethodName                  = "/pb.ReviewService/FindAll"
 	ReviewService_FindByProduct_FullMethodName            = "/pb.ReviewService/FindByProduct"
+	ReviewService_FindByMerchant_FullMethodName           = "/pb.ReviewService/FindByMerchant"
 	ReviewService_FindByTrashed_FullMethodName            = "/pb.ReviewService/FindByTrashed"
 	ReviewService_FindByActive_FullMethodName             = "/pb.ReviewService/FindByActive"
 	ReviewService_Create_FullMethodName                   = "/pb.ReviewService/Create"
@@ -38,7 +39,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ReviewServiceClient interface {
 	FindAll(ctx context.Context, in *FindAllReviewRequest, opts ...grpc.CallOption) (*ApiResponsePaginationReview, error)
-	FindByProduct(ctx context.Context, in *FindAllReviewProductRequest, opts ...grpc.CallOption) (*ApiResponsePaginationReview, error)
+	FindByProduct(ctx context.Context, in *FindAllReviewProductRequest, opts ...grpc.CallOption) (*ApiResponsePaginationReviewDetail, error)
+	FindByMerchant(ctx context.Context, in *FindAllReviewMerchantRequest, opts ...grpc.CallOption) (*ApiResponsePaginationReviewDetail, error)
 	FindByTrashed(ctx context.Context, in *FindAllReviewRequest, opts ...grpc.CallOption) (*ApiResponsePaginationReviewDeleteAt, error)
 	FindByActive(ctx context.Context, in *FindAllReviewRequest, opts ...grpc.CallOption) (*ApiResponsePaginationReviewDeleteAt, error)
 	Create(ctx context.Context, in *CreateReviewRequest, opts ...grpc.CallOption) (*ApiResponseReview, error)
@@ -68,10 +70,20 @@ func (c *reviewServiceClient) FindAll(ctx context.Context, in *FindAllReviewRequ
 	return out, nil
 }
 
-func (c *reviewServiceClient) FindByProduct(ctx context.Context, in *FindAllReviewProductRequest, opts ...grpc.CallOption) (*ApiResponsePaginationReview, error) {
+func (c *reviewServiceClient) FindByProduct(ctx context.Context, in *FindAllReviewProductRequest, opts ...grpc.CallOption) (*ApiResponsePaginationReviewDetail, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ApiResponsePaginationReview)
+	out := new(ApiResponsePaginationReviewDetail)
 	err := c.cc.Invoke(ctx, ReviewService_FindByProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *reviewServiceClient) FindByMerchant(ctx context.Context, in *FindAllReviewMerchantRequest, opts ...grpc.CallOption) (*ApiResponsePaginationReviewDetail, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApiResponsePaginationReviewDetail)
+	err := c.cc.Invoke(ctx, ReviewService_FindByMerchant_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +185,8 @@ func (c *reviewServiceClient) DeleteAllReviewPermanent(ctx context.Context, in *
 // for forward compatibility.
 type ReviewServiceServer interface {
 	FindAll(context.Context, *FindAllReviewRequest) (*ApiResponsePaginationReview, error)
-	FindByProduct(context.Context, *FindAllReviewProductRequest) (*ApiResponsePaginationReview, error)
+	FindByProduct(context.Context, *FindAllReviewProductRequest) (*ApiResponsePaginationReviewDetail, error)
+	FindByMerchant(context.Context, *FindAllReviewMerchantRequest) (*ApiResponsePaginationReviewDetail, error)
 	FindByTrashed(context.Context, *FindAllReviewRequest) (*ApiResponsePaginationReviewDeleteAt, error)
 	FindByActive(context.Context, *FindAllReviewRequest) (*ApiResponsePaginationReviewDeleteAt, error)
 	Create(context.Context, *CreateReviewRequest) (*ApiResponseReview, error)
@@ -196,8 +209,11 @@ type UnimplementedReviewServiceServer struct{}
 func (UnimplementedReviewServiceServer) FindAll(context.Context, *FindAllReviewRequest) (*ApiResponsePaginationReview, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindAll not implemented")
 }
-func (UnimplementedReviewServiceServer) FindByProduct(context.Context, *FindAllReviewProductRequest) (*ApiResponsePaginationReview, error) {
+func (UnimplementedReviewServiceServer) FindByProduct(context.Context, *FindAllReviewProductRequest) (*ApiResponsePaginationReviewDetail, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindByProduct not implemented")
+}
+func (UnimplementedReviewServiceServer) FindByMerchant(context.Context, *FindAllReviewMerchantRequest) (*ApiResponsePaginationReviewDetail, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindByMerchant not implemented")
 }
 func (UnimplementedReviewServiceServer) FindByTrashed(context.Context, *FindAllReviewRequest) (*ApiResponsePaginationReviewDeleteAt, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindByTrashed not implemented")
@@ -279,6 +295,24 @@ func _ReviewService_FindByProduct_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ReviewServiceServer).FindByProduct(ctx, req.(*FindAllReviewProductRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ReviewService_FindByMerchant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FindAllReviewMerchantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReviewServiceServer).FindByMerchant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ReviewService_FindByMerchant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReviewServiceServer).FindByMerchant(ctx, req.(*FindAllReviewMerchantRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -459,6 +493,10 @@ var ReviewService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FindByProduct",
 			Handler:    _ReviewService_FindByProduct_Handler,
+		},
+		{
+			MethodName: "FindByMerchant",
+			Handler:    _ReviewService_FindByMerchant_Handler,
 		},
 		{
 			MethodName: "FindByTrashed",

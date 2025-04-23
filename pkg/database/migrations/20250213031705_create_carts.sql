@@ -13,16 +13,15 @@ CREATE TABLE "carts" (
     "updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" TIMESTAMP DEFAULT NULL
 );
-CREATE INDEX idx_carts_user_id ON carts(user_id);
-CREATE INDEX idx_carts_product_id ON carts(product_id);
-CREATE INDEX idx_carts_name ON carts(name);
+CREATE INDEX "idx_carts_user_id" ON "carts"("user_id");
+CREATE INDEX "idx_carts_product_id" ON "carts"("product_id");
+CREATE INDEX "idx_carts_name" ON "carts"(name);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP INDEX IF EXISTS idx_carts_user_id;
-DROP INDEX IF EXISTS idx_carts_product_id;
-DROP INDEX IF EXISTS idx_carts_name;
-
+DROP INDEX IF EXISTS "idx_carts_user_id";
+DROP INDEX IF EXISTS "idx_carts_product_id";
+DROP INDEX IF EXISTS "idx_carts_name";
 DROP TABLE IF EXISTS "carts";
 -- +goose StatementEnd

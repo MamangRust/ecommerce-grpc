@@ -6,7 +6,6 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"errors"
 	"fmt"
 )
 
@@ -28,115 +27,143 @@ func NewReviewRepository(
 	}
 }
 
-func (r *reviewRepository) FindAllReview(search string, page, pageSize int) ([]*record.ReviewRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *reviewRepository) FindAllReview(req *requests.FindAllReview) ([]*record.ReviewRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetReviewsParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetReviewsParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetReviews(r.ctx, req)
+	res, err := r.db.GetReviews(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, nil, fmt.Errorf("failed to find all review: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToReviewsRecordPagination(res), totalCount, nil
+	return r.mapping.ToReviewsRecordPagination(res), &totalCount, nil
 }
 
-func (r *reviewRepository) FindByProduct(product_id int, search string, page, pageSize int) ([]*record.ReviewRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *reviewRepository) FindByProduct(req *requests.FindAllReviewByProduct) ([]*record.ReviewsDetailRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetReviewsByProductIDParams{
-		ProductID: int32(product_id),
-		Column2:   search,
-		Limit:     int32(pageSize),
+	reqDb := db.GetReviewByProductIdParams{
+		ProductID: int32(req.ProductID),
+		Column2:   int32(req.Rating),
+		Limit:     int32(req.PageSize),
 		Offset:    int32(offset),
 	}
 
-	res, err := r.db.GetReviewsByProductID(r.ctx, req)
+	res, err := r.db.GetReviewByProductId(r.ctx, reqDb)
 
 	if err != nil {
-
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, nil, fmt.Errorf("failed to find product review: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToReviewsProductRecordPagination(res), totalCount, nil
+	return r.mapping.ToReviewsProductRecordPagination(res), &totalCount, nil
 }
 
-func (r *reviewRepository) FindByActive(search string, page, pageSize int) ([]*record.ReviewRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *reviewRepository) FindByMerchant(req *requests.FindAllReviewByMerchant) ([]*record.ReviewsDetailRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetReviewsActiveParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetReviewByMerchantIdParams{
+		MerchantID: int32(req.MerchantID),
+		Column2:    int32(req.Rating),
+		Limit:      int32(req.PageSize),
+		Offset:     int32(offset),
+	}
+
+	res, err := r.db.GetReviewByMerchantId(r.ctx, reqDb)
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to find product review: %w", err)
+	}
+
+	var totalCount int
+
+	if len(res) > 0 {
+		totalCount = int(res[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	return r.mapping.ToReviewsMerchantRecordPagination(res), &totalCount, nil
+}
+
+func (r *reviewRepository) FindByActive(req *requests.FindAllReview) ([]*record.ReviewRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
+
+	reqDb := db.GetReviewsActiveParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetReviewsActive(r.ctx, req)
+	res, err := r.db.GetReviewsActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, nil, fmt.Errorf("failed to find active review: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToReviewsRecordActivePagination(res), totalCount, nil
+	return r.mapping.ToReviewsRecordActivePagination(res), &totalCount, nil
 }
 
-func (r *reviewRepository) FindByTrashed(search string, page, pageSize int) ([]*record.ReviewRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *reviewRepository) FindByTrashed(req *requests.FindAllReview) ([]*record.ReviewRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetReviewsTrashedParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetReviewsTrashedParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetReviewsTrashed(r.ctx, req)
+	res, err := r.db.GetReviewsTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, nil, fmt.Errorf("failed to find review: %w", err)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToReviewsRecordTrashedPagination(res), totalCount, nil
+	return r.mapping.ToReviewsRecordTrashedPagination(res), &totalCount, nil
 }
 
 func (r *reviewRepository) FindById(id int) (*record.ReviewRecord, error) {
 	res, err := r.db.GetReviewByID(r.ctx, int32(id))
 
 	if err != nil {
-		fmt.Printf("Error fetching review: %v\n", err)
-
-		return nil, fmt.Errorf("failed to find review: %w", err)
+		return nil, fmt.Errorf("failed to find id review: %w", err)
 	}
 
 	return r.mapping.ToReviewRecord(res), nil
@@ -151,8 +178,9 @@ func (r *reviewRepository) CreateReview(request *requests.CreateReviewRequest) (
 	}
 
 	review, err := r.db.CreateReview(r.ctx, req)
+
 	if err != nil {
-		return nil, errors.New("failed to create review")
+		return nil, fmt.Errorf("failed to create review: %w", err)
 	}
 
 	return r.mapping.ToReviewRecord(review), nil
@@ -160,13 +188,14 @@ func (r *reviewRepository) CreateReview(request *requests.CreateReviewRequest) (
 
 func (r *reviewRepository) UpdateReview(request *requests.UpdateReviewRequest) (*record.ReviewRecord, error) {
 	req := db.UpdateReviewParams{
-		ReviewID: int32(request.ReviewID),
+		ReviewID: int32(*request.ReviewID),
 		Name:     request.Name,
 		Rating:   int32(request.Rating),
 		Comment:  request.Comment,
 	}
 
 	res, err := r.db.UpdateReview(r.ctx, req)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to update review: %w", err)
 	}
@@ -178,7 +207,7 @@ func (r *reviewRepository) TrashReview(shipping_id int) (*record.ReviewRecord, e
 	res, err := r.db.TrashReview(r.ctx, int32(shipping_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash shipping address: %w", err)
+		return nil, fmt.Errorf("failed to trash review: %w", err)
 	}
 
 	return r.mapping.ToReviewRecord(res), nil
@@ -188,7 +217,7 @@ func (r *reviewRepository) RestoreReview(category_id int) (*record.ReviewRecord,
 	res, err := r.db.RestoreReview(r.ctx, int32(category_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to shipping address: %w", err)
+		return nil, fmt.Errorf("failed to restore review: %w", err)
 	}
 
 	return r.mapping.ToReviewRecord(res), nil
@@ -198,7 +227,7 @@ func (r *reviewRepository) DeleteReviewPermanently(category_id int) (bool, error
 	err := r.db.DeleteReviewPermanently(r.ctx, int32(category_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete shipping address: %w", err)
+		return false, fmt.Errorf("failed to delete review: %w", err)
 	}
 
 	return true, nil
@@ -208,7 +237,7 @@ func (r *reviewRepository) RestoreAllReview() (bool, error) {
 	err := r.db.RestoreAllReviews(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all shipping address: %w", err)
+		return false, fmt.Errorf("failed to restore all review: %w", err)
 	}
 	return true, nil
 }
@@ -217,7 +246,7 @@ func (r *reviewRepository) DeleteAllPermanentReview() (bool, error) {
 	err := r.db.DeleteAllPermanentReviews(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all shipping address permanently: %w", err)
+		return false, fmt.Errorf("failed to delete all review permanently: %w", err)
 	}
 	return true, nil
 }

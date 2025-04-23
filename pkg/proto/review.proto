@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package pb;
 
+import "google/protobuf/wrappers.proto";
 import "google/protobuf/empty.proto";
 
 import "api.proto";
@@ -13,6 +14,16 @@ message FindAllReviewProductRequest {
     int32 page_size = 3;
     string search = 4;
 }
+
+
+message FindAllReviewMerchantRequest {
+    int32 merchant_id = 1;
+    int32 page = 2;
+    int32 page_size = 3;
+    string search = 4;
+}
+
+
 
 message FindByIdReviewRequest{
     int32 id = 1;
@@ -64,9 +75,30 @@ message ReviewResponseDeleteAt {
     int32 rating = 6;
     string created_at = 7;
     string updated_at = 8;
-    string deleted_at = 9;
+    google.protobuf.StringValue deleted_at = 9;
 }
 
+
+message ReviewDetailResponse {
+    int32 id = 1;
+    string type = 2;
+    string url = 3;
+    string caption = 4;
+    string created_at = 5;
+}
+  
+message ReviewsDetailResponse {
+    int32 id = 1;
+    int32 user_id = 2;
+    int32 product_id = 3;
+    string name = 4;
+    string comment = 5;
+    int32 rating = 6;
+    ReviewDetailResponse review_detail = 7;
+    string created_at = 8;
+    string updated_at = 9;
+    string deleted_at = 10; 
+}
 
 message ApiResponseReview {
     string status = 1;
@@ -115,9 +147,19 @@ message ApiResponsePaginationReviewDeleteAt {
 }
 
 
+message ApiResponsePaginationReviewDetail{
+    string status = 1;
+    string message = 2;
+    repeated ReviewsDetailResponse data = 3;
+    PaginationMeta pagination = 4;
+}
+
+
 service ReviewService {
     rpc FindAll(FindAllReviewRequest) returns (ApiResponsePaginationReview);
-    rpc FindByProduct(FindAllReviewProductRequest) returns(ApiResponsePaginationReview);
+    rpc FindByProduct(FindAllReviewProductRequest) returns(ApiResponsePaginationReviewDetail);
+    rpc FindByMerchant(FindAllReviewMerchantRequest) returns(ApiResponsePaginationReviewDetail);
+
     rpc FindByTrashed(FindAllReviewRequest) returns (ApiResponsePaginationReviewDeleteAt);
     rpc FindByActive(FindAllReviewRequest) returns (ApiResponsePaginationReviewDeleteAt);
     

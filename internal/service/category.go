@@ -6,6 +6,10 @@ import (
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/utils"
+	"fmt"
+	"net/http"
+	"os"
 
 	"go.uber.org/zap"
 )
@@ -28,8 +32,12 @@ func NewCategoryService(
 	}
 }
 
-func (s *categoryService) FindAll(page int, pageSize int, search string) ([]*response.CategoryResponse, int, *response.ErrorResponse) {
-	s.logger.Debug("Fetching category",
+func (s *categoryService) FindAll(req *requests.FindAllCategory) ([]*response.CategoryResponse, *int, *response.ErrorResponse) {
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
+
+	s.logger.Debug("Fetching all categories",
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize),
 		zap.String("search", search))
@@ -42,127 +50,420 @@ func (s *categoryService) FindAll(page int, pageSize int, search string) ([]*res
 		pageSize = 10
 	}
 
-	category, totalRecords, err := s.categoryRepository.FindAllCategory(search, page, pageSize)
+	category, totalRecords, err := s.categoryRepository.FindAllCategory(req)
 
 	if err != nil {
 		s.logger.Error("Failed to fetch category",
 			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
+			zap.Int("page", req.Page),
+			zap.Int("pageSize", req.PageSize),
+			zap.String("search", req.Search))
 
-		return nil, 0, &response.ErrorResponse{
+		return nil, nil, &response.ErrorResponse{
 			Status:  "error",
-			Message: "Failed to fetch category",
+			Message: "Failed to retrieve category list",
+			Code:    http.StatusInternalServerError,
 		}
 	}
 
 	categoriesResponse := s.mapping.ToCategorysResponse(category)
 
 	s.logger.Debug("Successfully fetched category",
-		zap.Int("totalRecords", totalRecords),
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize))
+		zap.Int("totalRecords", *totalRecords),
+		zap.Int("page", req.Page),
+		zap.Int("pageSize", req.PageSize))
 
-	return categoriesResponse, int(totalRecords), nil
+	return categoriesResponse, totalRecords, nil
+}
+
+func (s *categoryService) FindByActive(req *requests.FindAllCategory) ([]*response.CategoryResponseDeleteAt, *int, *response.ErrorResponse) {
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
+
+	s.logger.Debug("Fetching categories active",
+		zap.Int("page", page),
+		zap.Int("pageSize", pageSize),
+		zap.String("search", search))
+
+	if page <= 0 {
+		page = 1
+	}
+
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	category, totalRecords, err := s.categoryRepository.FindByActive(req)
+
+	if err != nil {
+		s.logger.Error("Failed to retrieve active categories",
+			zap.Error(err),
+			zap.Int("page", req.Page),
+			zap.Int("pageSize", req.PageSize),
+			zap.String("search", req.Search))
+
+		return nil, nil, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to retrieve active categories",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	s.logger.Debug("Successfully fetched categories",
+		zap.Int("totalRecords", *totalRecords),
+		zap.Int("page", req.Page),
+		zap.Int("pageSize", req.PageSize))
+
+	return s.mapping.ToCategorysResponseDeleteAt(category), totalRecords, nil
+}
+
+func (s *categoryService) FindByTrashed(req *requests.FindAllCategory) ([]*response.CategoryResponseDeleteAt, *int, *response.ErrorResponse) {
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
+
+	s.logger.Debug("Fetching categories trashed",
+		zap.Int("page", page),
+		zap.Int("pageSize", pageSize),
+		zap.String("search", search))
+
+	if page <= 0 {
+		page = 1
+	}
+
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	categories, totalRecords, err := s.categoryRepository.FindByTrashed(req)
+
+	if err != nil {
+		s.logger.Error("Failed to fetch categories",
+			zap.Error(err),
+			zap.Int("page", req.Page),
+			zap.Int("pageSize", req.PageSize),
+			zap.String("search", req.Search))
+
+		return nil, nil, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to retrieve trashed categories",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	s.logger.Debug("Successfully fetched categories",
+		zap.Int("totalRecords", *totalRecords),
+		zap.Int("page", req.Page),
+		zap.Int("pageSize", req.PageSize))
+
+	return s.mapping.ToCategorysResponseDeleteAt(categories), totalRecords, nil
 }
 
 func (s *categoryService) FindById(category_id int) (*response.CategoryResponse, *response.ErrorResponse) {
 	s.logger.Debug("Fetching category by ID", zap.Int("category_id", category_id))
 
 	category, err := s.categoryRepository.FindById(category_id)
+
 	if err != nil {
-		s.logger.Error("Failed to fetch category", zap.Error(err))
-		return nil, &response.ErrorResponse{Status: "error", Message: "category not found"}
+		s.logger.Error("Failed to retrieve category details",
+			zap.Error(err),
+			zap.Int("category_id", category_id))
+
+		return nil, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to retrieve category details",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
 	return s.mapping.ToCategoryResponse(category), nil
 }
 
-func (s *categoryService) FindByActive(search string, page, pageSize int) ([]*response.CategoryResponseDeleteAt, int, *response.ErrorResponse) {
-	s.logger.Debug("Fetching categories",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+func (s *categoryService) FindMonthlyTotalPrice(req *requests.MonthTotalPrice) ([]*response.CategoriesMonthlyTotalPriceResponse, *response.ErrorResponse) {
+	year := req.Year
+	month := req.Month
 
-	if page <= 0 {
-		page = 1
-	}
-
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-
-	cashiers, totalRecords, err := s.categoryRepository.FindByActive(search, page, pageSize)
+	res, err := s.categoryRepository.GetMonthlyTotalPrice(req)
 
 	if err != nil {
-		s.logger.Error("Failed to fetch categories",
-			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
-		return nil, 0, &response.ErrorResponse{Status: "error", Message: "Failed to fetch active categories"}
+		s.logger.Error("failed to get monthly total sales",
+			zap.Int("year", year),
+			zap.Int("month", month),
+			zap.Error(err))
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: "Failed to retrieve monthly total sales data",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
-	s.logger.Debug("Successfully fetched categories",
-		zap.Int("totalRecords", totalRecords),
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize))
-
-	return s.mapping.ToCategorysResponseDeleteAt(cashiers), totalRecords, nil
+	return s.mapping.ToCategoryMonthlyTotalPrices(res), nil
 }
 
-func (s *categoryService) FindByTrashed(search string, page, pageSize int) ([]*response.CategoryResponseDeleteAt, int, *response.ErrorResponse) {
-	s.logger.Debug("Fetching categories",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+func (s *categoryService) FindYearlyTotalPrice(year int) ([]*response.CategoriesYearlyTotalPriceResponse, *response.ErrorResponse) {
+	res, err := s.categoryRepository.GetYearlyTotalPrices(year)
 
-	if page <= 0 {
-		page = 1
-	}
-
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-
-	categories, totalRecords, err := s.categoryRepository.FindByTrashed(search, page, pageSize)
 	if err != nil {
-		s.logger.Error("Failed to fetch cashier",
-			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
-		return nil, 0, &response.ErrorResponse{Status: "error", Message: "Failed to fetch trashed categories"}
+		s.logger.Error("failed to get yearly total sales",
+			zap.Int("year", year),
+			zap.Error(err))
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: "Failed to retrieve yearly total sales data",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
-	s.logger.Debug("Successfully fetched categories",
-		zap.Int("totalRecords", totalRecords),
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize))
+	return s.mapping.ToCategoryYearlyTotalPrices(res), nil
+}
 
-	return s.mapping.ToCategorysResponseDeleteAt(categories), totalRecords, nil
+func (s *categoryService) FindMonthlyTotalPriceById(req *requests.MonthTotalPriceCategory) ([]*response.CategoriesMonthlyTotalPriceResponse, *response.ErrorResponse) {
+	year := req.Year
+	month := req.Month
+
+	res, err := s.categoryRepository.GetMonthlyTotalPriceById(req)
+
+	if err != nil {
+		s.logger.Error("failed to get monthly total price",
+			zap.Int("year", year),
+			zap.Int("month", month),
+			zap.Error(err))
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: "Failed to retrieve monthly total price data",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryMonthlyTotalPrices(res), nil
+}
+
+func (s *categoryService) FindYearlyTotalPriceById(req *requests.YearTotalPriceCategory) ([]*response.CategoriesYearlyTotalPriceResponse, *response.ErrorResponse) {
+	year := req.Year
+
+	res, err := s.categoryRepository.GetYearlyTotalPricesById(req)
+
+	if err != nil {
+		s.logger.Error("failed to get yearly total price",
+			zap.Int("year", year),
+			zap.Error(err))
+
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: "Failed to retrieve yearly total price data",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryYearlyTotalPrices(res), nil
+}
+
+func (s *categoryService) FindMonthlyTotalPriceByMerchant(req *requests.MonthTotalPriceMerchant) ([]*response.CategoriesMonthlyTotalPriceResponse, *response.ErrorResponse) {
+	year := req.Year
+	month := req.Month
+
+	res, err := s.categoryRepository.GetMonthlyTotalPriceByMerchant(req)
+
+	if err != nil {
+		s.logger.Error("failed to get monthly total price",
+			zap.Int("year", year),
+			zap.Int("month", month),
+			zap.Error(err))
+
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: "Failed to retrieve monthly total price data",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryMonthlyTotalPrices(res), nil
+}
+
+func (s *categoryService) FindYearlyTotalPriceByMerchant(req *requests.YearTotalPriceMerchant) ([]*response.CategoriesYearlyTotalPriceResponse, *response.ErrorResponse) {
+	year := req.Year
+
+	res, err := s.categoryRepository.GetYearlyTotalPricesByMerchant(req)
+
+	if err != nil {
+		s.logger.Error("failed to get yearly total price",
+			zap.Int("year", year),
+			zap.Error(err))
+
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: "Failed to retrieve yearly total price data",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryYearlyTotalPrices(res), nil
+}
+
+func (s *categoryService) FindMonthPrice(year int) ([]*response.CategoryMonthPriceResponse, *response.ErrorResponse) {
+	res, err := s.categoryRepository.GetMonthPrice(year)
+
+	if err != nil {
+		s.logger.Error("failed to get monthly category prices",
+			zap.Int("year", year),
+			zap.Error(err))
+
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: "Failed to retrieve monthly category data",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryMonthlyPrices(res), nil
+}
+
+func (s *categoryService) FindYearPrice(year int) ([]*response.CategoryYearPriceResponse, *response.ErrorResponse) {
+	res, err := s.categoryRepository.GetYearPrice(year)
+
+	if err != nil {
+		s.logger.Error("failed to get yearly category prices",
+			zap.Int("year", year),
+			zap.Error(err))
+
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: "Failed to retrieve yearly category data",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryYearlyPrices(res), nil
+}
+
+func (s *categoryService) FindMonthPriceByMerchant(req *requests.MonthPriceMerchant) ([]*response.CategoryMonthPriceResponse, *response.ErrorResponse) {
+	year := req.Year
+	merchant_id := req.MerchantID
+
+	res, err := s.categoryRepository.GetMonthPriceByMerchant(req)
+
+	if err != nil {
+		s.logger.Error("failed to get monthly category prices by merchant",
+			zap.Int("year", year),
+			zap.Int("merchant_id", merchant_id),
+			zap.Error(err))
+
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: fmt.Sprintf("Failed to retrieve monthly category data for merchant %d", merchant_id),
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryMonthlyPrices(res), nil
+}
+
+func (s *categoryService) FindYearPriceByMerchant(req *requests.YearPriceMerchant) ([]*response.CategoryYearPriceResponse, *response.ErrorResponse) {
+	year := req.Year
+	merchant_id := req.MerchantID
+
+	res, err := s.categoryRepository.GetYearPriceByMerchant(req)
+
+	if err != nil {
+		s.logger.Error("failed to get yearly category prices by merchant",
+			zap.Int("year", year),
+			zap.Int("merchant_id", merchant_id),
+			zap.Error(err))
+
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: fmt.Sprintf("Failed to retrieve yearly category data for merchant %d", merchant_id),
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryYearlyPrices(res), nil
+}
+
+func (s *categoryService) FindMonthPriceById(req *requests.MonthPriceId) ([]*response.CategoryMonthPriceResponse, *response.ErrorResponse) {
+	year := req.Year
+	category_id := req.CategoryID
+
+	res, err := s.categoryRepository.GetMonthPriceById(req)
+
+	if err != nil {
+		s.logger.Error("failed to get monthly category prices by ID",
+			zap.Int("year", year),
+			zap.Int("category_id", category_id),
+			zap.Error(err))
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: fmt.Sprintf("Failed to retrieve monthly category data for category %d", category_id),
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryMonthlyPrices(res), nil
+}
+
+func (s *categoryService) FindYearPriceById(req *requests.YearPriceId) ([]*response.CategoryYearPriceResponse, *response.ErrorResponse) {
+	year := req.Year
+	category_id := req.CategoryID
+
+	res, err := s.categoryRepository.GetYearPriceById(req)
+
+	if err != nil {
+		s.logger.Error("failed to get yearly category prices by ID",
+			zap.Int("year", year),
+			zap.Int("category_id", category_id),
+			zap.Error(err))
+		return nil, &response.ErrorResponse{
+			Status:  "server_error",
+			Message: fmt.Sprintf("Failed to retrieve yearly category data for category %d", category_id),
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return s.mapping.ToCategoryYearlyPrices(res), nil
 }
 
 func (s *categoryService) CreateCategory(req *requests.CreateCategoryRequest) (*response.CategoryResponse, *response.ErrorResponse) {
-	s.logger.Debug("Creating new cashier")
+	s.logger.Debug("Creating new category")
+
+	slug := utils.GenerateSlug(req.Name)
+
+	req.Name = slug
 
 	cashier, err := s.categoryRepository.CreateCategory(req)
+
 	if err != nil {
-		s.logger.Error("Failed to create cashier", zap.Error(err))
-		return nil, &response.ErrorResponse{Status: "error", Message: "Failed to create cashier"}
+		s.logger.Error("Failed to create category", zap.Error(err))
+
+		return nil, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to create cashier",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
 	return s.mapping.ToCategoryResponse(cashier), nil
 }
 
 func (s *categoryService) UpdateCategory(req *requests.UpdateCategoryRequest) (*response.CategoryResponse, *response.ErrorResponse) {
-	s.logger.Debug("Updating category", zap.Int("category_id", req.CategoryID))
+	s.logger.Debug("Updating category", zap.Int("category_id", *req.CategoryID))
+
+	slug := utils.GenerateSlug(req.Name)
+
+	req.Name = slug
 
 	category, err := s.categoryRepository.UpdateCategory(req)
+
 	if err != nil {
-		s.logger.Error("Failed to update category", zap.Error(err))
-		return nil, &response.ErrorResponse{Status: "error", Message: "Failed to update category"}
+		s.logger.Error("Failed to update category",
+			zap.Error(err),
+			zap.Any("request", req))
+
+		return nil, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to update category record",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
 	return s.mapping.ToCategoryResponse(category), nil
@@ -172,9 +473,17 @@ func (s *categoryService) TrashedCategory(category_id int) (*response.CategoryRe
 	s.logger.Debug("Trashing category", zap.Int("category", category_id))
 
 	category, err := s.categoryRepository.TrashedCategory(category_id)
+
 	if err != nil {
-		s.logger.Error("Failed to trash category", zap.Error(err))
-		return nil, &response.ErrorResponse{Status: "error", Message: "Failed to trash category"}
+		s.logger.Error("Failed to move category to trash",
+			zap.Error(err),
+			zap.Int("category_id", category_id))
+
+		return nil, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to move category to trash",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
 	return s.mapping.ToCategoryResponseDeleteAt(category), nil
@@ -184,9 +493,17 @@ func (s *categoryService) RestoreCategory(categoryID int) (*response.CategoryRes
 	s.logger.Debug("Restoring category", zap.Int("categoryID", categoryID))
 
 	category, err := s.categoryRepository.RestoreCategory(categoryID)
+
 	if err != nil {
-		s.logger.Error("Failed to restore category", zap.Error(err))
-		return nil, &response.ErrorResponse{Status: "error", Message: "Failed to restore category"}
+		s.logger.Error("Failed to restore category from trash",
+			zap.Error(err),
+			zap.Int("category_id", categoryID))
+
+		return nil, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to restore category from trash",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
 	return s.mapping.ToCategoryResponseDeleteAt(category), nil
@@ -195,10 +512,55 @@ func (s *categoryService) RestoreCategory(categoryID int) (*response.CategoryRes
 func (s *categoryService) DeleteCategoryPermanent(categoryID int) (bool, *response.ErrorResponse) {
 	s.logger.Debug("Permanently deleting category", zap.Int("categoryID", categoryID))
 
-	success, err := s.categoryRepository.DeleteCategoryPermanently(categoryID)
+	res, err := s.categoryRepository.FindByIdTrashed(categoryID)
+
 	if err != nil {
-		s.logger.Error("Failed to permanently delete category", zap.Error(err))
-		return false, &response.ErrorResponse{Status: "error", Message: "Failed to permanently delete category"}
+		s.logger.Error("Failed to find category",
+			zap.Int("category_id", categoryID),
+			zap.Error(err))
+
+		return false, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to verify product existence",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	if res.ImageCategory != "" {
+		err := os.Remove(res.ImageCategory)
+		if err != nil {
+			if os.IsNotExist(err) {
+				s.logger.Debug("Category image file not found, continuing with category deletion",
+					zap.String("image_path", res.ImageCategory))
+			} else {
+				s.logger.Debug("Failed to delete category image",
+					zap.String("image_path", res.ImageCategory),
+					zap.Error(err))
+
+				return false, &response.ErrorResponse{
+					Status:  "error",
+					Message: "Failed to delete category image",
+					Code:    http.StatusInternalServerError,
+				}
+			}
+		} else {
+			s.logger.Debug("Successfully deleted category image",
+				zap.String("image_path", res.ImageCategory))
+		}
+	}
+
+	success, err := s.categoryRepository.DeleteCategoryPermanently(categoryID)
+
+	if err != nil {
+		s.logger.Error("Failed to permanently delete category",
+			zap.Error(err),
+			zap.Int("category_id", categoryID))
+
+		return false, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to permanently delete category",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
 	return success, nil
@@ -208,9 +570,16 @@ func (s *categoryService) RestoreAllCategories() (bool, *response.ErrorResponse)
 	s.logger.Debug("Restoring all trashed categories")
 
 	success, err := s.categoryRepository.RestoreAllCategories()
+
 	if err != nil {
-		s.logger.Error("Failed to restore all categories", zap.Error(err))
-		return false, &response.ErrorResponse{Status: "error", Message: "Failed to restore all categories"}
+		s.logger.Error("Failed to restore all trashed categories",
+			zap.Error(err))
+
+		return false, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to restore all trashed categories",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
 	return success, nil
@@ -220,9 +589,15 @@ func (s *categoryService) DeleteAllCategoriesPermanent() (bool, *response.ErrorR
 	s.logger.Debug("Permanently deleting all categories")
 
 	success, err := s.categoryRepository.DeleteAllPermanentCategories()
+
 	if err != nil {
 		s.logger.Error("Failed to permanently delete all categories", zap.Error(err))
-		return false, &response.ErrorResponse{Status: "error", Message: "Failed to permanently delete all categories"}
+
+		return false, &response.ErrorResponse{
+			Status:  "error",
+			Message: "Failed to permanently delete all trashed categories",
+			Code:    http.StatusInternalServerError,
+		}
 	}
 
 	return success, nil

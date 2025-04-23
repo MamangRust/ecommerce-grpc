@@ -89,10 +89,12 @@ func (h *sliderHandleApi) FindAllSlider(c echo.Context) error {
 	res, err := h.client.FindAll(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve slider data", zap.Error(err))
+		h.logger.Error("Failed to fetch sliders", zap.Error(err))
+
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve slider data: ",
+			Status:  "server_error",
+			Message: "We couldn't retrieve the slider list. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -137,10 +139,12 @@ func (h *sliderHandleApi) FindByActive(c echo.Context) error {
 	res, err := h.client.FindByActive(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve slider data", zap.Error(err))
+		h.logger.Error("Failed to fetch active sliders", zap.Error(err))
+
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve slider data: ",
+			Status:  "server_error",
+			Message: "We couldn't retrieve the active sliders list. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -186,10 +190,11 @@ func (h *sliderHandleApi) FindByTrashed(c echo.Context) error {
 	res, err := h.client.FindByTrashed(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve slider data", zap.Error(err))
+		h.logger.Error("Failed to fetch archived sliders", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve slider data: ",
+			Status:  "server_error",
+			Message: "We couldn't retrieve the archived sliders list. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -250,10 +255,15 @@ func (h *sliderHandleApi) Create(c echo.Context) error {
 	res, err := h.client.Create(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to create slider", zap.Error(err))
+		h.logger.Error("Slider creation failed",
+			zap.Error(err),
+			zap.Any("request", req),
+		)
+
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create slider: " + err.Error(),
+			Status:  "creation_failed",
+			Message: "Failed to create slider",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -267,7 +277,7 @@ func (h *sliderHandleApi) Create(c echo.Context) error {
 // @Description Update an existing slider record with the provided details and an optional image file
 // @Accept multipart/form-data
 // @Produce json
-// @Param slider_id formData int true "Slider ID"
+// @Param id path int true "Slider ID"
 // @Param name formData string true "Slider name"
 // @Param image_slider formData file false "New slider image file"
 // @Success 200 {object} response.ApiResponseSlider "Successfully updated slider"
@@ -317,10 +327,15 @@ func (h *sliderHandleApi) Update(c echo.Context) error {
 	res, err := h.client.Update(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to update slider", zap.Error(err))
+		h.logger.Error("slider update failed",
+			zap.Error(err),
+			zap.Any("request", req),
+		)
+
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update slider: " + err.Error(),
+			Status:  "update_failed",
+			Message: "Failed to update slider",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -343,10 +358,11 @@ func (h *sliderHandleApi) TrashedSlider(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid slider ID", zap.Error(err))
+		h.logger.Debug("Invalid slider ID format", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid slider ID",
+			Status:  "invalid_input",
+			Message: "Please provide a valid slider ID",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -359,10 +375,11 @@ func (h *sliderHandleApi) TrashedSlider(c echo.Context) error {
 	res, err := h.client.TrashedSlider(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to trashed slider", zap.Error(err))
+		h.logger.Error("Failed to archive slider", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to trashed slider: ",
+			Status:  "archive_failed",
+			Message: "We couldn't archive the slider. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -387,10 +404,11 @@ func (h *sliderHandleApi) RestoreSlider(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid slider ID", zap.Error(err))
+		h.logger.Debug("Invalid slider ID format", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid slider ID",
+			Status:  "invalid_input",
+			Message: "Please provide a valid slider ID",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -403,10 +421,11 @@ func (h *sliderHandleApi) RestoreSlider(c echo.Context) error {
 	res, err := h.client.RestoreSlider(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to restore slider", zap.Error(err))
+		h.logger.Error("Failed to restore slider", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore slider: ",
+			Status:  "restore_failed",
+			Message: "We couldn't restore the slider. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -431,10 +450,11 @@ func (h *sliderHandleApi) DeleteSliderPermanent(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid slider ID", zap.Error(err))
+		h.logger.Debug("Invalid slider ID format", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid slider ID",
+			Status:  "invalid_input",
+			Message: "Please provide a valid slider ID",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
@@ -447,10 +467,11 @@ func (h *sliderHandleApi) DeleteSliderPermanent(c echo.Context) error {
 	res, err := h.client.DeleteSliderPermanent(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to delete slider", zap.Error(err))
+		h.logger.Error("Failed to permanently delete slider", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to delete slider: ",
+			Status:  "deletion_failed",
+			Message: "We couldn't permanently delete the slider. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -477,10 +498,11 @@ func (h *sliderHandleApi) RestoreAllSlider(c echo.Context) error {
 	res, err := h.client.RestoreAllSlider(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Failed to restore all slider", zap.Error(err))
+		h.logger.Error("Bulk slider restoration failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently restore all slider",
+			Status:  "bulk_restore_failed",
+			Message: "We couldn't restore all slider. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 
@@ -509,11 +531,11 @@ func (h *sliderHandleApi) DeleteAllSliderPermanent(c echo.Context) error {
 	res, err := h.client.DeleteAllSliderPermanent(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Failed to permanently delete all slider", zap.Error(err))
-
+		h.logger.Error("Bulk slider deletion failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all slider",
+			Status:  "bulk_deletion_failed",
+			Message: "We couldn't permanently delete all slider. Please try again later.",
+			Code:    http.StatusInternalServerError,
 		})
 	}
 

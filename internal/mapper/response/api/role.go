@@ -80,12 +80,17 @@ func (s *roleResponseMapper) mapResponsesRole(roles []*pb.RoleResponse) []*respo
 }
 
 func (s *roleResponseMapper) mapResponseRoleDeleteAt(role *pb.RoleResponseDeleteAt) *response.RoleResponseDeleteAt {
+	var deletedAt string
+	if role.DeletedAt != nil {
+		deletedAt = role.DeletedAt.Value
+	}
+
 	return &response.RoleResponseDeleteAt{
 		ID:        int(role.Id),
 		Name:      role.Name,
 		CreatedAt: role.CreatedAt,
 		UpdatedAt: role.UpdatedAt,
-		DeletedAt: role.DeletedAt,
+		DeletedAt: &deletedAt,
 	}
 }
 

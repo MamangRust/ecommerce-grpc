@@ -35,6 +35,14 @@ func (t *cartResponseMapper) ToResponseCarts(pbResponse []*pb.CartResponse) []*r
 	return carts
 }
 
+func (t *cartResponseMapper) ToApiResponseCart(pbResponse *pb.ApiResponseCart) *response.ApiResponseCart {
+	return &response.ApiResponseCart{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    *t.ToResponseCart(pbResponse.Data),
+	}
+}
+
 func (t *cartResponseMapper) ToApiResponseCartPagination(pbResponse *pb.ApiResponsePaginationCart) *response.ApiResponseCartPagination {
 	return &response.ApiResponseCartPagination{
 		Status:     pbResponse.Status,

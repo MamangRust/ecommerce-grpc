@@ -1,232 +1,4 @@
 definitions:
-  pb.ApiResponseGetMe:
-    properties:
-      data:
-        $ref: '#/definitions/pb.UserResponse'
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponseLogin:
-    properties:
-      data:
-        $ref: '#/definitions/pb.TokenResponse'
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponsePaginationRole:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/pb.RoleResponse'
-        type: array
-      message:
-        type: string
-      pagination:
-        $ref: '#/definitions/pb.PaginationMeta'
-      status:
-        type: string
-    type: object
-  pb.ApiResponsePaginationRoleDeleteAt:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/pb.RoleResponseDeleteAt'
-        type: array
-      message:
-        type: string
-      pagination:
-        $ref: '#/definitions/pb.PaginationMeta'
-      status:
-        type: string
-    type: object
-  pb.ApiResponseProduct:
-    properties:
-      data:
-        $ref: '#/definitions/pb.ProductResponse'
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponseRefreshToken:
-    properties:
-      data:
-        $ref: '#/definitions/pb.TokenResponse'
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponseRegister:
-    properties:
-      data:
-        $ref: '#/definitions/pb.UserResponse'
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponseRole:
-    properties:
-      data:
-        $ref: '#/definitions/pb.RoleResponse'
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponseRoleAll:
-    properties:
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponseUser:
-    properties:
-      data:
-        $ref: '#/definitions/pb.UserResponse'
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponseUserAll:
-    properties:
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponseUserDelete:
-    properties:
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.ApiResponsesUser:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/pb.UserResponse'
-        type: array
-      message:
-        type: string
-      status:
-        type: string
-    type: object
-  pb.CreateRoleRequest:
-    properties:
-      name:
-        type: string
-    type: object
-  pb.DeleteCartRequest:
-    properties:
-      cart_ids:
-        items:
-          type: integer
-        type: array
-    type: object
-  pb.PaginationMeta:
-    properties:
-      current_page:
-        type: integer
-      page_size:
-        type: integer
-      total_pages:
-        type: integer
-      total_records:
-        type: integer
-    type: object
-  pb.ProductResponse:
-    properties:
-      brand:
-        type: string
-      category_id:
-        type: integer
-      count_in_stock:
-        type: integer
-      created_at:
-        type: string
-      description:
-        type: string
-      id:
-        type: integer
-      image_product:
-        type: string
-      merchant_id:
-        type: integer
-      name:
-        type: string
-      price:
-        type: integer
-      rating:
-        type: number
-      slug_product:
-        type: string
-      updated_at:
-        type: string
-      weight:
-        type: integer
-    type: object
-  pb.RoleResponse:
-    properties:
-      created_at:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      updated_at:
-        type: string
-    type: object
-  pb.RoleResponseDeleteAt:
-    properties:
-      created_at:
-        type: string
-      deleted_at:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      updated_at:
-        type: string
-    type: object
-  pb.TokenResponse:
-    properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
-    type: object
-  pb.UpdateRoleRequest:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-    type: object
-  pb.UserResponse:
-    properties:
-      created_at:
-        type: string
-      email:
-        type: string
-      firstname:
-        type: string
-      id:
-        type: integer
-      lastname:
-        type: string
-      updated_at:
-        type: string
-    type: object
   requests.AuthRequest:
     properties:
       email:
@@ -237,6 +9,128 @@ definitions:
     required:
     - email
     - password
+    type: object
+  requests.CreateBannerRequest:
+    properties:
+      end_date:
+        type: string
+      end_time:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      start_date:
+        type: string
+      start_time:
+        type: string
+    required:
+    - end_date
+    - end_time
+    - name
+    - start_date
+    - start_time
+    type: object
+  requests.CreateCartRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    type: object
+  requests.CreateMerchantBusinessInformationRequest:
+    properties:
+      business_type:
+        type: string
+      established_year:
+        maximum: 2100
+        minimum: 1900
+        type: integer
+      merchant_id:
+        type: integer
+      number_of_employees:
+        minimum: 1
+        type: integer
+      tax_id:
+        type: string
+      website_url:
+        type: string
+    required:
+    - business_type
+    - established_year
+    - merchant_id
+    - number_of_employees
+    - tax_id
+    type: object
+  requests.CreateMerchantCertificationOrAwardRequest:
+    properties:
+      certificate_url:
+        type: string
+      description:
+        type: string
+      expiry_date:
+        type: string
+      issue_date:
+        type: string
+      issued_by:
+        type: string
+      merchant_id:
+        type: integer
+      title:
+        type: string
+    required:
+    - description
+    - issue_date
+    - issued_by
+    - merchant_id
+    - title
+    type: object
+  requests.CreateMerchantDetailRequest:
+    properties:
+      cover_image_url:
+        type: string
+      display_name:
+        type: string
+      logo_url:
+        type: string
+      merchant_id:
+        type: integer
+      short_description:
+        type: string
+      social_links:
+        items:
+          $ref: '#/definitions/requests.CreateMerchantSocialRequest'
+        type: array
+      website_url:
+        type: string
+    required:
+    - cover_image_url
+    - display_name
+    - logo_url
+    - merchant_id
+    - short_description
+    - social_links
+    type: object
+  requests.CreateMerchantPolicyRequest:
+    properties:
+      description:
+        type: string
+      merchant_id:
+        type: integer
+      policy_type:
+        type: string
+      title:
+        type: string
+    required:
+    - description
+    - merchant_id
+    - policy_type
+    - title
     type: object
   requests.CreateMerchantRequest:
     properties:
@@ -262,6 +156,19 @@ definitions:
     - name
     - status
     - user_id
+    type: object
+  requests.CreateMerchantSocialRequest:
+    properties:
+      merchant_detail_id:
+        type: integer
+      platform:
+        type: string
+      url:
+        type: string
+    required:
+    - merchant_detail_id
+    - platform
+    - url
     type: object
   requests.CreateOrderItemRequest:
     properties:
@@ -296,6 +203,24 @@ definitions:
     - total_price
     - user_id
     type: object
+  requests.CreateReviewRequest:
+    properties:
+      comment:
+        type: string
+      product_id:
+        type: integer
+      rating:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  requests.CreateRoleRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
   requests.CreateShippingAddressRequest:
     properties:
       alamat:
@@ -329,8 +254,6 @@ definitions:
     properties:
       amount:
         type: integer
-      change_amount:
-        type: integer
       merchant_id:
         type: integer
       order_id:
@@ -341,11 +264,9 @@ definitions:
         type: string
     required:
     - amount
-    - change_amount
     - merchant_id
     - order_id
     - payment_method
-    - payment_status
     type: object
   requests.CreateUserRequest:
     properties:
@@ -375,6 +296,119 @@ definitions:
     required:
     - refresh_token
     type: object
+  requests.UpdateBannerRequest:
+    properties:
+      banner_id:
+        type: integer
+      end_date:
+        type: string
+      end_time:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      start_date:
+        type: string
+      start_time:
+        type: string
+    required:
+    - banner_id
+    - end_date
+    - end_time
+    - name
+    - start_date
+    - start_time
+    type: object
+  requests.UpdateMerchantBusinessInformationRequest:
+    properties:
+      business_type:
+        type: string
+      established_year:
+        maximum: 2100
+        minimum: 1900
+        type: integer
+      merchant_business_info_id:
+        type: integer
+      number_of_employees:
+        minimum: 1
+        type: integer
+      tax_id:
+        type: string
+      website_url:
+        type: string
+    required:
+    - business_type
+    - established_year
+    - merchant_business_info_id
+    - number_of_employees
+    - tax_id
+    type: object
+  requests.UpdateMerchantCertificationOrAwardRequest:
+    properties:
+      certificate_url:
+        type: string
+      description:
+        type: string
+      expiry_date:
+        type: string
+      issue_date:
+        type: string
+      issued_by:
+        type: string
+      merchant_certification_id:
+        type: integer
+      title:
+        type: string
+    required:
+    - description
+    - issue_date
+    - issued_by
+    - merchant_certification_id
+    - title
+    type: object
+  requests.UpdateMerchantDetailRequest:
+    properties:
+      cover_image_url:
+        type: string
+      display_name:
+        type: string
+      logo_url:
+        type: string
+      merchant_detail_id:
+        type: integer
+      short_description:
+        type: string
+      social_links:
+        items:
+          $ref: '#/definitions/requests.UpdateMerchantSocialRequest'
+        type: array
+      website_url:
+        type: string
+    required:
+    - cover_image_url
+    - display_name
+    - logo_url
+    - merchant_detail_id
+    - short_description
+    - social_links
+    type: object
+  requests.UpdateMerchantPolicyRequest:
+    properties:
+      description:
+        type: string
+      merchant_policy_id:
+        type: integer
+      policy_type:
+        type: string
+      title:
+        type: string
+    required:
+    - description
+    - merchant_policy_id
+    - policy_type
+    - title
+    type: object
   requests.UpdateMerchantRequest:
     properties:
       address:
@@ -398,10 +432,25 @@ definitions:
     - contact_email
     - contact_phone
     - description
-    - merchant_id
     - name
     - status
     - user_id
+    type: object
+  requests.UpdateMerchantSocialRequest:
+    properties:
+      id:
+        type: integer
+      merchant_detail_id:
+        type: integer
+      platform:
+        type: string
+      url:
+        type: string
+    required:
+    - id
+    - merchant_detail_id
+    - platform
+    - url
     type: object
   requests.UpdateOrderItemRequest:
     properties:
@@ -439,6 +488,49 @@ definitions:
     - total_price
     - user_id
     type: object
+  requests.UpdateReviewDetailRequest:
+    properties:
+      caption:
+        type: string
+      review_detail_id:
+        type: integer
+      type:
+        type: string
+      url:
+        type: string
+    required:
+    - caption
+    - review_detail_id
+    - type
+    - url
+    type: object
+  requests.UpdateReviewRequest:
+    properties:
+      comment:
+        type: string
+      name:
+        type: string
+      rating:
+        type: integer
+      review_id:
+        type: integer
+    required:
+    - comment
+    - name
+    - rating
+    - review_id
+    type: object
+  requests.UpdateRoleRequest:
+    properties:
+      id:
+        minimum: 1
+        type: integer
+      name:
+        type: string
+    required:
+    - id
+    - name
+    type: object
   requests.UpdateShippingAddressRequest:
     properties:
       alamat:
@@ -464,14 +556,11 @@ definitions:
     - courier
     - order_id
     - shipping_cost
-    - shipping_id
     - shipping_method
     type: object
   requests.UpdateTransactionRequest:
     properties:
       amount:
-        type: integer
-      change_amount:
         type: integer
       merchant_id:
         type: integer
@@ -485,12 +574,9 @@ definitions:
         type: integer
     required:
     - amount
-    - change_amount
     - merchant_id
     - order_id
     - payment_method
-    - payment_status
-    - transaction_id
     type: object
   requests.UpdateUserRequest:
     properties:
@@ -506,7 +592,6 @@ definitions:
         minLength: 6
         type: string
       user_id:
-        minimum: 1
         type: integer
     required:
     - confirm_password
@@ -514,7 +599,47 @@ definitions:
     - firstname
     - lastname
     - password
-    - user_id
+    type: object
+  response.ApiResponseBanner:
+    properties:
+      data:
+        $ref: '#/definitions/response.BannerResponse'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseBannerAll:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseBannerDelete:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseBannerDeleteAt:
+    properties:
+      data:
+        $ref: '#/definitions/response.BannerResponseDeleteAt'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseCart:
+    properties:
+      data:
+        $ref: '#/definitions/response.CartResponse'
+      message:
+        type: string
+      status:
+        type: string
     type: object
   response.ApiResponseCartAll:
     properties:
@@ -575,6 +700,46 @@ definitions:
       status:
         type: string
     type: object
+  response.ApiResponseCategoryMonthPrice:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.CategoryMonthPriceResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseCategoryYearPrice:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.CategoryYearPriceResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseGetMe:
+    properties:
+      data:
+        $ref: '#/definitions/response.UserResponse'
+      messsage:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseLogin:
+    properties:
+      data:
+        $ref: '#/definitions/response.TokenResponse'
+      messsage:
+        type: string
+      status:
+        type: string
+    type: object
   response.ApiResponseMerchant:
     properties:
       data:
@@ -591,6 +756,42 @@ definitions:
       status:
         type: string
     type: object
+  response.ApiResponseMerchantAward:
+    properties:
+      data:
+        $ref: '#/definitions/response.MerchantAwardResponse'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseMerchantAwardDeleteAt:
+    properties:
+      data:
+        $ref: '#/definitions/response.MerchantAwardResponseDeleteAt'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseMerchantBusiness:
+    properties:
+      data:
+        $ref: '#/definitions/response.MerchantBusinessResponse'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseMerchantBusinessDeleteAt:
+    properties:
+      data:
+        $ref: '#/definitions/response.MerchantBusinessResponseDeleteAt'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
   response.ApiResponseMerchantDelete:
     properties:
       message:
@@ -602,6 +803,42 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/response.MerchantResponseDeleteAt'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseMerchantDetail:
+    properties:
+      data:
+        $ref: '#/definitions/response.MerchantDetailResponse'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseMerchantDetailDeleteAt:
+    properties:
+      data:
+        $ref: '#/definitions/response.MerchantDetailResponseDeleteAt'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseMerchantPolicies:
+    properties:
+      data:
+        $ref: '#/definitions/response.MerchantPoliciesResponse'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseMerchantPoliciesDeleteAt:
+    properties:
+      data:
+        $ref: '#/definitions/response.MerchantPoliciesResponseDeleteAt'
       message:
         type: string
       status:
@@ -639,6 +876,54 @@ definitions:
       status:
         type: string
     type: object
+  response.ApiResponseOrderMonthly:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.OrderMonthlyResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseOrderYearly:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.OrderYearlyResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationBanner:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.BannerResponse'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationBannerDeleteAt:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.BannerResponseDeleteAt'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
   response.ApiResponsePaginationCategory:
     properties:
       data:
@@ -670,6 +955,123 @@ definitions:
       data:
         items:
           $ref: '#/definitions/response.MerchantResponse'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationMerchantAward:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.MerchantAwardResponse'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationMerchantAwardDeleteAt:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.MerchantAwardResponseDeleteAt'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationMerchantBusiness:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.MerchantBusinessResponse'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationMerchantBusinessDeleteAt:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.MerchantBusinessResponseDeleteAt'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationMerchantDeleteAt:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.MerchantResponseDeleteAt'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationMerchantDetail:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.MerchantDetailResponse'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationMerchantDetailDeleteAt:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.MerchantDetailResponseDeleteAt'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationMerchantPolicies:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.MerchantPoliciesResponse'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationMerchantPoliciesDeleteAt:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.MerchantPoliciesResponseDeleteAt'
         type: array
       message:
         type: string
@@ -774,6 +1176,71 @@ definitions:
       data:
         items:
           $ref: '#/definitions/response.ReviewResponseDeleteAt'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationReviewDetails:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.ReviewDetailsResponse'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationReviewDetailsDeleteAt:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.ReviewDetailsResponseDeleteAt'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationRole:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.RoleResponse'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationRoleDeleteAt:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.RoleResponseDeleteAt'
+        type: array
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.PaginationMeta'
+      status:
+        type: string
+    type: object
+  response.ApiResponsePaginationShippingAddress:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.ShippingAddressResponse'
         type: array
       message:
         type: string
@@ -905,6 +1372,33 @@ definitions:
       status:
         type: string
     type: object
+  response.ApiResponseRefreshToken:
+    properties:
+      data:
+        $ref: '#/definitions/response.TokenResponse'
+      messsage:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseRegister:
+    properties:
+      data:
+        $ref: '#/definitions/response.UserResponse'
+      messsage:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseReview:
+    properties:
+      data:
+        $ref: '#/definitions/response.ReviewResponse'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
   response.ApiResponseReviewAll:
     properties:
       message:
@@ -923,6 +1417,40 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/response.ReviewResponseDeleteAt'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseReviewDetail:
+    properties:
+      data:
+        $ref: '#/definitions/response.ReviewDetailsResponse'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseReviewDetailDeleteAt:
+    properties:
+      data:
+        $ref: '#/definitions/response.ReviewDetailsResponseDeleteAt'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseRole:
+    properties:
+      data:
+        $ref: '#/definitions/response.RoleResponse'
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseRoleAll:
+    properties:
       message:
         type: string
       status:
@@ -1033,6 +1561,20 @@ definitions:
       status:
         type: string
     type: object
+  response.ApiResponseUserAll:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponseUserDelete:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
   response.ApiResponseUserDeleteAt:
     properties:
       data:
@@ -1051,6 +1593,116 @@ definitions:
       message:
         type: string
       status:
+        type: string
+    type: object
+  response.ApiResponsesTransactionMonthFailed:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.TransactionMonthlyAmountFailedResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponsesTransactionMonthMethod:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.TransactionMonthlyMethodResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponsesTransactionMonthSuccess:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.TransactionMonthlyAmountSuccessResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponsesTransactionYearFailed:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.TransactionYearlyAmountFailedResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponsesTransactionYearMethod:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.TransactionYearlyMethodResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.ApiResponsesTransactionYearSuccess:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.TransactionYearlyAmountSuccessResponse'
+        type: array
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  response.BannerResponse:
+    properties:
+      created_at:
+        type: string
+      end_date:
+        type: string
+      end_time:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      start_date:
+        type: string
+      start_time:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.BannerResponseDeleteAt:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      end_date:
+        type: string
+      end_time:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      start_date:
+        type: string
+      start_time:
+        type: string
+      updated_at:
         type: string
     type: object
   response.CartResponse:
@@ -1074,6 +1726,21 @@ definitions:
       user_id:
         type: integer
       weight:
+        type: integer
+    type: object
+  response.CategoryMonthPriceResponse:
+    properties:
+      category_id:
+        type: integer
+      category_name:
+        type: string
+      items_sold:
+        type: integer
+      month:
+        type: string
+      order_count:
+        type: integer
+      total_revenue:
         type: integer
     type: object
   response.CategoryResponse:
@@ -1112,11 +1779,222 @@ definitions:
       updated_at:
         type: string
     type: object
+  response.CategoryYearPriceResponse:
+    properties:
+      category_id:
+        type: integer
+      category_name:
+        type: string
+      items_sold:
+        type: integer
+      order_count:
+        type: integer
+      total_revenue:
+        type: integer
+      unique_products_sold:
+        type: integer
+      year:
+        type: string
+    type: object
   response.ErrorResponse:
     properties:
+      code:
+        type: integer
       message:
         type: string
       status:
+        type: string
+    type: object
+  response.MerchantAwardResponse:
+    properties:
+      certificate_url:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      expiry_date:
+        type: string
+      id:
+        type: integer
+      issue_date:
+        type: string
+      issued_by:
+        type: string
+      merchant_id:
+        type: integer
+      merchant_name:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.MerchantAwardResponseDeleteAt:
+    properties:
+      certificate_url:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      expiry_date:
+        type: string
+      id:
+        type: integer
+      issue_date:
+        type: string
+      issued_by:
+        type: string
+      merchant_id:
+        type: integer
+      merchant_name:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.MerchantBusinessResponse:
+    properties:
+      business_type:
+        type: string
+      created_at:
+        type: string
+      established_year:
+        type: integer
+      id:
+        type: integer
+      merchant_id:
+        type: integer
+      merchant_name:
+        type: string
+      number_of_employees:
+        type: integer
+      tax_id:
+        type: string
+      updated_at:
+        type: string
+      website_url:
+        type: string
+    type: object
+  response.MerchantBusinessResponseDeleteAt:
+    properties:
+      business_type:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      established_year:
+        type: integer
+      id:
+        type: integer
+      merchant_id:
+        type: integer
+      merchant_name:
+        type: string
+      number_of_employees:
+        type: integer
+      tax_id:
+        type: string
+      updated_at:
+        type: string
+      website_url:
+        type: string
+    type: object
+  response.MerchantDetailResponse:
+    properties:
+      cover_image_url:
+        type: string
+      created_at:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      logo_url:
+        type: string
+      merchant_id:
+        type: integer
+      short_description:
+        type: string
+      social_media_links:
+        items:
+          $ref: '#/definitions/response.MerchantSocialMediaLinkResponse'
+        type: array
+      updated_at:
+        type: string
+      website_url:
+        type: string
+    type: object
+  response.MerchantDetailResponseDeleteAt:
+    properties:
+      cover_image_url:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      logo_url:
+        type: string
+      merchant_id:
+        type: integer
+      short_description:
+        type: string
+      social_media_links:
+        items:
+          $ref: '#/definitions/response.MerchantSocialMediaLinkResponse'
+        type: array
+      updated_at:
+        type: string
+      website_url:
+        type: string
+    type: object
+  response.MerchantPoliciesResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      merchant_id:
+        type: integer
+      merchant_name:
+        type: string
+      policy_type:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.MerchantPoliciesResponseDeleteAt:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      merchant_id:
+        type: integer
+      merchant_name:
+        type: string
+      policy_type:
+        type: string
+      title:
+        type: string
+      updated_at:
         type: string
     type: object
   response.MerchantResponse:
@@ -1167,6 +2045,15 @@ definitions:
       user_id:
         type: integer
     type: object
+  response.MerchantSocialMediaLinkResponse:
+    properties:
+      id:
+        type: integer
+      platform:
+        type: string
+      url:
+        type: string
+    type: object
   response.OrderItemResponse:
     properties:
       created_at:
@@ -1203,6 +2090,17 @@ definitions:
       updated_at:
         type: string
     type: object
+  response.OrderMonthlyResponse:
+    properties:
+      month:
+        type: string
+      order_count:
+        type: integer
+      total_items_sold:
+        type: integer
+      total_revenue:
+        type: integer
+    type: object
   response.OrderResponse:
     properties:
       created_at:
@@ -1234,6 +2132,21 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  response.OrderYearlyResponse:
+    properties:
+      active_cashiers:
+        type: integer
+      order_count:
+        type: integer
+      total_items_sold:
+        type: integer
+      total_revenue:
+        type: integer
+      unique_products_sold:
+        type: integer
+      year:
+        type: string
     type: object
   response.PaginationMeta:
     properties:
@@ -1310,6 +2223,42 @@ definitions:
       weight:
         type: integer
     type: object
+  response.ReviewDetailsResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      review_id:
+        type: integer
+      string:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+    type: object
+  response.ReviewDetailsResponseDeleteAt:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: integer
+      review_id:
+        type: integer
+      string:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+    type: object
   response.ReviewResponse:
     properties:
       comment:
@@ -1349,6 +2298,30 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  response.RoleResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.RoleResponseDeleteAt:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updated_at:
+        type: string
     type: object
   response.ShippingAddressResponse:
     properties:
@@ -1418,6 +2391,46 @@ definitions:
       updated_at:
         type: string
     type: object
+  response.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  response.TransactionMonthlyAmountFailedResponse:
+    properties:
+      month:
+        type: string
+      total_amount:
+        type: integer
+      total_failed:
+        type: integer
+      year:
+        type: string
+    type: object
+  response.TransactionMonthlyAmountSuccessResponse:
+    properties:
+      month:
+        type: string
+      total_amount:
+        type: integer
+      total_success:
+        type: integer
+      year:
+        type: string
+    type: object
+  response.TransactionMonthlyMethodResponse:
+    properties:
+      month:
+        type: string
+      payment_method:
+        type: string
+      total_amount:
+        type: integer
+      total_transactions:
+        type: integer
+    type: object
   response.TransactionResponse:
     properties:
       amount:
@@ -1460,6 +2473,35 @@ definitions:
       payment_status:
         type: string
       updated_at:
+        type: string
+    type: object
+  response.TransactionYearlyAmountFailedResponse:
+    properties:
+      total_amount:
+        type: integer
+      total_failed:
+        type: integer
+      year:
+        type: string
+    type: object
+  response.TransactionYearlyAmountSuccessResponse:
+    properties:
+      total_amount:
+        type: integer
+      total_success:
+        type: integer
+      year:
+        type: string
+    type: object
+  response.TransactionYearlyMethodResponse:
+    properties:
+      payment_method:
+        type: string
+      total_amount:
+        type: integer
+      total_transactions:
+        type: integer
+      year:
         type: string
     type: object
   response.UserResponse:
@@ -1515,7 +2557,7 @@ paths:
         "200":
           description: Success
           schema:
-            $ref: '#/definitions/pb.ApiResponseLogin'
+            $ref: '#/definitions/response.ApiResponseLogin'
         "400":
           description: Bad Request
           schema:
@@ -1537,7 +2579,7 @@ paths:
         "200":
           description: Success
           schema:
-            $ref: '#/definitions/pb.ApiResponseGetMe'
+            $ref: '#/definitions/response.ApiResponseGetMe'
         "401":
           description: Unauthorized
           schema:
@@ -1570,7 +2612,7 @@ paths:
         "200":
           description: Success
           schema:
-            $ref: '#/definitions/pb.ApiResponseRefreshToken'
+            $ref: '#/definitions/response.ApiResponseRefreshToken'
         "400":
           description: Bad Request
           schema:
@@ -1602,7 +2644,7 @@ paths:
         "200":
           description: Success
           schema:
-            $ref: '#/definitions/pb.ApiResponseRegister'
+            $ref: '#/definitions/response.ApiResponseRegister'
         "400":
           description: Bad Request
           schema:
@@ -1614,6 +2656,369 @@ paths:
       summary: Register a new user
       tags:
       - Auth
+  /api/banner:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all banners
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of banners
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationBanner'
+        "500":
+          description: Failed to retrieve banner data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find all banners
+      tags:
+      - Banner
+  /api/banner/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a banner by ID
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banner data
+          schema:
+            $ref: '#/definitions/response.ApiResponseBanner'
+        "400":
+          description: Invalid banner ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve banner data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find banner by ID
+      tags:
+      - Banner
+  /api/banner/active:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of active banners
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of active banners
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationBannerDeleteAt'
+        "500":
+          description: Failed to retrieve banner data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve active banners
+      tags:
+      - Banner
+  /api/banner/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new banner with the provided details
+      parameters:
+      - description: Create banner request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CreateBannerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created banner
+          schema:
+            $ref: '#/definitions/response.ApiResponseBanner'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to create banner
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new banner
+      tags:
+      - Banner
+  /api/banner/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete a Banner record by its ID.
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted Banner record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseBannerDelete'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete Banner:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a Banner
+      tags:
+      - Banner
+  /api/banner/delete/all:
+    post:
+      consumes:
+      - application/json
+      description: Permanently delete a banner record by its ID.
+      parameters:
+      - description: banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted banner record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseBannerAll'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete banner:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a banner
+      tags:
+      - Banner
+  /api/banner/restore/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed Banner record by its ID.
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored Banner
+          schema:
+            $ref: '#/definitions/response.ApiResponseBannerDeleteAt'
+        "400":
+          description: Invalid Banner ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore Banner
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed Banner
+      tags:
+      - Banner
+  /api/banner/restore/all:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed Banner record by its ID.
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored Banner all
+          schema:
+            $ref: '#/definitions/response.ApiResponseBannerAll'
+        "400":
+          description: Invalid Banner ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore Banner
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed Banner
+      tags:
+      - Banner
+  /api/banner/trashed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of trashed banners
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of active banners
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationBannerDeleteAt'
+        "500":
+          description: Failed to retrieve banner data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve trashed banners
+      tags:
+      - Banner
+  /api/banner/trashed/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a trashed Banner record by its ID.
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved trashed Banner
+          schema:
+            $ref: '#/definitions/response.ApiResponseBannerDeleteAt'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve trashed Banner
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve a trashed Banner
+      tags:
+      - Banner
+  /api/banner/update/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Update an existing banner record with the provided details
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update banner request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.UpdateBannerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated banner
+          schema:
+            $ref: '#/definitions/response.ApiResponseBanner'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to update banner
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update an existing banner
+      tags:
+      - Banner
   /api/cart:
     get:
       consumes:
@@ -1653,6 +3058,37 @@ paths:
       security:
       - Bearer: []
       summary: Find all carts
+      tags:
+      - Cart
+    post:
+      consumes:
+      - application/json
+      description: Create a new cart item
+      parameters:
+      - description: Cart creation data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CreateCartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Created cart details
+          schema:
+            $ref: '#/definitions/response.ApiResponseCart'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "502":
+          description: Failed to create cart
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new cart
       tags:
       - Cart
   /api/cart/{id}:
@@ -1697,7 +3133,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pb.DeleteCartRequest'
+          $ref: '#/definitions/response.ApiResponseCartAll'
       produces:
       - application/json
       responses:
@@ -1786,6 +3222,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of active category
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -1884,12 +3335,6 @@ paths:
       consumes:
       - application/json
       description: Permanently delete a category record by its ID.
-      parameters:
-      - description: category ID
-        in: path
-        name: id
-        required: true
-        type: integer
       produces:
       - application/json
       responses:
@@ -1908,6 +3353,343 @@ paths:
       security:
       - Bearer: []
       summary: Permanently delete a category
+      tags:
+      - Category
+  /api/category/merchant/monthly-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly pricing statistics for categories by specific
+        merchant
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly category pricing by merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryMonthPrice'
+        "400":
+          description: Invalid merchant ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly category pricing by merchant
+      tags:
+      - Category
+  /api/category/merchant/monthly-total-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly pricing statistics for all categories
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month
+        in: query
+        name: month
+        required: true
+        type: integer
+      - description: Category ID
+        in: query
+        name: category_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly category pricing data
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryMonthPrice'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly category pricing
+      tags:
+      - Category
+  /api/category/merchant/yearly-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly pricing statistics for categories by specific merchant
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly category pricing by merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryYearPrice'
+        "400":
+          description: Invalid merchant ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly category pricing by merchant
+      tags:
+      - Category
+  /api/category/monthly-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly pricing statistics for all categories
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly category pricing data
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryMonthPrice'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly category pricing
+      tags:
+      - Category
+  /api/category/monthly-total-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly pricing statistics for all categories
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly category pricing data
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryMonthPrice'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly category pricing
+      tags:
+      - Category
+  /api/category/mycategory/monthly-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly pricing statistics for specific category
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Category ID
+        in: path
+        name: category_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly pricing by category
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryMonthPrice'
+        "400":
+          description: Invalid category ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly pricing by category ID
+      tags:
+      - Category
+  /api/category/mycategory/monthly-total-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly pricing statistics for all categories
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month
+        in: query
+        name: month
+        required: true
+        type: integer
+      - description: Category ID
+        in: query
+        name: category_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly category pricing data
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryMonthPrice'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly category pricing
+      tags:
+      - Category
+  /api/category/mycategory/yearly-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly pricing statistics for specific category
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Category ID
+        in: path
+        name: category_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly pricing by category
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryYearPrice'
+        "400":
+          description: Invalid category ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly pricing by category ID
       tags:
       - Category
   /api/category/restore/{id}:
@@ -1946,12 +3728,6 @@ paths:
       consumes:
       - application/json
       description: Restore a trashed category record by its ID.
-      parameters:
-      - description: category ID
-        in: path
-        name: id
-        required: true
-        type: integer
       produces:
       - application/json
       responses:
@@ -1977,6 +3753,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of trashed category records
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -2031,9 +3822,9 @@ paths:
       description: Update an existing category record with the provided details and
         an optional image file
       parameters:
-      - description: Category ID
-        in: formData
-        name: category_id
+      - description: Order ID
+        in: path
+        name: id
         required: true
         type: integer
       - description: Category name
@@ -2075,6 +3866,116 @@ paths:
       summary: Update an existing category
       tags:
       - Category
+  /api/category/yearly-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly pricing statistics for all categories
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly category pricing data
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryYearPrice'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly category pricing
+      tags:
+      - Category
+  /api/category/yearly-total-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly pricing statistics for all categories
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly category pricing data
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryYearPrice'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly category pricing
+      tags:
+      - Category
+  /api/category/yearly-total-pricing/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly pricing statistics for all categories
+      parameters:
+      - description: Category ID
+        in: path
+        name: category_id
+        required: true
+        type: integer
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly category pricing data
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryYearPrice'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly category pricing
+      tags:
+      - Category
   /api/merchant:
     get:
       consumes:
@@ -2111,6 +4012,1401 @@ paths:
       summary: Find all merchant
       tags:
       - Merchant
+  /api/merchant-business:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantBusiness'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find all merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-business/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a merchant by ID
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantBusiness'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find merchant by ID
+      tags:
+      - MerchantCertification
+  /api/merchant-business/active:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of active merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of active merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantBusinessDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve active merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-business/create:
+    post:
+      consumes:
+      - application/json
+      description: Create merchant business info (e.g., type, tax ID, website, etc.)
+      parameters:
+      - description: Create merchant business request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CreateMerchantBusinessInformationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created merchant business info
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantBusiness'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to create merchant business info
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new merchant business information
+      tags:
+      - MerchantBusiness
+  /api/merchant-business/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDelete'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-business/delete/all:
+    post:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-business/restore/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantBusinessDeleteAt'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-business/restore/all:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant all
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-business/trashed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of trashed merchant records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of trashed merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantBusinessDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve trashed merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-business/trashed/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved trashed merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantBusinessDeleteAt'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve trashed merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve a trashed merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-business/update/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Update merchant business info by ID
+      parameters:
+      - description: Merchant Business Info ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update merchant business request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.UpdateMerchantBusinessInformationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated merchant business info
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantBusiness'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to update merchant business info
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update existing merchant business information
+      tags:
+      - MerchantBusiness
+  /api/merchant-certification:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantAward'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find all merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-certification/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a merchant by ID
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAward'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find merchant by ID
+      tags:
+      - MerchantCertification
+  /api/merchant-certification/active:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of active merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of active merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantAwardDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve active merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-certification/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new merchant certification or award with the provided
+        details
+      parameters:
+      - description: Create merchant certification or award request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CreateMerchantCertificationOrAwardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created merchant certification or award
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAward'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to create merchant certification or award
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new merchant certification or award
+      tags:
+      - MerchantCertificationCertification
+  /api/merchant-certification/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDelete'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-certification/delete/all:
+    post:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-certification/restore/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAwardDeleteAt'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-certification/restore/all:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant all
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-certification/trashed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of trashed merchant records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of trashed merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantAwardDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve trashed merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-certification/trashed/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved trashed merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAwardDeleteAt'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve trashed merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve a trashed merchant
+      tags:
+      - MerchantCertification
+  /api/merchant-certification/update/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Update an existing merchant certification or award with the provided
+        details
+      parameters:
+      - description: Merchant Certification ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update merchant certification or award request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.UpdateMerchantCertificationOrAwardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated merchant certification or award
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAward'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to update merchant certification or award
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update an existing merchant certification or award
+      tags:
+      - MerchantCertification
+  /api/merchant-detail:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantDetail'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find all merchant
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a merchant by ID
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDetail'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find merchant by ID
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/active:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of active merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of active merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantDetailDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve active merchant
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new merchant detail with display name, cover image, logo,
+        etc.
+      parameters:
+      - description: Merchant detail payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CreateMerchantDetailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created merchant detail
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDetail'
+        "400":
+          description: Invalid request or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new merchant detail
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDelete'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/delete/all:
+    post:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/restore/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDeleteAt'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/restore/all:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant all
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/trashed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of trashed merchant records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of trashed merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantDetailDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve trashed merchant
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/trashed/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved trashed merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDetailDeleteAt'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve trashed merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve a trashed merchant
+      tags:
+      - MerchantDetail
+  /api/merchant-detail/update/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Update an existing merchant detail by ID
+      parameters:
+      - description: Merchant Detail ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Merchant detail update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.UpdateMerchantDetailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated merchant detail
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDetail'
+        "400":
+          description: Invalid request or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update existing merchant detail
+      tags:
+      - MerchantDetail
+  /api/merchant-policy:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantPolicies'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find all merchant
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a merchant by ID
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchant'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find merchant by ID
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/active:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of active merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of active merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantPoliciesDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve active merchant
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new merchant policy with the provided details
+      parameters:
+      - description: Create merchant policy request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CreateMerchantPolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created merchant policy
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantPolicies'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to create merchant policy
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new merchant policy
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDelete'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/delete/all:
+    post:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/restore/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantPoliciesDeleteAt'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/restore/all:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant all
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/trashed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of trashed merchant records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of trashed merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantPoliciesDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve trashed merchant
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/trashed/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved trashed merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantPoliciesDeleteAt'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve trashed merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve a trashed merchant
+      tags:
+      - MerchantPolicy
+  /api/merchant-policy/update/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Update an existing merchant policy with the provided details
+      parameters:
+      - description: Merchant Policy ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update merchant policy request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.UpdateMerchantPolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated merchant policy
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantPolicies'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to update merchant policy
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update an existing merchant policy
+      tags:
+      - MerchantPolicy
   /api/merchant/{id}:
     get:
       consumes:
@@ -2147,13 +5443,28 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of active merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: List of active merchant
           schema:
-            $ref: '#/definitions/pb.ApiResponsesUser'
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantDeleteAt'
         "500":
           description: Failed to retrieve merchant data
           schema:
@@ -2330,7 +5641,7 @@ paths:
         "200":
           description: List of trashed merchant data
           schema:
-            $ref: '#/definitions/pb.ApiResponsesUser'
+            $ref: '#/definitions/response.ApiResponsePaginationMerchantDeleteAt'
         "500":
           description: Failed to retrieve merchant data
           schema:
@@ -2377,6 +5688,11 @@ paths:
       - application/json
       description: Update an existing merchant record with the provided details
       parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
       - description: Update merchant request
         in: body
         name: request
@@ -2403,6 +5719,46 @@ paths:
       summary: Update an existing merchant
       tags:
       - Merchant
+  /api/merchant/yearly-total-pricing:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly pricing statistics for all categories
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Category ID
+        in: query
+        name: category_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly category pricing data
+          schema:
+            $ref: '#/definitions/response.ApiResponseCategoryYearPrice'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly category pricing
+      tags:
+      - Category
   /api/order:
     get:
       consumes:
@@ -2480,6 +5836,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of active order items
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -2532,6 +5903,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of trashed order items
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -2584,6 +5970,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of active orders
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -2684,6 +6085,244 @@ paths:
       summary: Permanently delete all orders
       tags:
       - Order
+  /api/order/merchant/monthly-revenue:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly revenue statistics for specific merchant
+      parameters:
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly revenue by merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseOrderMonthly'
+        "400":
+          description: Invalid merchant ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly revenue by merchant
+      tags:
+      - Order
+  /api/order/merchant/monthly-total-revenue:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly revenue statistics for all orders
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month
+        in: query
+        name: month
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly revenue data
+          schema:
+            $ref: '#/definitions/response.ApiResponseOrderMonthly'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly revenue report
+      tags:
+      - Order
+  /api/order/merchant/yearly-revenue:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly revenue statistics for specific merchant
+      parameters:
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly revenue by merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseOrderYearly'
+        "400":
+          description: Invalid merchant ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly revenue by merchant
+      tags:
+      - Order
+  /api/order/merchant/yearly-total-revenue:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly revenue statistics for all orders
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly revenue data
+          schema:
+            $ref: '#/definitions/response.ApiResponseOrderYearly'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly revenue report
+      tags:
+      - Order
+  /api/order/monthly-revenue:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly revenue statistics for all orders
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly revenue data
+          schema:
+            $ref: '#/definitions/response.ApiResponseOrderMonthly'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly revenue report
+      tags:
+      - Order
+  /api/order/monthly-total-revenue:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve monthly revenue statistics for all orders
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month
+        in: query
+        name: month
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Monthly revenue data
+          schema:
+            $ref: '#/definitions/response.ApiResponseOrderMonthly'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly revenue report
+      tags:
+      - Order
   /api/order/restore/{id}:
     post:
       consumes:
@@ -2741,6 +6380,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of trashed orders
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -2758,7 +6412,7 @@ paths:
       tags:
       - Order
   /api/order/trashed/{id}:
-    get:
+    post:
       consumes:
       - application/json
       description: Retrieve a trashed order record by its ID.
@@ -2794,6 +6448,11 @@ paths:
       - application/json
       description: Update an existing order with provided details
       parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
       - description: Order update details
         in: body
         name: request
@@ -2818,6 +6477,76 @@ paths:
       security:
       - Bearer: []
       summary: Update an existing order
+      tags:
+      - Order
+  /api/order/yearly-revenue:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly revenue statistics for all orders
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly revenue data
+          schema:
+            $ref: '#/definitions/response.ApiResponseOrderYearly'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly revenue report
+      tags:
+      - Order
+  /api/order/yearly-total-revenue:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve yearly revenue statistics for all orders
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Yearly revenue data
+          schema:
+            $ref: '#/definitions/response.ApiResponseOrderYearly'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly revenue report
       tags:
       - Order
   /api/product:
@@ -2892,6 +6621,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of active products
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -2959,12 +6703,12 @@ paths:
         in: formData
         name: merchant_id
         required: true
-        type: integer
+        type: string
       - description: Category ID
         in: formData
         name: category_id
         required: true
-        type: integer
+        type: string
       - description: Product name
         in: formData
         name: name
@@ -2979,7 +6723,7 @@ paths:
         in: formData
         name: price
         required: true
-        type: integer
+        type: number
       - description: Product count in stock
         in: formData
         name: count_in_stock
@@ -2994,12 +6738,12 @@ paths:
         in: formData
         name: weight
         required: true
-        type: integer
+        type: number
       - description: Product rating
         in: formData
         name: rating
         required: true
-        type: integer
+        type: number
       - description: Product slug
         in: formData
         name: slug_product
@@ -3007,21 +6751,16 @@ paths:
         type: string
       - description: Product image file
         in: formData
-        name: image_product
+        name: image
         required: true
         type: file
-      - description: Product barcode
-        in: formData
-        name: barcode
-        required: true
-        type: string
       produces:
       - application/json
       responses:
         "200":
           description: Successfully created product
           schema:
-            $ref: '#/definitions/pb.ApiResponseProduct'
+            $ref: '#/definitions/response.ApiResponseProduct'
         "400":
           description: Invalid request body or validation error
           schema:
@@ -3185,6 +6924,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of trashed products
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -3232,7 +6986,7 @@ paths:
       summary: Retrieve a trashed product
       tags:
       - Product
-  /api/product/update:
+  /api/product/update/{id}:
     post:
       consumes:
       - multipart/form-data
@@ -3240,20 +6994,20 @@ paths:
         an optional image file
       parameters:
       - description: Product ID
-        in: formData
-        name: product_id
+        in: path
+        name: id
         required: true
         type: integer
       - description: Merchant ID
         in: formData
         name: merchant_id
         required: true
-        type: integer
+        type: string
       - description: Category ID
         in: formData
         name: category_id
         required: true
-        type: integer
+        type: string
       - description: Product name
         in: formData
         name: name
@@ -3268,7 +7022,7 @@ paths:
         in: formData
         name: price
         required: true
-        type: integer
+        type: number
       - description: Product count in stock
         in: formData
         name: count_in_stock
@@ -3283,33 +7037,29 @@ paths:
         in: formData
         name: weight
         required: true
-        type: integer
+        type: number
       - description: Product rating
         in: formData
         name: rating
         required: true
-        type: integer
+        type: number
       - description: Product slug
         in: formData
         name: slug_product
         required: true
         type: string
-      - description: New product image file
+      - description: Product image file
         in: formData
-        name: image_product
-        type: file
-      - description: Product barcode
-        in: formData
-        name: barcode
+        name: image
         required: true
-        type: string
+        type: file
       produces:
       - application/json
       responses:
         "200":
           description: Successfully updated product
           schema:
-            $ref: '#/definitions/pb.ApiResponseProduct'
+            $ref: '#/definitions/response.ApiResponseProduct'
         "400":
           description: Invalid request body or validation error
           schema:
@@ -3359,11 +7109,398 @@ paths:
       summary: Find all review
       tags:
       - Review
+  /api/review-detail:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationReviewDetails'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find all merchant
+      tags:
+      - ReviewDetail
+  /api/review-detail/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a merchant by ID
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponseReviewDetail'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find merchant by ID
+      tags:
+      - ReviewDetail
+  /api/review-detail/active:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of active merchant
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of active merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationReviewDetailsDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve active merchant
+      tags:
+      - ReviewDetail
+  /api/review-detail/create:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new merchant review detail with the provided details
+      parameters:
+      - description: Type
+        in: formData
+        name: type
+        required: true
+        type: string
+      - description: url
+        in: formData
+        name: url
+        required: true
+        type: file
+      - description: Product name
+        in: formData
+        name: caption
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created review detail
+          schema:
+            $ref: '#/definitions/response.ApiResponseReviewDetail'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to create review detail
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new merchant review detail
+      tags:
+      - ReviewDetail
+  /api/review-detail/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantDelete'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - ReviewDetail
+  /api/review-detail/delete/all:
+    post:
+      consumes:
+      - application/json
+      description: Permanently delete a merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted merchant record permanently
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: 'Bad Request: Invalid ID'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: 'Failed to delete merchant:'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Permanently delete a merchant
+      tags:
+      - ReviewDetail
+  /api/review-detail/restore/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseReviewDetailDeleteAt'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - ReviewDetail
+  /api/review-detail/restore/all:
+    post:
+      consumes:
+      - application/json
+      description: Restore a trashed merchant record by its ID.
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully restored merchant all
+          schema:
+            $ref: '#/definitions/response.ApiResponseMerchantAll'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to restore merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore a trashed merchant
+      tags:
+      - ReviewDetail
+  /api/review-detail/trashed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of trashed merchant records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of trashed merchant data
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationReviewDetailsDeleteAt'
+        "500":
+          description: Failed to retrieve merchant data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve trashed merchant
+      tags:
+      - ReviewDetail
+  /api/review-detail/trashed/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a trashed merchant record by its ID.
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved trashed merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponseReviewDetailDeleteAt'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve trashed merchant
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Retrieve a trashed merchant
+      tags:
+      - ReviewDetail
+  /api/review-detail/update/{id}:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Update an existing merchant review detail with the provided details
+      parameters:
+      - description: Review Detail ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Type
+        in: formData
+        name: type
+        required: true
+        type: string
+      - description: url
+        in: formData
+        name: url
+        required: true
+        type: file
+      - description: Product name
+        in: formData
+        name: caption
+        required: true
+        type: string
+      - description: Update review detail request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.UpdateReviewDetailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated review detail
+          schema:
+            $ref: '#/definitions/response.ApiResponseReviewDetail'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to update review detail
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update an existing merchant review detail
+      tags:
+      - ReviewDetail
   /api/review/active:
     get:
       consumes:
       - application/json
       description: Retrieve a list of active review
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -3378,6 +7515,38 @@ paths:
       security:
       - Bearer: []
       summary: Retrieve active review
+      tags:
+      - Review
+  /api/review/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new review with the provided details
+      parameters:
+      - description: review details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CreateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created review
+          schema:
+            $ref: '#/definitions/response.ApiResponseReview'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to create review
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new review
       tags:
       - Review
   /api/review/delete/{id}:
@@ -3410,7 +7579,7 @@ paths:
       - Bearer: []
       summary: Permanently delete a review
       tags:
-      - Category
+      - review
   /api/review/delete/all:
     post:
       consumes:
@@ -3440,6 +7609,51 @@ paths:
       security:
       - Bearer: []
       summary: Permanently delete a review
+      tags:
+      - Review
+  /api/review/merchant/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of reviews for a specific merchant
+      parameters:
+      - description: merchant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of reviews for the merchant
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationReview'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve review data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find reviews by merchant ID
       tags:
       - Review
   /api/review/product/{id}:
@@ -3548,12 +7762,27 @@ paths:
       - Bearer: []
       summary: Restore a trashed review
       tags:
-      - Category
+      - review
   /api/review/trashed:
     get:
       consumes:
       - application/json
       description: Retrieve a list of trashed review records
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -3601,6 +7830,43 @@ paths:
       summary: Retrieve a trashed review
       tags:
       - Review
+  /api/review/update/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Update an existing review record with the provided details
+      parameters:
+      - description: review ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: review update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.UpdateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated review
+          schema:
+            $ref: '#/definitions/response.ApiResponseReview'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to update review
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update an existing review
+      tags:
+      - Review
   /api/role:
     get:
       consumes:
@@ -3626,7 +7892,7 @@ paths:
         "200":
           description: List of roles
           schema:
-            $ref: '#/definitions/pb.ApiResponsePaginationRole'
+            $ref: '#/definitions/response.ApiResponsePaginationRole'
         "400":
           description: Invalid query parameters
           schema:
@@ -3650,14 +7916,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pb.CreateRoleRequest'
+          $ref: '#/definitions/requests.CreateRoleRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Created role data
           schema:
-            $ref: '#/definitions/pb.ApiResponseRole'
+            $ref: '#/definitions/response.ApiResponseRole'
         "400":
           description: Invalid request body
           schema:
@@ -3688,7 +7954,7 @@ paths:
         "200":
           description: Soft-deleted role data
           schema:
-            $ref: '#/definitions/pb.ApiResponseRole'
+            $ref: '#/definitions/response.ApiResponseRole'
         "400":
           description: Invalid role ID
           schema:
@@ -3718,7 +7984,7 @@ paths:
         "200":
           description: Role data
           schema:
-            $ref: '#/definitions/pb.ApiResponseRole'
+            $ref: '#/definitions/response.ApiResponseRole'
         "400":
           description: Invalid role ID
           schema:
@@ -3747,14 +8013,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pb.UpdateRoleRequest'
+          $ref: '#/definitions/requests.UpdateRoleRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Updated role data
           schema:
-            $ref: '#/definitions/pb.ApiResponseRole'
+            $ref: '#/definitions/response.ApiResponseRole'
         "400":
           description: Invalid role ID or request body
           schema:
@@ -3793,7 +8059,7 @@ paths:
         "200":
           description: List of active roles
           schema:
-            $ref: '#/definitions/pb.ApiResponsePaginationRoleDeleteAt'
+            $ref: '#/definitions/response.ApiResponsePaginationRoleDeleteAt'
         "400":
           description: Invalid query parameters
           schema:
@@ -3818,7 +8084,7 @@ paths:
         "200":
           description: Permanently deleted roles data
           schema:
-            $ref: '#/definitions/pb.ApiResponseRoleAll'
+            $ref: '#/definitions/response.ApiResponseRoleAll'
         "500":
           description: Failed to delete all roles permanently
           schema:
@@ -3845,7 +8111,7 @@ paths:
         "200":
           description: Permanently deleted role data
           schema:
-            $ref: '#/definitions/pb.ApiResponseRole'
+            $ref: '#/definitions/response.ApiResponseRole'
         "400":
           description: Invalid role ID
           schema:
@@ -3870,7 +8136,7 @@ paths:
         "200":
           description: Restored roles data
           schema:
-            $ref: '#/definitions/pb.ApiResponseRoleAll'
+            $ref: '#/definitions/response.ApiResponseRoleAll'
         "500":
           description: Failed to restore all roles
           schema:
@@ -3897,7 +8163,7 @@ paths:
         "200":
           description: Restored role data
           schema:
-            $ref: '#/definitions/pb.ApiResponseRole'
+            $ref: '#/definitions/response.ApiResponseRole'
         "400":
           description: Invalid role ID
           schema:
@@ -3936,7 +8202,7 @@ paths:
         "200":
           description: List of trashed roles
           schema:
-            $ref: '#/definitions/pb.ApiResponsePaginationRoleDeleteAt'
+            $ref: '#/definitions/response.ApiResponsePaginationRoleDeleteAt'
         "400":
           description: Invalid query parameters
           schema:
@@ -3967,7 +8233,7 @@ paths:
         "200":
           description: Role data
           schema:
-            $ref: '#/definitions/pb.ApiResponseRole'
+            $ref: '#/definitions/response.ApiResponseRole'
         "400":
           description: Invalid user ID
           schema:
@@ -4007,7 +8273,7 @@ paths:
         "200":
           description: List of shipping-address
           schema:
-            $ref: '#/definitions/response.ApiResponsePaginationCategory'
+            $ref: '#/definitions/response.ApiResponsePaginationShippingAddress'
         "500":
           description: Failed to retrieve shipping-address data
           schema:
@@ -4016,7 +8282,7 @@ paths:
       - Bearer: []
       summary: Find all shipping-address
       tags:
-      - Category
+      - shipping address
   /api/shipping-address/{id}:
     get:
       consumes:
@@ -4053,6 +8319,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of active shipping-address
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -4209,6 +8490,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of trashed shipping-address records
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -4563,8 +8859,8 @@ paths:
         an optional image file
       parameters:
       - description: Slider ID
-        in: formData
-        name: slider_id
+        in: path
+        name: id
         required: true
         type: integer
       - description: Slider name
@@ -4600,13 +8896,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve a list of all transactions filtered by merchant
+      description: Retrieve a list of all transactions
       parameters:
-      - description: Merchant ID
-        in: query
-        name: merchant_id
-        required: true
-        type: integer
       - default: 1
         description: Page number
         in: query
@@ -4628,17 +8919,13 @@ paths:
           description: List of transactions
           schema:
             $ref: '#/definitions/response.ApiResponsePaginationTransaction'
-        "400":
-          description: Invalid merchant ID
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Failed to retrieve transaction data
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - Bearer: []
-      summary: Find all transactions by merchant
+      summary: Find all transactions
       tags:
       - Transaction
   /api/transaction/{id}:
@@ -4677,6 +8964,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of active transactions
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -4777,6 +9079,446 @@ paths:
       summary: Permanently delete all transactions
       tags:
       - Transaction
+  /api/transaction/merchant/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all transactions filtered by merchant
+      parameters:
+      - description: Merchant ID
+        in: path
+        name: merchant_id
+        required: true
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of transactions
+          schema:
+            $ref: '#/definitions/response.ApiResponsePaginationTransaction'
+        "400":
+          description: Invalid merchant ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to retrieve transaction data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Find all transactions by merchant
+      tags:
+      - Transaction
+  /api/transaction/merchant/monthly-failed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of failed transactions by month for specific
+        merchant
+      parameters:
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month in MM format (1-12)
+        in: query
+        name: month
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionMonthFailed'
+        "400":
+          description: Invalid merchant ID, year or month parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly failed transactions by merchant
+      tags:
+      - Transaction
+  /api/transaction/merchant/monthly-methods:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of payment methods used by month for specific
+        merchant
+      parameters:
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionMonthMethod'
+        "400":
+          description: Invalid merchant ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly payment method distribution by merchant
+      tags:
+      - Transaction
+  /api/transaction/merchant/monthly-success:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of successful transactions by month for specific
+        merchant
+      parameters:
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month in MM format (1-12)
+        in: query
+        name: month
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionMonthSuccess'
+        "400":
+          description: Invalid merchant ID, year or month parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly successful transactions by merchant
+      tags:
+      - Transaction
+  /api/transaction/merchant/yearly-failed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of failed transactions by year for specific
+        merchant
+      parameters:
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionYearFailed'
+        "400":
+          description: Invalid merchant ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly failed transactions by merchant
+      tags:
+      - Transaction
+  /api/transaction/merchant/yearly-methods:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of payment methods used by year for specific
+        merchant
+      parameters:
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionYearMethod'
+        "400":
+          description: Invalid merchant ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly payment method distribution by merchant
+      tags:
+      - Transaction
+  /api/transaction/merchant/yearly-success:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of successful transactions by year for specific
+        merchant
+      parameters:
+      - description: Merchant ID
+        in: query
+        name: merchant_id
+        required: true
+        type: integer
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionYearSuccess'
+        "400":
+          description: Invalid merchant ID or year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Merchant not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly successful transactions by merchant
+      tags:
+      - Transaction
+  /api/transaction/monthly-failed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of failed transactions by month
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month in MM format (1-12)
+        in: query
+        name: month
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionMonthFailed'
+        "400":
+          description: Invalid year or month parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly failed transactions
+      tags:
+      - Transaction
+  /api/transaction/monthly-methods:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of payment methods used by month
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionMonthMethod'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly payment method distribution
+      tags:
+      - Transaction
+  /api/transaction/monthly-success:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of successful transactions by month
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month in MM format (1-12)
+        in: query
+        name: month
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionMonthSuccess'
+        "400":
+          description: Invalid year or month parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get monthly successful transactions
+      tags:
+      - Transaction
   /api/transaction/restore/{id}:
     post:
       consumes:
@@ -4834,6 +9576,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of trashed transaction records
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -4887,6 +9644,11 @@ paths:
       - application/json
       description: Update an existing transaction record
       parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: integer
       - description: Updated transaction details
         in: body
         name: request
@@ -4911,6 +9673,111 @@ paths:
       security:
       - Bearer: []
       summary: Update an existing transaction
+      tags:
+      - Transaction
+  /api/transaction/yearly-failed:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of failed transactions by year
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionYearFailed'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly failed transactions
+      tags:
+      - Transaction
+  /api/transaction/yearly-methods:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of payment methods used by year
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionYearMethod'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly payment method distribution
+      tags:
+      - Transaction
+  /api/transaction/yearly-success:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve statistics of successful transactions by year
+      parameters:
+      - description: Year in YYYY format (e.g., 2023)
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ApiResponsesTransactionYearSuccess'
+        "400":
+          description: Invalid year parameter
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get yearly successful transactions
       tags:
       - Transaction
   /api/user:
@@ -4966,7 +9833,7 @@ paths:
         "200":
           description: User data
           schema:
-            $ref: '#/definitions/pb.ApiResponseUser'
+            $ref: '#/definitions/response.ApiResponseUser'
         "400":
           description: Invalid user ID
           schema:
@@ -4985,6 +9852,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of active users
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -5050,7 +9932,7 @@ paths:
         "200":
           description: Successfully deleted user record permanently
           schema:
-            $ref: '#/definitions/pb.ApiResponseUserDelete'
+            $ref: '#/definitions/response.ApiResponseUserDelete'
         "400":
           description: 'Bad Request: Invalid ID'
           schema:
@@ -5081,7 +9963,7 @@ paths:
         "200":
           description: Successfully deleted user record permanently
           schema:
-            $ref: '#/definitions/pb.ApiResponseUserDelete'
+            $ref: '#/definitions/response.ApiResponseUserDelete'
         "400":
           description: 'Bad Request: Invalid ID'
           schema:
@@ -5143,7 +10025,7 @@ paths:
         "200":
           description: Successfully restored user all
           schema:
-            $ref: '#/definitions/pb.ApiResponseUserAll'
+            $ref: '#/definitions/response.ApiResponseUserAll'
         "400":
           description: Invalid user ID
           schema:
@@ -5162,6 +10044,21 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of trashed user records
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -5215,6 +10112,11 @@ paths:
       - application/json
       description: Update an existing user record with the provided details
       parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
       - description: Update user request
         in: body
         name: UpdateUserRequest

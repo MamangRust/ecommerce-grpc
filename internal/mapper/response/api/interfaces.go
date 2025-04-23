@@ -21,6 +21,16 @@ type RoleResponseMapper interface {
 	ToApiResponsePaginationRoleDeleteAt(pbResponse *pb.ApiResponsePaginationRoleDeleteAt) *response.ApiResponsePaginationRoleDeleteAt
 }
 
+type BannerResponseMapper interface {
+	ToApiResponseBanner(pbResponse *pb.ApiResponseBanner) *response.ApiResponseBanner
+	ToApiResponseBannerDeleteAt(pbResponse *pb.ApiResponseBannerDeleteAt) *response.ApiResponseBannerDeleteAt
+	ToApiResponsesBanner(pbResponse *pb.ApiResponsesBanner) *response.ApiResponsesBanner
+	ToApiResponseBannerDelete(pbResponse *pb.ApiResponseBannerDelete) *response.ApiResponseBannerDelete
+	ToApiResponseBannerAll(pbResponse *pb.ApiResponseBannerAll) *response.ApiResponseBannerAll
+	ToApiResponsePaginationBannerDeleteAt(pbResponse *pb.ApiResponsePaginationBannerDeleteAt) *response.ApiResponsePaginationBannerDeleteAt
+	ToApiResponsePaginationBanner(pbResponse *pb.ApiResponsePaginationBanner) *response.ApiResponsePaginationBanner
+}
+
 type UserResponseMapper interface {
 	ToApiResponseUserDeleteAt(pbResponse *pb.ApiResponseUserDeleteAt) *response.ApiResponseUserDeleteAt
 	ToApiResponseUser(pbResponse *pb.ApiResponseUser) *response.ApiResponseUser
@@ -33,6 +43,11 @@ type UserResponseMapper interface {
 }
 
 type CategoryResponseMapper interface {
+	ToApiResponseCategoryMonthlyTotalPrice(pbResponse *pb.ApiResponseCategoryMonthlyTotalPrice) *response.ApiResponseCategoryMonthlyTotalPrice
+	ToApiResponseCategoryYearlyTotalPrice(pbResponse *pb.ApiResponseCategoryYearlyTotalPrice) *response.ApiResponseCategoryYearlyTotalPrice
+	ToApiResponseCategoryMonthlyPrice(pbResponse *pb.ApiResponseCategoryMonthPrice) *response.ApiResponseCategoryMonthPrice
+	ToApiResponseCategoryYearlyPrice(pbResponse *pb.ApiResponseCategoryYearPrice) *response.ApiResponseCategoryYearPrice
+
 	ToApiResponseCategory(pbResponse *pb.ApiResponseCategory) *response.ApiResponseCategory
 	ToApiResponseCategoryDeleteAt(pbResponse *pb.ApiResponseCategoryDeleteAt) *response.ApiResponseCategoryDeleteAt
 	ToApiResponsesCategory(pbResponse *pb.ApiResponsesCategory) *response.ApiResponsesCategory
@@ -53,6 +68,39 @@ type MerchantResponseMapper interface {
 	ToApiResponsePaginationMerchant(pbResponse *pb.ApiResponsePaginationMerchant) *response.ApiResponsePaginationMerchant
 }
 
+type MerchantAwardResponseMapper interface {
+	ToApiResponseMerchantAward(pbResponse *pb.ApiResponseMerchantAward) *response.ApiResponseMerchantAward
+	ToApiResponseMerchantAwardDeleteAt(pbResponse *pb.ApiResponseMerchantAwardDeleteAt) *response.ApiResponseMerchantAwardDeleteAt
+	ToApiResponsesMerchantAward(pbResponse *pb.ApiResponsesMerchantAward) *response.ApiResponsesMerchantAward
+	ToApiResponsePaginationMerchantAwardDeleteAt(pbResponse *pb.ApiResponsePaginationMerchantAwardDeleteAt) *response.ApiResponsePaginationMerchantAwardDeleteAt
+	ToApiResponsePaginationMerchantAward(pbResponse *pb.ApiResponsePaginationMerchantAward) *response.ApiResponsePaginationMerchantAward
+}
+
+type MerchantBusinessResponseMapper interface {
+	ToApiResponseMerchantBusiness(pbResponse *pb.ApiResponseMerchantBusiness) *response.ApiResponseMerchantBusiness
+	ToApiResponseMerchantBusinessDeleteAt(pbResponse *pb.ApiResponseMerchantBusinessDeleteAt) *response.ApiResponseMerchantBusinessDeleteAt
+	ToApiResponsesMerchantBusiness(pbResponse *pb.ApiResponsesMerchantBusiness) *response.ApiResponsesMerchantBusiness
+	ToApiResponsePaginationMerchantBusinessDeleteAt(pbResponse *pb.ApiResponsePaginationMerchantBusinessDeleteAt) *response.ApiResponsePaginationMerchantBusinessDeleteAt
+	ToApiResponsePaginationMerchantBusiness(pbResponse *pb.ApiResponsePaginationMerchantBusiness) *response.ApiResponsePaginationMerchantBusiness
+}
+
+type MerchantDetailResponseMapper interface {
+	ToApiResponseMerchantDetail(pbResponse *pb.ApiResponseMerchantDetail) *response.ApiResponseMerchantDetail
+	ToApiResponseMerchantDetailRelation(pbResponse *pb.ApiResponseMerchantDetail) *response.ApiResponseMerchantDetailRelation
+	ToApiResponseMerchantDetailDeleteAt(pbResponse *pb.ApiResponseMerchantDetailDeleteAt) *response.ApiResponseMerchantDetailDeleteAt
+	ToApiResponsesMerchantDetail(pbResponse *pb.ApiResponsesMerchantDetail) *response.ApiResponsesMerchantDetail
+	ToApiResponsePaginationMerchantDetailDeleteAt(pbResponse *pb.ApiResponsePaginationMerchantDetailDeleteAt) *response.ApiResponsePaginationMerchantDetailDeleteAt
+	ToApiResponsePaginationMerchantDetail(pbResponse *pb.ApiResponsePaginationMerchantDetail) *response.ApiResponsePaginationMerchantDetail
+}
+
+type MerchantPolicyResponseMapper interface {
+	ToApiResponseMerchantPolicies(pbResponse *pb.ApiResponseMerchantPolicies) *response.ApiResponseMerchantPolicies
+	ToApiResponseMerchantPoliciesDeleteAt(pbResponse *pb.ApiResponseMerchantPoliciesDeleteAt) *response.ApiResponseMerchantPoliciesDeleteAt
+	ToApiResponsesMerchantPolicies(pbResponse *pb.ApiResponsesMerchantPolicies) *response.ApiResponsesMerchantPolicies
+	ToApiResponsePaginationMerchantPoliciesDeleteAt(pbResponse *pb.ApiResponsePaginationMerchantPoliciesDeleteAt) *response.ApiResponsePaginationMerchantPoliciesDeleteAt
+	ToApiResponsePaginationMerchantPolicies(pbResponse *pb.ApiResponsePaginationMerchantPolicies) *response.ApiResponsePaginationMerchantPolicies
+}
+
 type OrderItemResponseMapper interface {
 	ToApiResponseOrderItem(pbResponse *pb.ApiResponseOrderItem) *response.ApiResponseOrderItem
 	ToApiResponsesOrderItem(pbResponse *pb.ApiResponsesOrderItem) *response.ApiResponsesOrderItem
@@ -63,6 +111,12 @@ type OrderItemResponseMapper interface {
 }
 
 type OrderResponseMapper interface {
+	ToApiResponseMonthlyTotalRevenue(pbResponse *pb.ApiResponseOrderMonthlyTotalRevenue) *response.ApiResponseOrderMonthlyTotalRevenue
+	ToApiResponseYearlyTotalRevenue(pbResponse *pb.ApiResponseOrderYearlyTotalRevenue) *response.ApiResponseOrderYearlyTotalRevenue
+
+	ToApiResponseMonthlyOrder(pbResponse *pb.ApiResponseOrderMonthly) *response.ApiResponseOrderMonthly
+	ToApiResponseYearlyOrder(pbResponse *pb.ApiResponseOrderYearly) *response.ApiResponseOrderYearly
+
 	ToApiResponseOrder(pbResponse *pb.ApiResponseOrder) *response.ApiResponseOrder
 	ToApiResponseOrderDeleteAt(pbResponse *pb.ApiResponseOrderDeleteAt) *response.ApiResponseOrderDeleteAt
 	ToApiResponsesOrder(pbResponse *pb.ApiResponsesOrder) *response.ApiResponsesOrder
@@ -83,6 +137,13 @@ type ProductResponseMapper interface {
 }
 
 type TransactionResponseMapper interface {
+	ToApiResponseTransactionMonthAmountSuccess(pbResponse *pb.ApiResponseTransactionMonthAmountSuccess) *response.ApiResponsesTransactionMonthSuccess
+	ToApiResponseTransactionMonthAmountFailed(pbResponse *pb.ApiResponseTransactionMonthAmountFailed) *response.ApiResponsesTransactionMonthFailed
+	ToApiResponseTransactionYearAmountSuccess(pbResponse *pb.ApiResponseTransactionYearAmountSuccess) *response.ApiResponsesTransactionYearSuccess
+	ToApiResponseTransactionYearAmountFailed(pbResponse *pb.ApiResponseTransactionYearAmountFailed) *response.ApiResponsesTransactionYearFailed
+	ToApiResponseTransactionMonthMethod(pbResponse *pb.ApiResponseTransactionMonthPaymentMethod) *response.ApiResponsesTransactionMonthMethod
+	ToApiResponseTransactionYearMethod(pbResponse *pb.ApiResponseTransactionYearPaymentmethod) *response.ApiResponsesTransactionYearMethod
+
 	ToApiResponseTransaction(pbResponse *pb.ApiResponseTransaction) *response.ApiResponseTransaction
 	ToApiResponseTransactionDeleteAt(pbResponse *pb.ApiResponseTransactionDeleteAt) *response.ApiResponseTransactionDeleteAt
 	ToApiResponsesTransaction(pbResponse *pb.ApiResponsesTransaction) *response.ApiResponsesTransaction
@@ -93,6 +154,7 @@ type TransactionResponseMapper interface {
 }
 
 type CartResponseMapper interface {
+	ToApiResponseCart(pbResponse *pb.ApiResponseCart) *response.ApiResponseCart
 	ToApiResponseCartPagination(pbResponse *pb.ApiResponsePaginationCart) *response.ApiResponseCartPagination
 	ToApiResponseCartDelete(pbResponse *pb.ApiResponseCartDelete) *response.ApiResponseCartDelete
 	ToApiResponseCartAll(pbResponse *pb.ApiResponseCartAll) *response.ApiResponseCartAll
@@ -106,6 +168,15 @@ type ReviewResponseMapper interface {
 	ToApiResponseReviewAll(pbResponse *pb.ApiResponseReviewAll) *response.ApiResponseReviewAll
 	ToApiResponsePaginationReviewDeleteAt(pbResponse *pb.ApiResponsePaginationReviewDeleteAt) *response.ApiResponsePaginationReviewDeleteAt
 	ToApiResponsePaginationReview(pbResponse *pb.ApiResponsePaginationReview) *response.ApiResponsePaginationReview
+	ToApiResponsePaginationReviewsDetail(pbResponse *pb.ApiResponsePaginationReviewDetail) *response.ApiResponsePaginationReviewsDetail
+}
+
+type ReviewDetailResponseMapper interface {
+	ToApiResponseReviewDetail(pbResponse *pb.ApiResponseReviewDetail) *response.ApiResponseReviewDetail
+	ToApiResponseReviewDetailDeleteAt(pbResponse *pb.ApiResponseReviewDetailDeleteAt) *response.ApiResponseReviewDetailDeleteAt
+	ToApiResponsesReviewDetail(pbResponse *pb.ApiResponsesReviewDetails) *response.ApiResponsesReviewDetails
+	ToApiResponsePaginationReviewDetailDeleteAt(pbResponse *pb.ApiResponsePaginationReviewDetailsDeleteAt) *response.ApiResponsePaginationReviewDetailsDeleteAt
+	ToApiResponsePaginationReviewDetail(pbResponse *pb.ApiResponsePaginationReviewDetails) *response.ApiResponsePaginationReviewDetails
 }
 
 type ShippingAddressResponseMapper interface {

@@ -11,17 +11,13 @@ CREATE TABLE "categories" (
     "deleted_at" TIMESTAMP DEFAULT NULL
 );
 
-CREATE INDEX idx_categories_slug ON categories (slug_category);
-
-CREATE INDEX idx_categories_created_at ON categories (created_at);
-
+CREATE INDEX "idx_categories_slug" ON "categories" ("slug_category");
+CREATE INDEX "idx_categories_created_at" ON "categories" ("created_at");
 -- +goose StatementEnd
+
 -- +goose Down
 -- +goose StatementBegin
-DROP INDEX IF EXISTS idx_categories_slug ON categories (slug_category);
-
-DROP INDEX IF EXISTS idx_categories_created_at ON categories (created_at);
-
+DROP INDEX IF EXISTS "idx_categories_slug" ON "categories" ("slug_category");
+DROP INDEX IF EXISTS "idx_categories_created_at" ON "categories" ("created_at");
 DROP TABLE IF EXISTS "categories";
-
 -- +goose StatementEnd

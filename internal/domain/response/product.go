@@ -32,7 +32,7 @@ type ProductResponseDeleteAt struct {
 	ImageProduct string  `json:"image_product"`
 	CreatedAt    string  `json:"created_at"`
 	UpdatedAt    string  `json:"updated_at"`
-	DeleteAt     string  `json:"deleted_at"`
+	DeletedAt    *string `json:"deleted_at"`
 }
 
 type ApiResponseProduct struct {

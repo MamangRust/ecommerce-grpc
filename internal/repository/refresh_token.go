@@ -47,6 +47,7 @@ func (r *refreshTokenRepository) FindByUserId(user_id int) (*record.RefreshToken
 func (r *refreshTokenRepository) CreateRefreshToken(req *requests.CreateRefreshToken) (*record.RefreshTokenRecord, error) {
 	layout := "2006-01-02 15:04:05"
 	expirationTime, err := time.Parse(layout, req.ExpiresAt)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse expiration date: %w", err)
 	}
@@ -71,7 +72,7 @@ func (r *refreshTokenRepository) UpdateRefreshToken(req *requests.UpdateRefreshT
 		return nil, fmt.Errorf("failed to parse expiration date: %w", err)
 	}
 
-	err = r.db.UpdateRefreshTokenByUserId(r.ctx, db.UpdateRefreshTokenByUserIdParams{
+	_, err = r.db.UpdateRefreshTokenByUserId(r.ctx, db.UpdateRefreshTokenByUserIdParams{
 		UserID:     int32(req.UserId),
 		Token:      req.Token,
 		Expiration: expirationTime,

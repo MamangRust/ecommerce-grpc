@@ -34,6 +34,11 @@ func (s *shippingAddressResponseMapper) ToResponsesShippingAddress(pbResponses [
 }
 
 func (s *shippingAddressResponseMapper) ToResponseShippingAddressDeleteAt(pbResponse *pb.ShippingResponseDeleteAt) *response.ShippingAddressResponseDeleteAt {
+	var deletedAt string
+	if pbResponse.DeletedAt != nil {
+		deletedAt = pbResponse.DeletedAt.Value
+	}
+
 	return &response.ShippingAddressResponseDeleteAt{
 		ID:        int(pbResponse.Id),
 		OrderID:   int(pbResponse.OrderId),
@@ -43,7 +48,7 @@ func (s *shippingAddressResponseMapper) ToResponseShippingAddressDeleteAt(pbResp
 		Kota:      pbResponse.Kota,
 		CreatedAt: pbResponse.CreatedAt,
 		UpdatedAt: pbResponse.UpdatedAt,
-		DeletedAt: pbResponse.DeletedAt,
+		DeletedAt: &deletedAt,
 	}
 }
 

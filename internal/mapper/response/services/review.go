@@ -45,7 +45,7 @@ func (r *reviewResponseMapper) ToReviewResponseDeleteAt(review *record.ReviewRec
 		Rating:    review.Rating,
 		CreatedAt: review.CreatedAt,
 		UpdatedAt: review.UpdatedAt,
-		DeletedAt: *review.DeletedAt,
+		DeletedAt: review.DeletedAt,
 	}
 }
 
@@ -54,6 +54,29 @@ func (r *reviewResponseMapper) ToReviewsResponseDeleteAt(reviews []*record.Revie
 
 	for _, review := range reviews {
 		responses = append(responses, r.ToReviewResponseDeleteAt(review))
+	}
+
+	return responses
+}
+
+func (r *reviewResponseMapper) ToReviewDetailResponse(review *record.ReviewsDetailRecord) *response.ReviewsDetailResponse {
+	return &response.ReviewsDetailResponse{
+		ID:        review.ID,
+		UserID:    review.UserID,
+		ProductID: review.ProductID,
+		Name:      review.Name,
+		Comment:   review.Comment,
+		Rating:    review.Rating,
+		CreatedAt: review.CreatedAt,
+		UpdatedAt: review.UpdatedAt,
+	}
+}
+
+func (r *reviewResponseMapper) ToReviewsDetailResponse(reviews []*record.ReviewsDetailRecord) []*response.ReviewsDetailResponse {
+	var responses []*response.ReviewsDetailResponse
+
+	for _, review := range reviews {
+		responses = append(responses, r.ToReviewDetailResponse(review))
 	}
 
 	return responses

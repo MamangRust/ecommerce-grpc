@@ -6,7 +6,6 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"errors"
 	"fmt"
 )
 
@@ -24,86 +23,89 @@ func NewOrderItemRepository(db *db.Queries, ctx context.Context, mapping recordm
 	}
 }
 
-func (r *orderItemRepository) FindAllOrderItems(search string, page, pageSize int) ([]*record.OrderItemRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *orderItemRepository) FindAllOrderItems(req *requests.FindAllOrderItems) ([]*record.OrderItemRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetOrderItemsParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetOrderItemsParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetOrderItems(r.ctx, req)
+	res, err := r.db.GetOrderItems(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find order items : %w", err)
+		return nil, nil, fmt.Errorf("failed to fetch order-items: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToOrderItemsRecordPagination(res), totalCount, nil
+	return r.mapping.ToOrderItemsRecordPagination(res), &totalCount, nil
 }
 
-func (r *orderItemRepository) FindByActive(search string, page, pageSize int) ([]*record.OrderItemRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *orderItemRepository) FindByActive(req *requests.FindAllOrderItems) ([]*record.OrderItemRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetOrderItemsActiveParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetOrderItemsActiveParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetOrderItemsActive(r.ctx, req)
+	res, err := r.db.GetOrderItemsActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find users: %w", err)
+		return nil, nil, fmt.Errorf("failed to fetch order-items active: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToOrderItemsRecordActivePagination(res), totalCount, nil
+	return r.mapping.ToOrderItemsRecordActivePagination(res), &totalCount, nil
 }
 
-func (r *orderItemRepository) FindByTrashed(search string, page, pageSize int) ([]*record.OrderItemRecord, int, error) {
-	offset := (page - 1) * pageSize
+func (r *orderItemRepository) FindByTrashed(req *requests.FindAllOrderItems) ([]*record.OrderItemRecord, *int, error) {
+	offset := (req.Page - 1) * req.PageSize
 
-	req := db.GetOrderItemsTrashedParams{
-		Column1: search,
-		Limit:   int32(pageSize),
+	reqDb := db.GetOrderItemsTrashedParams{
+		Column1: req.Search,
+		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetOrderItemsTrashed(r.ctx, req)
+	res, err := r.db.GetOrderItemsTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to find users: %w", err)
+		return nil, nil, fmt.Errorf("failed to fetch order-items trashed: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
 	}
 
 	var totalCount int
+
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
 		totalCount = 0
 	}
 
-	return r.mapping.ToOrderItemsRecordTrashedPagination(res), totalCount, nil
+	return r.mapping.ToOrderItemsRecordTrashedPagination(res), &totalCount, nil
 }
 
 func (r *orderItemRepository) FindOrderItemByOrder(order_id int) ([]*record.OrderItemRecord, error) {
 	res, err := r.db.GetOrderItemsByOrder(r.ctx, int32(order_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find order by order_id: %w", err)
+		return nil, fmt.Errorf("failed to find order-item by order_id: %w", err)
 	}
 
 	return r.mapping.ToOrderItemsRecord(res), nil
@@ -113,7 +115,7 @@ func (r *orderItemRepository) CalculateTotalPrice(order_id int) (*int32, error) 
 	res, err := r.db.CalculateTotalPrice(r.ctx, int32(order_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find order by order_id: %w", err)
+		return nil, fmt.Errorf("failed to find order-item by order_id: %w", err)
 	}
 
 	return &res, nil
@@ -129,7 +131,7 @@ func (r *orderItemRepository) CreateOrderItem(req *requests.CreateOrderItemRecor
 	})
 
 	if err != nil {
-		return nil, errors.New("failed create order item")
+		return nil, fmt.Errorf("failed create order item: %w", err)
 	}
 
 	return r.mapping.ToOrderItemRecord(res), nil
@@ -143,7 +145,7 @@ func (r *orderItemRepository) UpdateOrderItem(req *requests.UpdateOrderItemRecor
 	})
 
 	if err != nil {
-		return nil, errors.New("failed update order item")
+		return nil, fmt.Errorf("failed update order item: %w", err)
 	}
 
 	return r.mapping.ToOrderItemRecord(res), nil
@@ -194,5 +196,6 @@ func (r *orderItemRepository) DeleteAllOrderPermanent() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to delete all order_item permanently: %w", err)
 	}
+
 	return true, nil
 }

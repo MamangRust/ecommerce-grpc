@@ -15,20 +15,19 @@ CREATE TABLE "shipping_addresses" (
     "deleted_at" TIMESTAMP DEFAULT NULL
 );
 
-CREATE INDEX idx_shipping_addresses_order_id ON shipping_addresses(order_id);
-CREATE INDEX idx_shipping_addresses_provinsi ON shipping_addresses(provinsi);
-CREATE INDEX idx_shipping_addresses_negara ON shipping_addresses(negara);
-CREATE INDEX idx_shipping_addresses_kota ON shipping_addresses(kota);
-CREATE INDEX idx_shipping_addresses_method ON shipping_addresses(shipping_method);
+CREATE INDEX "idx_shipping_addresses_order_id" ON "shipping_addresses"("order_id");
+CREATE INDEX "idx_shipping_addresses_provinsi" ON "shipping_addresses"("provinsi");
+CREATE INDEX "idx_shipping_addresses_negara" ON "shipping_addresses"("negara");
+CREATE INDEX "idx_shipping_addresses_kota" ON "shipping_addresses"("kota");
+CREATE INDEX "idx_shipping_addresses_method" ON "shipping_addresses"("shipping_method");
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP INDEX IF EXISTS idx_shipping_addresses_order_id;
-DROP INDEX IF EXISTS idx_shipping_addresses_provinsi;
-DROP INDEX IF EXISTS idx_shipping_addresses_negara;
-DROP INDEX IF EXISTS idx_shipping_addresses_kota;
-DROP INDEX IF EXISTS idx_shipping_addresses_method;
-
+DROP INDEX IF EXISTS "idx_shipping_addresses_order_id";
+DROP INDEX IF EXISTS "idx_shipping_addresses_provinsi";
+DROP INDEX IF EXISTS "idx_shipping_addresses_negara";
+DROP INDEX IF EXISTS "idx_shipping_addresses_kota";
+DROP INDEX IF EXISTS "idx_shipping_addresses_method";
 DROP TABLE IF EXISTS "shipping_addresses";
 -- +goose StatementEnd

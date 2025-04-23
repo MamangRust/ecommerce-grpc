@@ -14,6 +14,12 @@ type ResponseApiMapper struct {
 	ReviewMapper                  ReviewResponseMapper
 	SliderMapper                  SliderResponseMapper
 	ShippingAddressResponseMapper ShippingAddressResponseMapper
+	BannerResponseMapper          BannerResponseMapper
+	MerchantAwardResponseMapper   MerchantAwardResponseMapper
+	MerchantBusinessMapper        MerchantBusinessResponseMapper
+	MerchantDetailResponseMapper  MerchantDetailResponseMapper
+	MerchantPolicyResponseMapper  MerchantPolicyResponseMapper
+	ReviewDetailResponseMapper    ReviewDetailResponseMapper
 }
 
 func NewResponseApiMapper() *ResponseApiMapper {
@@ -31,5 +37,11 @@ func NewResponseApiMapper() *ResponseApiMapper {
 		ReviewMapper:                  NewReviewResponseMapper(),
 		SliderMapper:                  NewSliderResponseMapper(),
 		ShippingAddressResponseMapper: NewShippingAddressResponseMapper(),
+		BannerResponseMapper:          NewBannerResponseMapper(),
+		MerchantAwardResponseMapper:   NewMerchantAwardResponseMapper(),
+		MerchantBusinessMapper:        NewMerchantBusinessResponseMapper(),
+		MerchantDetailResponseMapper:  NewMerchantDetailResponseMapper(),
+		MerchantPolicyResponseMapper:  NewMerchantPolicyResponseMapper(),
+		ReviewDetailResponseMapper:    NewReviewDetailResponseMapper(),
 	}
 }

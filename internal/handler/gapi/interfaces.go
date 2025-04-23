@@ -53,3 +53,27 @@ type ShippingAdddressHandleGrpc interface {
 type SliderHandleGrpc interface {
 	pb.SliderServiceServer
 }
+
+type BannerHandleGrpc interface {
+	pb.BannerServiceServer
+}
+
+type MerchantAwardHandleGrpc interface {
+	pb.MerchantAwardServiceServer
+}
+
+type MerchantBusinessHandleGrpc interface {
+	pb.MerchantBusinessServiceServer
+}
+
+type MerchantDetailHandleGrpc interface {
+	pb.MerchantDetailServiceServer
+}
+
+type MerchantPoliciesHandleGrpc interface {
+	pb.MerchantPoliciesServiceServer
+}
+
+type ReviewDetailHandleGrpc interface {
+	pb.ReviewDetailServiceServer
+}

@@ -10,13 +10,13 @@ type UserResponse struct {
 }
 
 type UserResponseDeleteAt struct {
-	ID        int    `json:"id"`
-	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
-	Email     string `json:"email"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-	DeletedAt string `json:"deleted_at"`
+	ID        int     `json:"id"`
+	FirstName string  `json:"firstname"`
+	LastName  string  `json:"lastname"`
+	Email     string  `json:"email"`
+	CreatedAt string  `json:"created_at"`
+	UpdatedAt string  `json:"updated_at"`
+	DeletedAt *string `json:"deleted_at"`
 }
 
 type ApiResponseUser struct {

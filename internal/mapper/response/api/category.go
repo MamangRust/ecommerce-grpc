@@ -34,6 +34,11 @@ func (c *categoryResponseMapper) ToResponsesCategory(categories []*pb.CategoryRe
 }
 
 func (c *categoryResponseMapper) ToResponseCategoryDelete(category *pb.CategoryResponseDeleteAt) *response.CategoryResponseDeleteAt {
+	var deletedAt string
+	if category.DeletedAt != nil {
+		deletedAt = category.DeletedAt.Value
+	}
+
 	return &response.CategoryResponseDeleteAt{
 		ID:            int(category.Id),
 		Name:          category.Name,
@@ -42,7 +47,7 @@ func (c *categoryResponseMapper) ToResponseCategoryDelete(category *pb.CategoryR
 		ImageCategory: category.ImageCategory,
 		CreatedAt:     category.CreatedAt,
 		UpdatedAt:     category.UpdatedAt,
-		DeletedAt:     category.DeletedAt,
+		DeletedAt:     &deletedAt,
 	}
 }
 
@@ -54,6 +59,84 @@ func (c *categoryResponseMapper) ToResponsesCategoryDeleteAt(categories []*pb.Ca
 	}
 
 	return mappedCategories
+}
+
+func (s *categoryResponseMapper) ToResponseCategoryMonthlyPrice(category *pb.CategoryMonthPriceResponse) *response.CategoryMonthPriceResponse {
+	return &response.CategoryMonthPriceResponse{
+		Month:        category.Month,
+		CategoryID:   int(category.CategoryId),
+		CategoryName: category.CategoryName,
+		OrderCount:   int(category.OrderCount),
+		ItemsSold:    int(category.ItemsSold),
+		TotalRevenue: int(category.TotalRevenue),
+	}
+}
+
+func (s *categoryResponseMapper) ToResponseCategoryMonthlyPrices(c []*pb.CategoryMonthPriceResponse) []*response.CategoryMonthPriceResponse {
+	var categoryRecords []*response.CategoryMonthPriceResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.ToResponseCategoryMonthlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *categoryResponseMapper) ToResponseCategoryYearlyPrice(category *pb.CategoryYearPriceResponse) *response.CategoryYearPriceResponse {
+	return &response.CategoryYearPriceResponse{
+		Year:               category.Year,
+		CategoryID:         int(category.CategoryId),
+		CategoryName:       category.CategoryName,
+		OrderCount:         int(category.OrderCount),
+		ItemsSold:          int(category.ItemsSold),
+		TotalRevenue:       int(category.TotalRevenue),
+		UniqueProductsSold: int(category.UniqueProductsSold),
+	}
+}
+
+func (s *categoryResponseMapper) ToResponseCategoryYearlyPrices(c []*pb.CategoryYearPriceResponse) []*response.CategoryYearPriceResponse {
+	var categoryRecords []*response.CategoryYearPriceResponse
+
+	for _, category := range c {
+		categoryRecords = append(categoryRecords, s.ToResponseCategoryYearlyPrice(category))
+	}
+
+	return categoryRecords
+}
+
+func (s *categoryResponseMapper) ToResponseCashierMonthlyTotalPrice(c *pb.CategoriesMonthlyTotalPriceResponse) *response.CategoriesMonthlyTotalPriceResponse {
+	return &response.CategoriesMonthlyTotalPriceResponse{
+		Year:         c.Year,
+		Month:        c.Month,
+		TotalRevenue: int(c.TotalRevenue),
+	}
+}
+
+func (s *categoryResponseMapper) ToResponseCategoryMonthlyTotalPrices(c []*pb.CategoriesMonthlyTotalPriceResponse) []*response.CategoriesMonthlyTotalPriceResponse {
+	var CategoryRecords []*response.CategoriesMonthlyTotalPriceResponse
+
+	for _, Category := range c {
+		CategoryRecords = append(CategoryRecords, s.ToResponseCashierMonthlyTotalPrice(Category))
+	}
+
+	return CategoryRecords
+}
+
+func (s *categoryResponseMapper) ToResponseCategoryYearlyTotalSale(c *pb.CategoriesYearlyTotalPriceResponse) *response.CategoriesYearlyTotalPriceResponse {
+	return &response.CategoriesYearlyTotalPriceResponse{
+		Year:         c.Year,
+		TotalRevenue: int(c.TotalRevenue),
+	}
+}
+
+func (s *categoryResponseMapper) ToResponseCategoryYearlyTotalPrices(c []*pb.CategoriesYearlyTotalPriceResponse) []*response.CategoriesYearlyTotalPriceResponse {
+	var CategoryRecords []*response.CategoriesYearlyTotalPriceResponse
+
+	for _, Category := range c {
+		CategoryRecords = append(CategoryRecords, s.ToResponseCategoryYearlyTotalSale(Category))
+	}
+
+	return CategoryRecords
 }
 
 func (c *categoryResponseMapper) ToApiResponseCategory(pbResponse *pb.ApiResponseCategory) *response.ApiResponseCategory {
@@ -109,5 +192,37 @@ func (c *categoryResponseMapper) ToApiResponsePaginationCategory(pbResponse *pb.
 		Message:    pbResponse.Message,
 		Data:       c.ToResponsesCategory(pbResponse.Data),
 		Pagination: *mapPaginationMeta(pbResponse.Pagination),
+	}
+}
+
+func (c *categoryResponseMapper) ToApiResponseCategoryMonthlyPrice(pbResponse *pb.ApiResponseCategoryMonthPrice) *response.ApiResponseCategoryMonthPrice {
+	return &response.ApiResponseCategoryMonthPrice{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    c.ToResponseCategoryMonthlyPrices(pbResponse.Data),
+	}
+}
+
+func (c *categoryResponseMapper) ToApiResponseCategoryYearlyPrice(pbResponse *pb.ApiResponseCategoryYearPrice) *response.ApiResponseCategoryYearPrice {
+	return &response.ApiResponseCategoryYearPrice{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    c.ToResponseCategoryYearlyPrices(pbResponse.Data),
+	}
+}
+
+func (c *categoryResponseMapper) ToApiResponseCategoryMonthlyTotalPrice(pbResponse *pb.ApiResponseCategoryMonthlyTotalPrice) *response.ApiResponseCategoryMonthlyTotalPrice {
+	return &response.ApiResponseCategoryMonthlyTotalPrice{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    c.ToResponseCategoryMonthlyTotalPrices(pbResponse.Data),
+	}
+}
+
+func (c *categoryResponseMapper) ToApiResponseCategoryYearlyTotalPrice(pbResponse *pb.ApiResponseCategoryYearlyTotalPrice) *response.ApiResponseCategoryYearlyTotalPrice {
+	return &response.ApiResponseCategoryYearlyTotalPrice{
+		Status:  pbResponse.Status,
+		Message: pbResponse.Message,
+		Data:    c.ToResponseCategoryYearlyTotalPrices(pbResponse.Data),
 	}
 }

@@ -6,6 +6,7 @@ import (
 	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors_custom"
 	"math"
 
 	"google.golang.org/grpc/codes"
@@ -41,22 +42,32 @@ func (s *productHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllProd
 		pageSize = 10
 	}
 
-	product, totalRecords, err := s.productService.FindAll(page, pageSize, search)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch product: ",
-		})
+	reqService := requests.FindAllProduct{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+	product, totalRecords, err := s.productService.FindAll(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
 
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
 		TotalPages:   int32(totalPages),
-		TotalRecords: int32(totalRecords),
+		TotalRecords: int32(*totalRecords),
 	}
 
 	so := s.mapping.ToProtoResponsePaginationProduct(paginationMeta, "success", "Successfully fetched product", product)
@@ -68,6 +79,8 @@ func (s *productHandleGrpc) FindByMerchant(ctx context.Context, request *pb.Find
 	pageSize := int(request.GetPageSize())
 	search := request.GetSearch()
 	merchant_id := int(request.GetMerchantId())
+	min_price := int(request.GetMinPrice())
+	max_price := int(request.GetMaxPrice())
 
 	if page <= 0 {
 		page = 1
@@ -76,22 +89,43 @@ func (s *productHandleGrpc) FindByMerchant(ctx context.Context, request *pb.Find
 		pageSize = 10
 	}
 
-	product, totalRecords, err := s.productService.FindByMerchant(merchant_id, page, pageSize, search)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch product: ",
-		})
+	if min_price <= 0 {
+		min_price = 0
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+	if max_price <= 0 {
+		max_price = 0
+	}
+
+	reqService := requests.FindAllProductByMerchant{
+		MerchantID: merchant_id,
+		Page:       page,
+		PageSize:   pageSize,
+		Search:     search,
+		MinPrice:   &min_price,
+		MaxPrice:   &max_price,
+	}
+
+	product, totalRecords, err := s.productService.FindByMerchant(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
 
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
 		TotalPages:   int32(totalPages),
-		TotalRecords: int32(totalRecords),
+		TotalRecords: int32(*totalRecords),
 	}
 
 	so := s.mapping.ToProtoResponsePaginationProduct(paginationMeta, "success", "Successfully fetched product", product)
@@ -103,6 +137,8 @@ func (s *productHandleGrpc) FindByCategory(ctx context.Context, request *pb.Find
 	pageSize := int(request.GetPageSize())
 	search := request.GetSearch()
 	category_name := request.GetCategoryName()
+	min_price := int(request.GetMinPrice())
+	max_price := int(request.GetMaxPrice())
 
 	if page <= 0 {
 		page = 1
@@ -111,22 +147,43 @@ func (s *productHandleGrpc) FindByCategory(ctx context.Context, request *pb.Find
 		pageSize = 10
 	}
 
-	product, totalRecords, err := s.productService.FindByCategory(category_name, page, pageSize, search)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch product: ",
-		})
+	if min_price <= 0 {
+		min_price = 0
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+	if max_price <= 0 {
+		max_price = 0
+	}
+
+	reqService := requests.FindAllProductByCategory{
+		Page:         page,
+		PageSize:     pageSize,
+		Search:       search,
+		CategoryName: category_name,
+		MinPrice:     &min_price,
+		MaxPrice:     &max_price,
+	}
+
+	product, totalRecords, err := s.productService.FindByCategory(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
 
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
 		TotalPages:   int32(totalPages),
-		TotalRecords: int32(totalRecords),
+		TotalRecords: int32(*totalRecords),
 	}
 
 	so := s.mapping.ToProtoResponsePaginationProduct(paginationMeta, "success", "Successfully fetched product", product)
@@ -134,20 +191,30 @@ func (s *productHandleGrpc) FindByCategory(ctx context.Context, request *pb.Find
 }
 
 func (s *productHandleGrpc) FindById(ctx context.Context, request *pb.FindByIdProductRequest) (*pb.ApiResponseProduct, error) {
-	if request.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid product id",
-		})
+	id := int(request.GetId())
+
+	if id == 0 {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "invalid_request",
+				Message: "Valid Product ID is required",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
-	product, err := s.productService.FindById(int(request.GetId()))
+	product, err := s.productService.FindById(id)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch product: " + err.Message,
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseProduct("success", "Successfully fetched product", product)
@@ -168,22 +235,32 @@ func (s *productHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAl
 		pageSize = 10
 	}
 
-	product, totalRecords, err := s.productService.FindByActive(search, page, pageSize)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch active product: " + err.Message,
-		})
+	reqService := requests.FindAllProduct{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+	product, totalRecords, err := s.productService.FindByActive(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
 
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
 		TotalPages:   int32(totalPages),
-		TotalRecords: int32(0),
+		TotalRecords: int32(*totalRecords),
 	}
 	so := s.mapping.ToProtoResponsePaginationProductDeleteAt(paginationMeta, "success", "Successfully fetched active product", product)
 
@@ -202,22 +279,32 @@ func (s *productHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindA
 		pageSize = 10
 	}
 
-	users, totalRecords, err := s.productService.FindByTrashed(search, page, pageSize)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch trashed product: " + err.Message,
-		})
+	reqService := requests.FindAllProduct{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(pageSize)))
+	users, totalRecords, err := s.productService.FindByTrashed(&reqService)
+
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
+	}
+
+	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
 
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
 		TotalPages:   int32(totalPages),
-		TotalRecords: int32(0),
+		TotalRecords: int32(*totalRecords),
 	}
 
 	so := s.mapping.ToProtoResponsePaginationProductDeleteAt(paginationMeta, "success", "Successfully fetched trashed product", users)
@@ -235,25 +322,31 @@ func (s *productHandleGrpc) Create(ctx context.Context, request *pb.CreateProduc
 		CountInStock: int(request.GetCountInStock()),
 		Brand:        request.GetBrand(),
 		Weight:       int(request.GetWeight()),
-		Rating:       int(request.GetRating()),
-		SlugProduct:  request.GetSlugProduct(),
 		ImageProduct: request.GetImageProduct(),
-		Barcode:      request.GetBarcode(),
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create product: " + err.Error(),
-		})
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Unable to create new product. Please check your input.",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
 	product, err := s.productService.CreateProduct(req)
+
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create product: ",
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseProduct("success", "Successfully created product", product)
@@ -261,15 +354,21 @@ func (s *productHandleGrpc) Create(ctx context.Context, request *pb.CreateProduc
 }
 
 func (s *productHandleGrpc) Update(ctx context.Context, request *pb.UpdateProductRequest) (*pb.ApiResponseProduct, error) {
-	if request.GetProductId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid product id",
-		})
+	id := int(request.GetProductId())
+
+	if id == 0 {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Product ID parameter cannot be empty and must be a positive number",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
 	req := &requests.UpdateProductRequest{
-		ProductID:    int(request.GetProductId()),
+		ProductID:    &id,
 		MerchantID:   int(request.GetMerchantId()),
 		CategoryID:   int(request.GetCategoryId()),
 		Name:         request.GetName(),
@@ -278,25 +377,30 @@ func (s *productHandleGrpc) Update(ctx context.Context, request *pb.UpdateProduc
 		CountInStock: int(request.GetCountInStock()),
 		Brand:        request.GetBrand(),
 		Weight:       int(request.GetWeight()),
-		Rating:       int(request.GetRating()),
-		SlugProduct:  request.GetSlugProduct(),
 		ImageProduct: request.GetImageProduct(),
-		Barcode:      request.GetBarcode(),
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update product: " + err.Error(),
-		})
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Unable to process product update. Please review your data.",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
 	product, err := s.productService.UpdateProduct(req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update product: ",
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseProduct("success", "Successfully updated product", product)
@@ -304,20 +408,30 @@ func (s *productHandleGrpc) Update(ctx context.Context, request *pb.UpdateProduc
 }
 
 func (s *productHandleGrpc) TrashedProduct(ctx context.Context, request *pb.FindByIdProductRequest) (*pb.ApiResponseProductDeleteAt, error) {
-	if request.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid product id",
-		})
+	id := int(request.GetId())
+
+	if id == 0 {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Product ID parameter cannot be empty and must be a positive number",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
-	product, err := s.productService.TrashProduct(int(request.GetId()))
+	product, err := s.productService.TrashProduct(id)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to trashed product: " + err.Message,
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseProductDeleteAt("success", "Successfully trashed product", product)
@@ -326,20 +440,30 @@ func (s *productHandleGrpc) TrashedProduct(ctx context.Context, request *pb.Find
 }
 
 func (s *productHandleGrpc) RestoreProduct(ctx context.Context, request *pb.FindByIdProductRequest) (*pb.ApiResponseProductDeleteAt, error) {
-	if request.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid product id",
-		})
+	id := int(request.GetId())
+
+	if id == 0 {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Product ID parameter cannot be empty and must be a positive number",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
-	product, err := s.productService.RestoreProduct(int(request.GetId()))
+	product, err := s.productService.RestoreProduct(id)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore product: " + err.Message,
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseProductDeleteAt("success", "Successfully restored product", product)
@@ -348,20 +472,30 @@ func (s *productHandleGrpc) RestoreProduct(ctx context.Context, request *pb.Find
 }
 
 func (s *productHandleGrpc) DeleteProductPermanent(ctx context.Context, request *pb.FindByIdProductRequest) (*pb.ApiResponseProductDelete, error) {
-	if request.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid Product id",
-		})
+	id := int(request.GetId())
+
+	if id == 0 {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  "validation_error",
+				Message: "Product ID parameter cannot be empty and must be a positive number",
+				Code:    int32(codes.InvalidArgument),
+			}),
+		)
 	}
 
-	_, err := s.productService.DeleteProductPermanent(int(request.GetId()))
+	_, err := s.productService.DeleteProductPermanent(id)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to delete Product permanently: " + err.Message,
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseProductDelete("success", "Successfully deleted Product permanently")
@@ -373,10 +507,14 @@ func (s *productHandleGrpc) RestoreAllProduct(ctx context.Context, _ *emptypb.Em
 	_, err := s.productService.RestoreAllProducts()
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all Product: ",
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseProductAll("success", "Successfully restore all Product")
@@ -388,10 +526,14 @@ func (s *productHandleGrpc) DeleteAllProductPermanent(ctx context.Context, _ *em
 	_, err := s.productService.DeleteAllProductsPermanent()
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", &pb.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to delete Product permanent: ",
-		})
+		return nil, status.Errorf(
+			codes.Code(err.Code),
+			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
+				Status:  err.Status,
+				Message: err.Message,
+				Code:    int32(err.Code),
+			}),
+		)
 	}
 
 	so := s.mapping.ToProtoResponseProductAll("success", "Successfully delete Product permanen")

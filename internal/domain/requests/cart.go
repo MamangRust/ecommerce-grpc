@@ -2,6 +2,13 @@ package requests
 
 import "github.com/go-playground/validator/v10"
 
+type FindAllCarts struct {
+	UserID   int    `json:"user_id"`
+	Search   string `json:"search" validate:"required"`
+	Page     int    `json:"page" validate:"min=1"`
+	PageSize int    `json:"page_size" validate:"min=1,max=100"`
+}
+
 type CartCreateRecord struct {
 	ProductID    int    `json:"product_id"`
 	UserID       int    `json:"user_id"`
