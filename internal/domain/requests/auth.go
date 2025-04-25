@@ -8,8 +8,8 @@ type AuthRequest struct {
 }
 
 type RegisterRequest struct {
-	FirstName       string `json:"firstname"`
-	LastName        string `json:"lastname"`
+	FirstName       string `json:"firstname" validate:"required,alpha"`
+	LastName        string `json:"lastname" validate:"required,alpha"`
 	Email           string `json:"email" validate:"required,email"`
 	Password        string `json:"password" validate:"required,min=6"`
 	ConfirmPassword string `json:"confirm_password" validate:"required,min=6"`

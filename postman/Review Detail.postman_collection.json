@@ -1,0 +1,394 @@
+{
+	"info": {
+		"_postman_id": "816182a1-8f0b-4f71-b7e5-9b2e856989f0",
+		"name": "Review Detail",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Find All Review Detail",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail?page=1&page_size=10&search=video",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "10"
+						},
+						{
+							"key": "search",
+							"value": "video"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/review-detail?page=1&page_size=10&search=video\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id Review Detail",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/review-detail/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Active",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/active?page=1&page_size=5&search=image",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"active"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "5"
+						},
+						{
+							"key": "search",
+							"value": "image"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/review-detail/active?page=1&page_size=5&search=image\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Review Detail",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/trashed?page=1&page_size=5&search=old",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"trashed"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "5"
+						},
+						{
+							"key": "search",
+							"value": "old"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/review-detail/trashed?page=1&page_size=5&search=old\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Create Review Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "type",
+							"value": "image",
+							"type": "text"
+						},
+						{
+							"key": "url",
+							"value": "https://example.com/review1.jpg",
+							"type": "text"
+						},
+						{
+							"key": "caption",
+							"value": "Product in use",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/review-detail/create\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\" \\\n  -H \"Content-Type: multipart/form-data\" \\\n  -F \"type=image\" \\\n  -F \"url=https://example.com/review1.jpg\" \\\n  -F \"caption=Product in use\""
+			},
+			"response": []
+		},
+		{
+			"name": "Update Review Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "type",
+							"value": "video",
+							"type": "text"
+						},
+						{
+							"key": "url",
+							"value": "https://example.com/updated_review.mp4",
+							"type": "text"
+						},
+						{
+							"key": "caption",
+							"value": "Updated demonstration",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/update/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"update",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/review-detail/update/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\" \\\n  -H \"Content-Type: multipart/form-data\" \\\n  -F \"type=video\" \\\n  -F \"url=https://example.com/updated_review.mp4\" \\\n  -F \"caption=Updated demonstration\""
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Review Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/trashed/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"trashed",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: \ncurl -X POST \"http://localhost:5000/api/review-detail/trashed/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Restore Review Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/restore/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"restore",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/review-detail/restore/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent Review Detail",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/permanent/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"permanent",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/review-detail/permanent/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All Review Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/restore/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"restore",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/review-detail/restore/all\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete All Permanent Review Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/permanent/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"permanent",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/review-detail/permanent/all\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		}
+	]
+}

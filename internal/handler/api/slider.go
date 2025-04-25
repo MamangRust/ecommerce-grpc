@@ -1,14 +1,15 @@
 package api
 
 import (
+	"ecommerce/internal/domain/requests"
 	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
 	"ecommerce/pkg/logger"
-	"io"
+	"ecommerce/pkg/upload_image"
 	"net/http"
-	"os"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
@@ -16,9 +17,10 @@ import (
 )
 
 type sliderHandleApi struct {
-	client  pb.SliderServiceClient
-	logger  logger.LoggerInterface
-	mapping response_api.SliderResponseMapper
+	client       pb.SliderServiceClient
+	logger       logger.LoggerInterface
+	mapping      response_api.SliderResponseMapper
+	upload_image upload_image.ImageUploads
 }
 
 func NewHandlerSlider(
@@ -26,11 +28,13 @@ func NewHandlerSlider(
 	client pb.SliderServiceClient,
 	logger logger.LoggerInterface,
 	mapping response_api.SliderResponseMapper,
+	upload_image upload_image.ImageUploads,
 ) *sliderHandleApi {
 	sliderHandler := &sliderHandleApi{
-		client:  client,
-		logger:  logger,
-		mapping: mapping,
+		client:       client,
+		logger:       logger,
+		mapping:      mapping,
+		upload_image: upload_image,
 	}
 
 	routerSlider := router.Group("/api/slider")
@@ -217,39 +221,20 @@ func (h *sliderHandleApi) FindByTrashed(c echo.Context) error {
 // @Failure 500 {object} response.ErrorResponse "Failed to create slider"
 // @Router /api/slider/create [post]
 func (h *sliderHandleApi) Create(c echo.Context) error {
-	name := c.FormValue("name")
-
-	file, err := c.FormFile("image_slider")
+	formData, err := h.parseSliderForm(c, true)
 	if err != nil {
-		h.logger.Debug("Invalid image file", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
 			Status:  "error",
-			Message: "Invalid image file",
+			Message: "invalid body",
+			Code:    http.StatusBadRequest,
 		})
-	}
-
-	src, err := file.Open()
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	imagePath := "uploads/slider/" + file.Filename
-	dst, err := os.Create(imagePath)
-	if err != nil {
-		return err
-	}
-	defer dst.Close()
-
-	if _, err = io.Copy(dst, src); err != nil {
-		return err
 	}
 
 	ctx := c.Request().Context()
 
 	req := &pb.CreateSliderRequest{
-		Name:  name,
-		Image: imagePath,
+		Name:  formData.Nama,
+		Image: formData.FilePath,
 	}
 
 	res, err := h.client.Create(ctx, req)
@@ -285,43 +270,30 @@ func (h *sliderHandleApi) Create(c echo.Context) error {
 // @Failure 500 {object} response.ErrorResponse "Failed to update slider"
 // @Router /api/slider/update [post]
 func (h *sliderHandleApi) Update(c echo.Context) error {
-	sliderID, err := strconv.Atoi(c.FormValue("slider_id"))
+	sliderID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
 			Status:  "error",
 			Message: "Invalid slider ID",
+			Code:    http.StatusBadRequest,
 		})
 	}
 
-	name := c.FormValue("name")
-
-	imagePath := ""
-	file, err := c.FormFile("image_slider")
-	if err == nil {
-		src, err := file.Open()
-		if err != nil {
-			return err
-		}
-		defer src.Close()
-
-		imagePath = "uploads/slider/" + file.Filename
-		dst, err := os.Create(imagePath)
-		if err != nil {
-			return err
-		}
-		defer dst.Close()
-
-		if _, err = io.Copy(dst, src); err != nil {
-			return err
-		}
+	formData, err := h.parseSliderForm(c, true)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
+			Status:  "error",
+			Message: "invalid body",
+			Code:    http.StatusBadRequest,
+		})
 	}
 
 	ctx := c.Request().Context()
 
 	req := &pb.UpdateSliderRequest{
 		Id:    int32(sliderID),
-		Name:  name,
-		Image: imagePath,
+		Name:  formData.Nama,
+		Image: formData.FilePath,
 	}
 
 	res, err := h.client.Update(ctx, req)
@@ -544,4 +516,38 @@ func (h *sliderHandleApi) DeleteAllSliderPermanent(c echo.Context) error {
 	h.logger.Debug("Successfully deleted all slider permanently")
 
 	return c.JSON(http.StatusOK, so)
+}
+
+func (h *sliderHandleApi) parseSliderForm(c echo.Context, requireImage bool) (requests.SliderFormData, error) {
+	var formData requests.SliderFormData
+
+	formData.Nama = strings.TrimSpace(c.FormValue("name"))
+	if formData.Nama == "" {
+		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
+			Status:  "validation_error",
+			Message: "Slider name is required",
+			Code:    http.StatusBadRequest,
+		})
+	}
+
+	file, err := c.FormFile("image_slider")
+	if err != nil {
+		if requireImage {
+			h.logger.Debug("Image upload error", zap.Error(err))
+			return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
+				Status:  "image_required",
+				Message: "A category image is required",
+				Code:    http.StatusBadRequest,
+			})
+		}
+		return formData, nil
+	}
+
+	imagePath, err := h.upload_image.ProcessImageUpload(c, file)
+	if err != nil {
+		return formData, err
+	}
+
+	formData.FilePath = imagePath
+	return formData, nil
 }

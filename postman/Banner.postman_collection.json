@@ -1,0 +1,380 @@
+{
+	"info": {
+		"_postman_id": "9f596c4f-c5b0-49e5-870f-3b9a9615768c",
+		"name": "Banner",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Create ",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Banner Ramadhan\",\n  \"start_date\": \"2025-04-24\",\n  \"end_date\": \"2025-05-05\",\n  \"start_time\": \"08:00\",\n  \"end_time\": \"20:00\",\n  \"is_active\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/banner/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5000/api/banner/create \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\" \\\n-H \"Content-Type: application/json\" \\\n-d '{\n  \"name\": \"Banner Ramadhan\",\n  \"start_date\": \"2025-04-24\",\n  \"end_date\": \"2025-05-05\",\n  \"start_time\": \"08:00\",\n  \"end_time\": \"20:00\",\n  \"is_active\": true\n}'\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Update",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"banner_id\": 1,\n  \"name\": \"Update Banner Ramadhan\",\n  \"start_date\": \"2025-04-25\",\n  \"end_date\": \"2025-05-06\",\n  \"start_time\": \"09:00\",\n  \"end_time\": \"21:00\",\n  \"is_active\": false\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/banner/update/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"update",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5000/api/banner/update/1 \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\" \\\n-H \"Content-Type: application/json\" \\\n-d '{\n  \"banner_id\": 1,\n  \"name\": \"Update Banner Ramadhan\",\n  \"start_date\": \"2025-04-25\",\n  \"end_date\": \"2025-05-06\",\n  \"start_time\": \"09:00\",\n  \"end_time\": \"21:00\",\n  \"is_active\": false\n}'\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Banner",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/banner?page=1&page_size=10&search=ramadhan",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "10"
+						},
+						{
+							"key": "search",
+							"value": "ramadhan"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl \"http://localhost:5000/api/banner?page=1&page_size=10&search=ramadhan\" \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Find Active",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/banner/active?page=1&page_size=10&search=promo",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"active"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "10"
+						},
+						{
+							"key": "search",
+							"value": "promo"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl \"http://localhost:5000/api/banner/active?page=1&page_size=10&search=promo\" \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Find Trashed Banner",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/banner/trashed?page=1&page_size=10&search=old",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"trashed"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "10"
+						},
+						{
+							"key": "search",
+							"value": "old"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl \"http://localhost:5000/api/banner/trashed?page=1&page_size=10&search=old\" \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Find id Banner",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/banner/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl http://localhost:5000/api/banner/1 \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Banner",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/banner/trashed/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"trashed",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5000/api/banner/trashed/1 \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore Banner",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/banner/restore/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"restore",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5000/api/banner/restore/1 \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/banner/permanent/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"permanent",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE http://localhost:5000/api/banner/permanent/1 \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All Banner",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/banner/restore/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"restore",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5000/api/banner/restore/all \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent All Banner",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/banner/permanent/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"banner",
+						"permanent",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5000/api/banner/permanent/all \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.payload.signature\"\n"
+			},
+			"response": []
+		}
+	]
+}

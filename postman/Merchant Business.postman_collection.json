@@ -1,0 +1,380 @@
+{
+	"info": {
+		"_postman_id": "c639dcc0-913d-4465-8cf3-51dbc28dd39d",
+		"name": "Merchant Business",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Find All Business",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business?page=1&page_size=10&search=restaurant",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "10"
+						},
+						{
+							"key": "search",
+							"value": "restaurant"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant-business?page=1&page_size=10&search=restaurant\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id Merchant",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant-business/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Active",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/active?page=1&page_size=5&search=active",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"active"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "5"
+						},
+						{
+							"key": "search",
+							"value": "active"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant-business/active?page=1&page_size=5&search=active\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Trashed",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/trashed?page=1&page_size=5&search=deleted",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"trashed"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "5"
+						},
+						{
+							"key": "search",
+							"value": "deleted"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant-business/trashed?page=1&page_size=5&search=deleted\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Create Merchant Business",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"merchant_id\": 456,\n    \"business_type\": \"Restaurant\",\n    \"tax_id\": \"TAX123456789\",\n    \"established_year\": 2010,\n    \"number_of_employees\": 25,\n    \"website_url\": \"https://www.example-restaurant.com\"\n  }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-business/create\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"merchant_id\": 456,\n    \"business_type\": \"Restaurant\",\n    \"tax_id\": \"TAX123456789\",\n    \"established_year\": 2010,\n    \"number_of_employees\": 25,\n    \"website_url\": \"https://www.example-restaurant.com\"\n  }'"
+			},
+			"response": []
+		},
+		{
+			"name": "Update Merchant Business",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"merchant_business_info_id\": 123,\n    \"business_type\": \"Updated Restaurant\",\n    \"tax_id\": \"TAX987654321\",\n    \"established_year\": 2012,\n    \"number_of_employees\": 30,\n    \"website_url\": \"https://www.updated-restaurant.com\"\n  }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/update/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"update",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-business/update/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"merchant_business_info_id\": 123,\n    \"business_type\": \"Updated Restaurant\",\n    \"tax_id\": \"TAX987654321\",\n    \"established_year\": 2012,\n    \"number_of_employees\": 30,\n    \"website_url\": \"https://www.updated-restaurant.com\"\n  }'"
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Business",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/trashed/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"trashed",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-business/trashed/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Restore Business",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/restore/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"restore",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-business/restore/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent Business",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/permanent/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"permanent",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/merchant-business/permanent/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/restore/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"restore",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-business/restore/all\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete All Permanent",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-business/permanent/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-business",
+						"permanent",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-business/permanent/all\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		}
+	]
+}

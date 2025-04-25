@@ -1,0 +1,117 @@
+{
+	"info": {
+		"_postman_id": "db33643b-f374-43a7-92e2-a7c6fdaf0efb",
+		"name": "Order Item",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Find All Order Item",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/order-item",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"order-item"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/order-item\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id Order Item",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/order-item/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"order-item",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/order-item/1\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Active Order Item",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/order-item/active",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"order-item",
+						"active"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/order-item/active\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Trashed Order Item",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/order-item/trashed",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"order-item",
+						"trashed"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/order-item/trashed\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		}
+	]
+}

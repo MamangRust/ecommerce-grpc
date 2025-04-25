@@ -1,0 +1,429 @@
+{
+	"info": {
+		"_postman_id": "4b5f9f71-5f1b-4e33-b29c-ebb0e4ad593c",
+		"name": "Merchant Detail",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Find All Merchant Detail",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail?page=1&page_size=10&search=cafe",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "10"
+						},
+						{
+							"key": "search",
+							"value": "cafe"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant-detail?page=1&page_size=10&search=cafe\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find By Id",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant-detail/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find Active Merchant Detail",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/active?page=1&page_size=5&search=restaurant",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"active"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "5"
+						},
+						{
+							"key": "search",
+							"value": "restaurant"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant-detail/active?page=1&page_size=5&search=restaurant\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Trashed",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/trashed?page=1&page_size=5&search=deleted",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"trashed"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "5"
+						},
+						{
+							"key": "search",
+							"value": "deleted"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant-detail/trashed?page=1&page_size=5&search=deleted\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Create Merchant Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "merchant_id",
+							"value": "456",
+							"type": "text"
+						},
+						{
+							"key": "display_name",
+							"value": "Best Cafe",
+							"type": "text"
+						},
+						{
+							"key": "short_description",
+							"value": "A cozy cafe with the best coffee",
+							"type": "text"
+						},
+						{
+							"key": "website_url",
+							"value": "https://bestcafe.example.com",
+							"type": "text"
+						},
+						{
+							"key": "cover_image",
+							"type": "file",
+							"src": "/path/to/cover.jpg"
+						},
+						{
+							"key": "logo",
+							"type": "file",
+							"src": "/path/to/logo.png"
+						},
+						{
+							"key": "social_links",
+							"value": "[{\"platform\":\"instagram\",\"url\":\"https://instagram.com/bestcafe\"},{\"platform\":\"facebook\",\"url\":\"https://facebook.com/bestcafe\"}]",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-detail/create\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\" \\\n  -H \"Content-Type: multipart/form-data\" \\\n  -F \"merchant_id=456\" \\\n  -F \"display_name=Best Cafe\" \\\n  -F \"short_description=A cozy cafe with the best coffee\" \\\n  -F \"website_url=https://bestcafe.example.com\" \\\n  -F \"cover_image=@/path/to/cover.jpg\" \\\n  -F \"logo=@/path/to/logo.png\" \\\n  -F \"social_links=[{\\\"platform\\\":\\\"instagram\\\",\\\"url\\\":\\\"https://instagram.com/bestcafe\\\"},{\\\"platform\\\":\\\"facebook\\\",\\\"url\\\":\\\"https://facebook.com/bestcafe\\\"}]\""
+			},
+			"response": []
+		},
+		{
+			"name": "Update Merhcnat Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "display_name",
+							"value": "Updated Best Cafe",
+							"type": "text"
+						},
+						{
+							"key": "short_description",
+							"value": "The most cozy cafe in town",
+							"type": "text"
+						},
+						{
+							"key": "website_url",
+							"value": "https://updated.bestcafe.example.com",
+							"type": "text"
+						},
+						{
+							"key": "cover_image",
+							"type": "file",
+							"src": "/path/to/new_cover.jpg"
+						},
+						{
+							"key": "logo",
+							"type": "file",
+							"src": "/path/to/new_logo.png"
+						},
+						{
+							"key": "social_links",
+							"value": "[{\"id\":1,\"platform\":\"instagram\",\"url\":\"https://instagram.com/updated_bestcafe\"},{\"id\":2,\"platform\":\"facebook\",\"url\":\"https://facebook.com/updated_bestcafe\"}]",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/update/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"update",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-detail/update/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\" \\\n  -H \"Content-Type: multipart/form-data\" \\\n  -F \"display_name=Updated Best Cafe\" \\\n  -F \"short_description=The most cozy cafe in town\" \\\n  -F \"website_url=https://updated.bestcafe.example.com\" \\\n  -F \"cover_image=@/path/to/new_cover.jpg\" \\\n  -F \"logo=@/path/to/new_logo.png\" \\\n  -F \"social_links=[{\\\"id\\\":1,\\\"platform\\\":\\\"instagram\\\",\\\"url\\\":\\\"https://instagram.com/updated_bestcafe\\\"},{\\\"id\\\":2,\\\"platform\\\":\\\"facebook\\\",\\\"url\\\":\\\"https://facebook.com/updated_bestcafe\\\"}]\""
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Merchant Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/trashed/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"trashed",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-detail/trashed/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Restore Merchant Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/restore/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"restore",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-detail/restore/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent Merchant",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/permanent/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"permanent",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/merchant-detail/permanent/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All Merchant",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/restore/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"restore",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-detail/restore/all\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete All Merchant Detail",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant-detail/permanent/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant-detail",
+						"permanent",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant-detail/permanent/all\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		}
+	]
+}

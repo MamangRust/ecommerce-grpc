@@ -1,0 +1,867 @@
+{
+	"info": {
+		"_postman_id": "211b8dd7-e07c-4a08-8ee5-5e6be0e11990",
+		"name": "Transaction",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Success",
+			"item": [
+				{
+					"name": "Month Success",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/monthly-success?year=2025&month=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"monthly-success"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "month",
+									"value": "4"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/monthly-success?year=2025&month=4\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Year Success Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/yearly-success?year=2025&merchant_id=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"yearly-success"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "merchant_id",
+									"value": "4"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/yearly-failed?year=2025&merchant_id=4\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Month Success Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/monthly-success?year=2025&month=4&merchant_id=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"monthly-success"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "month",
+									"value": "4"
+								},
+								{
+									"key": "merchant_id",
+									"value": "4"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/monthly-success?year=2025&month=4&merchant_id=4\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Year Success",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/yearly-success?year=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"yearly-success"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/yearly-success?year=2025\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Failed",
+			"item": [
+				{
+					"name": "Month Failed Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/monthly-failed?year=2025&month=4&merchant_id=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"monthly-failed"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "month",
+									"value": "4"
+								},
+								{
+									"key": "merchant_id",
+									"value": "4"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/monthly-failed?year=2025&month=4&merchant_id=4\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Month Failed",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/monthly-failed?year=2025&month=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"monthly-failed"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "month",
+									"value": "4"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/monthly-failed?year=2025&month=4\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Year Failed Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/yearly-failed?year=2025&merchant_id=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"yearly-failed"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "merchant_id",
+									"value": "4"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/yearly-failed?year=2025&merchant_id=4\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Year Failed",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/yearly-failed?year=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"yearly-failed"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/yearly-failed?year=2025\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Method",
+			"item": [
+				{
+					"name": "Month Method",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/monthly-methods?year=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"monthly-methods"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/monthly-methods?year=2025\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Year Method",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/yearly-methods?year=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"yearly-methods"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/yearly-methods?year=2025\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Month Method Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/merchant/monthly-methods?year=2025&merchant_id=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"merchant",
+								"monthly-methods"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "merchant_id",
+									"value": "4"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/merchant/monthly-methods?year=2025&merchant_id=4\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Year Method Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/transaction/merchant/yearly-methods?year=2025&merchant_id=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"transaction",
+								"merchant",
+								"yearly-methods"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "merchant_id",
+									"value": "4"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/merchant/yearly-methods?year=2025&merchant_id=4\" \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Find All Transaction",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id Transaction Merchant",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/merchant/10",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"merchant",
+						"10"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/merchant/5\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id Transaction",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"5"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/5\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Active",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/active",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"active"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/active\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Trashed",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/trashed",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"trashed"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/transaction/trashed\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Create Transaction",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"order_id\": 12,\n    \"cashier_id\": 2,\n    \"payment_method\": \"credit_card\",\n    \"amount\": 2557535\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/transaction/create\" \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\" \\\n     -d '{\n           \"order_id\": 10,\n           \"merchant_id\": 5,\n           \"payment_method\": \"credit_card\",\n           \"amount\": 250000,\n           \"change_amount\": 0,\n           \"payment_status\": \"pending\"\n         }'"
+			},
+			"response": []
+		},
+		{
+			"name": "Update Transaction",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"transaction_id\": 11,\n    \"order_id\": 12,\n    \"cashier_id\": 5,\n    \"payment_method\": \"debit_card\",\n    \"amount\": 2557535,\n    \"payment_status\": \"paid\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/update/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"update",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/transaction/update/1\" \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\" \\\n     -d '{\n           \"transaction_id\": 1,\n           \"order_id\": 10,\n           \"merchant_id\": 5,\n           \"payment_method\": \"debit_card\",\n           \"amount\": 255000,\n           \"change_amount\": 5000,\n           \"payment_status\": \"completed\"\n         }'"
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Transaction",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/trashed/12",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"trashed",
+						"12"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/transaction/trashed/1\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Restore Transaction",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/restore/12",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"restore",
+						"12"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/transaction/restore/1\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent Transaction",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/permanent/12",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"permanent",
+						"12"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/transaction/restore/1\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All Transaction",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/restore/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"restore",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/transaction/restore/all\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete  All Permanent Transaction",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/permanent/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"permanent",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/transaction/permanent/all\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		}
+	]
+}

@@ -1,0 +1,868 @@
+{
+	"info": {
+		"_postman_id": "09a6a9a8-0d87-4d1b-b8c2-7e07076b0161",
+		"name": "Category",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Total Pricing",
+			"item": [
+				{
+					"name": "Month Total Pricing",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/monthly-total-pricing?year=2025&month=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"monthly-total-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "month",
+									"value": "4"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/monthly-total-pricing?year=2025&month=4\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Year Total Pricing",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/yearly-total-pricing?year=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"yearly-total-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/yearly-total-pricing?year=2025\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Month Total Pricing Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/merchant/yearly-total-pricing?year=2025&merchant_id=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"merchant",
+								"yearly-total-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "merchant_id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/merchant/yearly-total-pricing?year=2025&merchant_id=1\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Month Total Pricing Category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/mycategory/monthly-total-pricing?year=2025&month=4&category_id=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"mycategory",
+								"monthly-total-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "month",
+									"value": "4"
+								},
+								{
+									"key": "category_id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/mycategory/monthly-total-pricing?year=2025&&month=4&category_id=2\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Year Total Pricing Category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/mycategory/yearly-total-pricing?year=2025&category_id=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"mycategory",
+								"yearly-total-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "category_id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/mycategory/yearly-total-pricing?year=2025&category_id=1\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Year Total Pricing Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/merchant/monthly-total-pricing?year=2025&month=4&merchant_id=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"merchant",
+								"monthly-total-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "month",
+									"value": "4"
+								},
+								{
+									"key": "merchant_id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/merchant/monthly-total-pricing?year=2025&&month=4&category_id=1\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Pricing",
+			"item": [
+				{
+					"name": "Month Pricing",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/monthly-pricing?year=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"monthly-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/monthly-total-pricing?year=2025&month=4\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Year Pricing",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/yearly-pricing?year=2025",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"yearly-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/yearly-total-pricing?year=2025\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Month Pricing Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/merchant/yearly-pricing?year=2025&merchant_id=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"merchant",
+								"yearly-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "merchant_id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/merchant/yearly-total-pricing?year=2025&merchant_id=1\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				},
+				{
+					"name": "Month Pricing Category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/mycategory/monthly-pricing?year=2025&month=4&category_id=2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"mycategory",
+								"monthly-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "month",
+									"value": "4"
+								},
+								{
+									"key": "category_id",
+									"value": "2"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/mycategory/monthly-total-pricing?year=2025&&month=4&category_id=2\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Year Pricing Category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/mycategory/yearly-pricing?year=2025&category_id=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"mycategory",
+								"yearly-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "category_id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/mycategory/yearly-total-pricing?year=2025&category_id=1\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Year Pricing Merchant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{secret_key}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/category/merchant/monthly-pricing?year=2025&month=4&merchant_id=1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"category",
+								"merchant",
+								"monthly-pricing"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2025"
+								},
+								{
+									"key": "month",
+									"value": "4"
+								},
+								{
+									"key": "merchant_id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/merchant/monthly-total-pricing?year=2025&&month=4&category_id=1\" \\\n-H \"Authorization: Bearer {{vault:json-web-token}}\""
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Find All Category",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/category",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/category/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Active Category",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/category/active",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"active"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/active \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Trashed Category",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/category/trashed",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"trashed"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/category/trashed \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Category",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"sembaksosss\",\n    \"description\": \"This is a category for electronic devices\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/category/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/category/create\" \\\n-H \"Content-Type: application/json\" \\\n-H 'Authorization: Bearer {{vault:json-web-token}}' \\\n-d '{\n    \"name\": \"Electronics\",\n    \"description\": \"This is a category for electronic devices\"\n}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Update Category",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Updated Electronics\",\n    \"description\": \"This is an updated category for electronic devices\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/category/update/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"update",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/category/update/1\" \\\n-H \"Content-Type: application/json\" \\\n-H 'Authorization: Bearer {{vault:json-web-token}}' \\\n-d '{\n    \"name\": \"Updated Electronics\",\n    \"description\": \"This is an updated category for electronic devices\"\n}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Category",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/category/trashed/17",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"trashed",
+						"17"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/category/trashed/1 \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All Category",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/category/restore/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"restore",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/category/restore/all \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore Category",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/category/restore/17",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"restore",
+						"17"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/category/restore/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent Category",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/category/permanent/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"permanent",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/category/permanent/1 \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent All Category",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/category/permanent/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"category",
+						"permanent",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/category/permanent/all \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id Review Detail",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/review-detail/123",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"review-detail",
+						"123"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/review-detail/123\" \\\n  -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+			},
+			"response": []
+		}
+	]
+}

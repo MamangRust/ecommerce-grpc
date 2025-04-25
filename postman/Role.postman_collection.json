@@ -1,0 +1,402 @@
+{
+	"info": {
+		"_postman_id": "e70c7f9b-94d8-42c0-891b-480ee2231141",
+		"name": "Role",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Find Id",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/role/1 \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Active",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role/active",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"active"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/role/active \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find User Id",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role/user/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"user",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/role/user/123 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Trashed",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role/trashed",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"trashed"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/role/trashed \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Role",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/role \\\n -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Role",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Example\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/role",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/role\" \\\n     -H \"Content-Type: application/json\" \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}' \\\n     -d '{\"name\": \"Admin\"}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Update Role",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"MyDota 2\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/role/5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"5"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/role/1\" \\\n     -H \"Content-Type: application/json\" \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}' \\\n     -d '{\"id\": 1, \"name\": \"Super Admin\"}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Role",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role/trashed/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"trashed",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/role/1 \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore Role",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role/restore/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"restore",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X PUT \"http://localhost:5000/api/role/restore/1 \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent Role",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role/permanent/5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"permanent",
+						"5"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/role/permanent/1 \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All Role",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role/restore-all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"restore-all"
+					]
+				},
+				"description": "Generated from cURL: curl -X PUT \"http://localhost:5000/api/role/restore-all \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete All Permanent Role",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/role/permanent-all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"role",
+						"permanent-all"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/role/permanent-all \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		}
+	]
+}

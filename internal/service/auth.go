@@ -10,6 +10,7 @@ import (
 	"ecommerce/pkg/hash"
 	"ecommerce/pkg/logger"
 	"errors"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -34,68 +35,97 @@ func NewAuthService(auth repository.UserRepository, refreshToken repository.Refr
 func (s *authService) Register(request *requests.CreateUserRequest) (*response.UserResponse, *response.ErrorResponse) {
 	s.logger.Debug("Starting user registration",
 		zap.String("email", request.Email),
-		zap.String("firstname", request.FirstName),
-		zap.String("lastname", request.LastName),
+		zap.String("first_name", request.FirstName),
+		zap.String("last_name", request.LastName),
 	)
 
-	_, err := s.auth.FindByEmail(request.Email)
-
-	if err == nil {
-		s.logger.Error("Email already exists", zap.String("email", request.Email))
+	existingUser, err := s.auth.FindByEmail(request.Email)
+	if err == nil && existingUser != nil {
+		s.logger.Debug("Email already exists",
+			zap.String("email", request.Email),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Email already exists",
+			Code:    http.StatusConflict,
+			Status:  "conflict",
+			Message: "Email address is already registered",
 		}
 	}
 
 	passwordHash, err := s.hash.HashPassword(request.Password)
-
 	if err != nil {
-		s.logger.Error("Failed to hash password", zap.Error(err))
+		s.logger.Error("Failed to hash password",
+			zap.Error(err),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to hash password",
+			Code:    http.StatusInternalServerError,
+			Status:  "server_error",
+			Message: "Failed to process password",
 		}
 	}
 	request.Password = passwordHash
 
-	res, err := s.auth.CreateUser(request)
+	newUser, err := s.auth.CreateUser(request)
 	if err != nil {
-		s.logger.Error("Failed to create user", zap.Error(err))
+		s.logger.Error("Failed to create user",
+			zap.String("email", request.Email),
+			zap.Error(err),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create user: ",
+			Code:    http.StatusInternalServerError,
+			Status:  "server_error",
+			Message: "Failed to create user account",
 		}
 	}
 
-	_, err = s.role.FindByName("User Permission 2")
-
-	if err != nil {
-		s.logger.Error("Failed to find role", zap.Error(err))
+	const defaultRoleName = "Admin"
+	role, err := s.role.FindByName(defaultRoleName)
+	if err != nil || role == nil {
+		s.logger.Error("Failed to find default role",
+			zap.String("role", defaultRoleName),
+			zap.Error(err),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to find role: ",
+			Code:    http.StatusInternalServerError,
+			Status:  "server_error",
+			Message: "Failed to assign user role",
 		}
 	}
 
 	_, err = s.userRole.AssignRoleToUser(&requests.CreateUserRoleRequest{
-		UserId: res.ID,
-		RoleId: 1,
+		UserId: newUser.ID,
+		RoleId: role.ID,
 	})
-
 	if err != nil {
-		s.logger.Error("Failed to assign role to user", zap.Error(err))
+		s.logger.Error("Failed to assign role to user",
+			zap.Int("user_id", newUser.ID),
+			zap.Int("role_id", role.ID),
+			zap.Error(err),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to assign role to user: ",
+			Code:    http.StatusInternalServerError,
+			Status:  "server_error",
+			Message: "Failed to complete user registration",
 		}
 	}
 
-	s.logger.Debug("User registered successfully", zap.String("email", request.Email))
+	userResponse := s.mapping.ToUserResponse(newUser)
+	if userResponse == nil {
+		s.logger.Error("Failed to map user response",
+			zap.Int("user_id", newUser.ID),
+		)
+		return nil, &response.ErrorResponse{
+			Code:    http.StatusInternalServerError,
+			Status:  "server_error",
+			Message: "Failed to process user data",
+		}
+	}
 
-	so := s.mapping.ToUserResponse(res)
+	s.logger.Debug("User registered successfully",
+		zap.Int("user_id", newUser.ID),
+		zap.String("email", request.Email),
+	)
 
-	return so, nil
+	return userResponse, nil
 }
 
 func (s *authService) Login(request *requests.AuthRequest) (*response.TokenResponse, *response.ErrorResponse) {
@@ -104,53 +134,90 @@ func (s *authService) Login(request *requests.AuthRequest) (*response.TokenRespo
 	)
 
 	res, err := s.auth.FindByEmail(request.Email)
-
 	if err != nil {
-		s.logger.Error("Failed to get user", zap.Error(err))
+		s.logger.Error("Failed to get user",
+			zap.String("email", request.Email),
+			zap.Error(err),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to get user: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+			Status:  "database_error",
+			Message: "Could not verify user credentials",
 		}
 	}
 
-	err = s.hash.ComparePassword(res.Password, request.Password)
-
-	if err != nil {
-		s.logger.Error("Failed to compare password", zap.Error(err))
+	if res == nil {
+		s.logger.Debug("User not found",
+			zap.String("email", request.Email),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid password",
+			Code:    http.StatusUnauthorized,
+			Status:  "unauthorized",
+			Message: "Invalid credentials",
+		}
+	}
+
+	if err := s.hash.ComparePassword(res.Password, request.Password); err != nil {
+		s.logger.Debug("Invalid password attempt",
+			zap.String("email", request.Email),
+			zap.Error(err),
+		)
+		return nil, &response.ErrorResponse{
+			Code:    http.StatusUnauthorized,
+			Status:  "unauthorized",
+			Message: "Invalid credentials",
 		}
 	}
 
 	token, err := s.createAccessToken(res.ID)
-
 	if err != nil {
-		s.logger.Error("Failed to generate JWT token", zap.Error(err))
+		s.logger.Error("Failed to generate JWT token",
+			zap.Int("user_id", res.ID),
+			zap.Error(err),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to generate token: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+			Status:  "token_error",
+			Message: "Failed to generate authentication token",
 		}
 	}
 
 	refreshToken, err := s.createRefreshToken(res.ID)
-
 	if err != nil {
-		s.logger.Error("Failed to generate refresh token", zap.Error(err))
+		s.logger.Error("Failed to generate refresh token",
+			zap.Int("user_id", res.ID),
+			zap.Error(err),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to generate refresh token: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+			Status:  "token_error",
+			Message: "Failed to generate refresh token",
 		}
 	}
 
-	s.logger.Debug("User logged in successfully", zap.String("email", request.Email))
+	s.logger.Debug("User logged in successfully",
+		zap.Int("user_id", res.ID),
+		zap.String("email", request.Email),
+	)
 
-	return &response.TokenResponse{AccessToken: token, RefreshToken: refreshToken}, nil
+	return &response.TokenResponse{
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 func (s *authService) RefreshToken(token string) (*response.TokenResponse, *response.ErrorResponse) {
+	if token == "" {
+		s.logger.Error("Empty refresh token provided")
+		return nil, &response.ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "bad_request",
+			Message: "Refresh token is required",
+		}
+	}
+
 	s.logger.Debug("Refreshing token",
-		zap.String("token", token),
+		zap.String("token", maskToken(token)),
 	)
 
 	userIdStr, err := s.token.ValidateToken(token)
@@ -169,13 +236,16 @@ func (s *authService) RefreshToken(token string) (*response.TokenResponse, *resp
 			s.logger.Error("Refresh token has expired", zap.Error(err))
 
 			return nil, &response.ErrorResponse{
-				Status:  "error",
-				Message: "Refresh token has expired",
+				Code:    http.StatusUnauthorized,
+				Status:  "unauthorized",
+				Message: "Refresh token has expired. Please login again.",
 			}
 		}
 		s.logger.Error("Invalid refresh token", zap.Error(err))
+
 		return nil, &response.ErrorResponse{
-			Status:  "error",
+			Code:    http.StatusUnauthorized,
+			Status:  "unauthorized",
 			Message: "Invalid refresh token",
 		}
 	}
@@ -184,9 +254,11 @@ func (s *authService) RefreshToken(token string) (*response.TokenResponse, *resp
 
 	if err != nil {
 		s.logger.Error("Invalid user ID format in token", zap.Error(err))
+
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid user ID format in token",
+			Code:    http.StatusUnauthorized,
+			Status:  "unauthorized",
+			Message: "Malformed authentication token",
 		}
 	}
 
@@ -195,8 +267,9 @@ func (s *authService) RefreshToken(token string) (*response.TokenResponse, *resp
 		s.logger.Error("Failed to generate new access token", zap.Error(err))
 
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to generate new access token",
+			Code:    http.StatusInternalServerError,
+			Status:  "token_error",
+			Message: "Failed to generate access token",
 		}
 	}
 
@@ -205,8 +278,9 @@ func (s *authService) RefreshToken(token string) (*response.TokenResponse, *resp
 		s.logger.Error("Failed to generate new refresh token", zap.Error(err))
 
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to generate new refresh token",
+			Code:    http.StatusInternalServerError,
+			Status:  "token_error",
+			Message: "Failed to generate refresh token",
 		}
 	}
 
@@ -222,8 +296,9 @@ func (s *authService) RefreshToken(token string) (*response.TokenResponse, *resp
 		s.logger.Error("Failed to update refresh token in storage", zap.Error(err))
 
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update refresh token in storage",
+			Code:    http.StatusInternalServerError,
+			Status:  "server_error",
+			Message: "Failed to update token storage",
 		}
 	}
 
@@ -236,46 +311,93 @@ func (s *authService) RefreshToken(token string) (*response.TokenResponse, *resp
 }
 
 func (s *authService) GetMe(token string) (*response.UserResponse, *response.ErrorResponse) {
+	if token == "" {
+		s.logger.Error("Empty token provided")
+		return nil, &response.ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "bad_request",
+			Message: "Authorization token is required",
+		}
+	}
+
 	s.logger.Debug("Fetching user details",
-		zap.String("token", token),
+		zap.String("token", maskToken(token)),
 	)
 
 	userIdStr, err := s.token.ValidateToken(token)
-
 	if err != nil {
-		s.logger.Error("Invalid access token", zap.Error(err))
+		s.logger.Error("Invalid access token",
+			zap.Error(err),
+			zap.String("token", maskToken(token)),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid access token",
+			Code:    http.StatusUnauthorized,
+			Status:  "unauthorized",
+			Message: "Invalid or expired access token",
 		}
 	}
 
 	userId, err := strconv.Atoi(userIdStr)
 	if err != nil {
-		s.logger.Error("Invalid user ID format in token", zap.Error(err))
+		s.logger.Error("Invalid user ID format in token",
+			zap.String("user_id_str", userIdStr),
+			zap.Error(err),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid user ID format in token",
+			Code:    http.StatusUnauthorized,
+			Status:  "unauthorized",
+			Message: "Malformed authentication token",
 		}
 	}
 
 	user, err := s.auth.FindById(userId)
-
 	if err != nil {
-		s.logger.Error("Failed to find user by ID", zap.Error(err))
+		s.logger.Error("Failed to find user by ID",
+			zap.Int("user_id", userId),
+			zap.Error(err),
+		)
 		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to find user by ID",
+			Code:    http.StatusInternalServerError,
+			Status:  "server_error",
+			Message: "Could not retrieve user information",
 		}
 	}
 
-	so := s.mapping.ToUserResponse(user)
+	if user == nil {
+		s.logger.Debug("User not found",
+			zap.Int("user_id", userId),
+		)
+		return nil, &response.ErrorResponse{
+			Code:    http.StatusNotFound,
+			Status:  "not_found",
+			Message: "User account not found",
+		}
+	}
+
+	userResponse := s.mapping.ToUserResponse(user)
+	if userResponse == nil {
+		s.logger.Error("Failed to map user response",
+			zap.Int("user_id", userId),
+		)
+		return nil, &response.ErrorResponse{
+			Code:    http.StatusInternalServerError,
+			Status:  "server_error",
+			Message: "Failed to process user data",
+		}
+	}
 
 	s.logger.Debug("User details fetched successfully",
-		zap.Int("userID", userId),
+		zap.Int("user_id", userId),
 	)
 
-	return so, nil
+	return userResponse, nil
+}
+
+func maskToken(token string) string {
+	if len(token) < 8 {
+		return "******"
+	}
+	return token[:4] + "****" + token[len(token)-4:]
 }
 
 func (s *authService) createAccessToken(id int) (string, error) {

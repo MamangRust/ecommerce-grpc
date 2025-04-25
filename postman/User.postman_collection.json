@@ -1,0 +1,374 @@
+{
+	"info": {
+		"_postman_id": "12425159-f89b-4df2-9039-ec1286bc4c41",
+		"name": "User",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Find Id",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/user/14",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"14"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/user/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/user",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/user \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Active",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/user/active",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"active"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/user/active \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Trashed",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/user/trashed",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"trashed"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/user/trashed \\\n     -H 'Content-Type: application/json' \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/user/restore/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"restore",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/user/restore/all \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Create User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"firstname\": \"Cashiers\",\n    \"lastname\": \"Example\",\n    \"email\": \"cashier@example.com\",\n    \"password\": \"cashier\",\n    \"confirm_password\": \"cashier\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/user/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/user/create\" \\\n     -H \"Content-Type: application/json\" \\\n      -H 'Authorization: Bearer {{vault:json-web-token}}' \\\n     -d '{\"name\": \"John Doe\", \"email\": \"john@example.com\", \"password\": \"securepassword\"}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Update User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"firstname\": \"Cashiesr\",\n    \"lastname\": \"Example\",\n    \"email\": \"cashiers@example.com\",\n    \"password\": \"cashier\",\n    \"confirm_password\": \"cashier\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/user/update/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"update",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/user/update/1\" \\\n     -H \"Content-Type: application/json\" \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}'\\\n     -d '{\"name\": \"John Updated\", \"email\": \"john.updated@example.com\"}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/user/trashed/14",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"trashed",
+						"14"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/user/trashed/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/user/restore/14",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"restore",
+						"14"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/user/restore/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent User",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/user/permanent/14",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"permanent",
+						"14"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/user/permanent/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent All User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/user/permanent/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"permanent",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/user/permanent/all \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		}
+	]
+}

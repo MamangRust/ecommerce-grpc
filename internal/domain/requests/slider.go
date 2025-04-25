@@ -8,6 +8,11 @@ type FindAllSlider struct {
 	PageSize int    `json:"page_size" validate:"min=1,max=100"`
 }
 
+type SliderFormData struct {
+	Nama     string `json:"nama"`
+	FilePath string `json:"file_path"`
+}
+
 type CreateSliderRequest struct {
 	Nama     string `json:"nama"`
 	FilePath string `json:"file_path"`

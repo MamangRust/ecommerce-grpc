@@ -53,7 +53,7 @@ func NewHandler(deps Deps) {
 	NewHandlerTransaction(deps.E, clientTransaction, deps.Logger, deps.Mapping.TransactionResponseMapper)
 	NewHandlerCart(deps.E, clientCart, deps.Logger, deps.Mapping.CartResponseMapper)
 	NewHandlerReview(deps.E, clientReview, deps.Logger, deps.Mapping.ReviewMapper)
-	NewHandlerSlider(deps.E, clientSlider, deps.Logger, deps.Mapping.SliderMapper)
+	NewHandlerSlider(deps.E, clientSlider, deps.Logger, deps.Mapping.SliderMapper, deps.Image)
 	NewHandlerShippingAddress(deps.E, clientShipping, deps.Logger, deps.Mapping.ShippingAddressResponseMapper)
 	NewHandleBanner(deps.E, clientBanner, deps.Logger, deps.Mapping.BannerResponseMapper)
 	NewHandlerMerchantAward(deps.E, clientMerchantAward, deps.Logger, deps.Mapping.MerchantAwardResponseMapper, deps.Mapping.MerchantResponseMapper)

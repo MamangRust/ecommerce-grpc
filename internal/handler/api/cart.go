@@ -33,6 +33,7 @@ func NewHandlerCart(
 
 	routerCart := router.Group("/api/cart")
 	routerCart.GET("", cartHandler.FindAll)
+	routerCart.POST("/create", cartHandler.Create)
 	routerCart.DELETE("/:id", cartHandler.Delete)
 	routerCart.POST("/delete-all", cartHandler.DeleteAll)
 
@@ -207,31 +208,39 @@ func (h *cartHandleApi) Delete(c echo.Context) error {
 // @Description Delete multiple carts by IDs
 // @Accept json
 // @Produce json
-// @Param request body response.ApiResponseCartAll true "Cart IDs"
+// @Param request body requests.DeleteCartRequest true "Cart IDs"
 // @Success 200 {object} response.ApiResponseCartAll "Successfully deleted carts"
 // @Failure 500 {object} response.ErrorResponse "Failed to delete carts"
 // @Router /api/cart/delete-all [post]
 func (h *cartHandleApi) DeleteAll(c echo.Context) error {
-	var req pb.DeleteCartRequest
+	var req requests.DeleteCartRequest
 	if err := c.Bind(&req); err != nil {
-		h.logger.Debug("Invalid id parameter", zap.Error(err))
-
+		h.logger.Debug("Invalid request parameter", zap.Error(err))
 		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
 			Status:  "error",
-			Message: "Invalid id parameter",
+			Message: "Invalid request parameter",
 			Code:    http.StatusBadRequest,
 		})
 	}
 
 	ctx := c.Request().Context()
 
-	res, err := h.client.DeleteAll(ctx, &req)
+	cartIdsPb := make([]int32, len(req.CartIds))
+	for i, id := range req.CartIds {
+		cartIdsPb[i] = int32(id)
+	}
+
+	reqPb := &pb.DeleteCartRequest{
+		CartIds: cartIdsPb,
+	}
+
+	res, err := h.client.DeleteAll(ctx, reqPb)
 
 	if err != nil {
-		h.logger.Error("Failed to archive cart", zap.Error(err))
+		h.logger.Error("Failed to delete cart items", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "archive_failed",
-			Message: "We couldn't archive the cart. Please try again.",
+			Status:  "delete_failed",
+			Message: "We couldn't delete the cart items. Please try again.",
 			Code:    http.StatusInternalServerError,
 		})
 	}

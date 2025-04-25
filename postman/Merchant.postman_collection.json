@@ -1,0 +1,388 @@
+{
+	"info": {
+		"_postman_id": "c205cf87-ac4b-4123-a078-83f1aae72c99",
+		"name": "Merchant",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Find All Merchant",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id Merchant",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/10",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"10"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Active Merchant",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/active",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"active"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant/active \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Trashed Merchant",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/trashed?page=1&page_size=10&search=store",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"trashed"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "10"
+						},
+						{
+							"key": "search",
+							"value": "store"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/merchant/trashed?page=1&page_size=10&search=store\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Create Merchant",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 13,\n    \"name\": \"Toko Sukses\",\n    \"description\": \"Menjual berbagai kebutuhan sehari-hari\",\n    \"address\": \"Jl. Merdeka No. 45\",\n    \"contact_email\": \"tokosukses@example.com\",\n    \"contact_phone\": \"08123456789\",\n    \"status\": \"active\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant/create\" \\\n     -H \"Content-Type: application/json\" \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}' \\\n     -d '{\n           \"user_id\": 123,\n           \"name\": \"Toko Sukses\",\n           \"description\": \"Menjual berbagai kebutuhan sehari-hari\",\n           \"address\": \"Jl. Merdeka No. 45\",\n           \"contact_email\": \"tokosukses@example.com\",\n           \"contact_phone\": \"08123456789\",\n           \"status\": \"active\"\n         }'"
+			},
+			"response": []
+		},
+		{
+			"name": "Update Merchant",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"merchant_id\": 11,\n    \"user_id\": 15,\n    \"name\": \"Toko Makmur\",\n    \"description\": \"Menjual sembako dan kebutuhan rumah tangga\",\n    \"address\": \"Jl. Merdeka No. 99\",\n    \"contact_email\": \"tokomakmur@example.com\",\n    \"contact_phone\": \"08129876543\",\n    \"status\": \"inactive\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/update/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"update",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant/update/1\" \\\n     -H \"Content-Type: application/json\" \\\n     -H 'Authorization: Bearer {{vault:json-web-token}}' \\\n     -d '{\n           \"merchant_id\": 1,\n           \"user_id\": 123,\n           \"name\": \"Toko Makmur\",\n           \"description\": \"Menjual sembako dan kebutuhan rumah tangga\",\n           \"address\": \"Jl. Merdeka No. 99\",\n           \"contact_email\": \"tokomakmur@example.com\",\n           \"contact_phone\": \"08129876543\",\n           \"status\": \"inactive\"\n         }'"
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Merchant",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/trashed/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"trashed",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant/trashed/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore Merchant",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/restore/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"restore",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant/restore/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent Merchant",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/permanent/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"permanent",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/merchant/permanent/1 \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All Merchant",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/restore/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"restore",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant/restore/all \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete All Permanent",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/merchant/permanent/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"merchant",
+						"permanent",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/merchant/permanent/all \\\n-H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer {{vault:json-web-token}}'"
+			},
+			"response": []
+		}
+	]
+}

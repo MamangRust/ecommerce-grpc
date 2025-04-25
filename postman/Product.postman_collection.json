@@ -1,0 +1,515 @@
+{
+	"info": {
+		"_postman_id": "1723df74-c07d-40ef-be14-a1d110b65778",
+		"name": "Product",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12455638"
+	},
+	"item": [
+		{
+			"name": "Find All Product",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/product\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Activce",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/active",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"active"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/product/active\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id Product",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"1"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/product/1\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find Category Product",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/category/electronics",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"category",
+						"electronics"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/product/category/electronics\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find All Trashed",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/trashed",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"trashed"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/product/trashed\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Create Product",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "merchant_id",
+							"value": "5",
+							"type": "text"
+						},
+						{
+							"key": "category_id",
+							"value": "2",
+							"type": "text"
+						},
+						{
+							"key": "name",
+							"value": "Shampoo Herbal",
+							"type": "text"
+						},
+						{
+							"key": "description",
+							"value": "Shampoo herbal alami tanpa bahan kimia",
+							"type": "text"
+						},
+						{
+							"key": "price",
+							"value": "50000",
+							"type": "text"
+						},
+						{
+							"key": "count_in_stock",
+							"value": "100",
+							"type": "text"
+						},
+						{
+							"key": "brand",
+							"value": "HerbalCare",
+							"type": "text"
+						},
+						{
+							"key": "weight",
+							"value": "200",
+							"type": "text"
+						},
+						{
+							"key": "image_product",
+							"type": "file",
+							"src": "/home/hoveredan/Downloads/_.jpeg"
+						},
+						{
+							"key": "slug_product",
+							"value": "shampoo-herbal",
+							"type": "text",
+							"disabled": true
+						},
+						{
+							"key": "barcode",
+							"value": "123456789",
+							"type": "text",
+							"disabled": true
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/product/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/product/create\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\" \\\n     -H \"Content-Type: multipart/form-data\" \\\n     -F \"merchant_id=5\" \\\n     -F \"category_id=2\" \\\n     -F \"name=Shampoo Herbal\" \\\n     -F \"description=Shampoo herbal alami tanpa bahan kimia\" \\\n     -F \"price=50000\" \\\n     -F \"count_in_stock=100\" \\\n     -F \"brand=HerbalCare\" \\\n     -F \"weight=200\" \\\n     -F \"image_product=@/path/to/image.jpg\" \\\n     -F \"slug_product=shampoo-herbal\" \\\n     -F \"barcode=123456789\""
+			},
+			"response": []
+		},
+		{
+			"name": "Update Product",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "product_id",
+							"value": "1",
+							"type": "text"
+						},
+						{
+							"key": "merchant_id",
+							"value": "5",
+							"type": "text"
+						},
+						{
+							"key": "category_id",
+							"value": "2",
+							"type": "text"
+						},
+						{
+							"key": "name",
+							"value": "Shampoo Herbal Premium",
+							"type": "text"
+						},
+						{
+							"key": "description",
+							"value": "Shampoo herbal dengan tambahan ekstrak lidah buaya",
+							"type": "text"
+						},
+						{
+							"key": "price",
+							"value": "55000",
+							"type": "text"
+						},
+						{
+							"key": "count_in_stock",
+							"value": "90",
+							"type": "text"
+						},
+						{
+							"key": "brand",
+							"value": "HerbalCare",
+							"type": "text"
+						},
+						{
+							"key": "weight",
+							"value": "250",
+							"type": "text"
+						},
+						{
+							"key": "image_product",
+							"type": "file",
+							"src": "/home/hoveredan/Downloads/_.jpeg"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/product/update/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"update",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/product/update/1\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\" \\\n     -H \"Content-Type: multipart/form-data\" \\\n     -F \"product_id=1\" \\\n     -F \"merchant_id=5\" \\\n     -F \"category_id=2\" \\\n     -F \"name=Shampoo Herbal Premium\" \\\n     -F \"description=Shampoo herbal dengan tambahan ekstrak lidah buaya\" \\\n     -F \"price=55000\" \\\n     -F \"count_in_stock=90\" \\\n     -F \"brand=HerbalCare\" \\\n     -F \"weight=250\" \\\n     -F \"image_product=@/path/to/image.jpg\" \\\n     -F \"slug_product=shampoo-herbal-premium\" \\\n     -F \"barcode=987654321\""
+			},
+			"response": []
+		},
+		{
+			"name": "Trashed Product",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/trashed/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"trashed",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/product/trashed/1\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Restore Product",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/restore/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"restore",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/product/restore/1\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Permanent Product",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/permanent/11",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"permanent",
+						"11"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE \"http://localhost:5000/api/product/permanent/1\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Restore All Product",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/restore/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"restore",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/product/restore/all\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete All Permanent Product",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/permanent/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"permanent",
+						"all"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \"http://localhost:5000/api/product/permanent/all\" \\\n     -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		},
+		{
+			"name": "Find Id Merchant Product",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{secret_key}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/product/merchant/3?page=1&page_size=10&search=Laptop&category_id=10&min_price=10000&max_price=125405",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"product",
+						"merchant",
+						"3"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "page_size",
+							"value": "10"
+						},
+						{
+							"key": "search",
+							"value": "Laptop"
+						},
+						{
+							"key": "category_id",
+							"value": "10"
+						},
+						{
+							"key": "min_price",
+							"value": "10000"
+						},
+						{
+							"key": "max_price",
+							"value": "125405"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X GET \"http://localhost:5000/api/product/merchant/123?page=2&page_size=20&search=shampoo&category_id=5&min_price=10000&max_price=50000\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer {{vault:json-web-token}}\""
+			},
+			"response": []
+		}
+	]
+}

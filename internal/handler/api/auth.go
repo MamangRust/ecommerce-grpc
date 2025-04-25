@@ -61,7 +61,7 @@ func (h *authHandleApi) HandleHello(c echo.Context) error {
 // @Failure 500 {object} response.ErrorResponse "Internal Server Error"
 // @Router /api/auth/register [post]
 func (h *authHandleApi) Register(c echo.Context) error {
-	var body requests.CreateUserRequest
+	var body requests.RegisterRequest
 
 	if err := c.Bind(&body); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
