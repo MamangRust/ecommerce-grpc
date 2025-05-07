@@ -3,14 +3,13 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
+	"ecommerce/internal/domain/response"
 	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
-	"ecommerce/pkg/errors_custom"
+	reviewdetail_errors "ecommerce/pkg/errors/review_detail"
 	"math"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -54,14 +53,7 @@ func (s *reviewDetailHandleGrpc) FindAll(ctx context.Context, request *pb.FindAl
 	Review, totalRecords, err := s.reviewDetailService.FindAll(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -81,27 +73,13 @@ func (s *reviewDetailHandleGrpc) FindById(ctx context.Context, request *pb.FindB
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Error(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "invalid_request",
-				Message: "Valid Review ID is required",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, reviewdetail_errors.ErrGrpcInvalidID
 	}
 
-	Review, err := s.reviewDetailService.FindById(int(request.GetId()))
+	Review, err := s.reviewDetailService.FindById(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseReviewDetail("success", "Successfully fetched Review", Review)
@@ -131,14 +109,7 @@ func (s *reviewDetailHandleGrpc) FindByActive(ctx context.Context, request *pb.F
 	Review, totalRecords, err := s.reviewDetailService.FindByActive(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -176,14 +147,7 @@ func (s *reviewDetailHandleGrpc) FindByTrashed(ctx context.Context, request *pb.
 	users, totalRecords, err := s.reviewDetailService.FindByTrashed(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -209,26 +173,12 @@ func (s *reviewDetailHandleGrpc) Create(ctx context.Context, request *pb.CreateR
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Unable to create new Review Detail. Please check your input.",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, reviewdetail_errors.ErrGrpcValidateCreateReviewDetail
 	}
 
 	review, err := s.reviewDetailService.CreateReviewDetail(req)
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseReviewDetail("success", "Successfully created Review Detail", review)
@@ -239,14 +189,7 @@ func (s *reviewDetailHandleGrpc) Update(ctx context.Context, request *pb.UpdateR
 	id := int(request.GetReviewDetailId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Review Detail ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, reviewdetail_errors.ErrGrpcInvalidID
 	}
 
 	req := &requests.UpdateReviewDetailRequest{
@@ -257,26 +200,12 @@ func (s *reviewDetailHandleGrpc) Update(ctx context.Context, request *pb.UpdateR
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Unable to process Review Detail update. Please review your data.",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, reviewdetail_errors.ErrGrpcValidateUpdateReviewDetail
 	}
 
 	review, err := s.reviewDetailService.UpdateReviewDetail(req)
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseReviewDetail("success", "Successfully updated Review Detail", review)
@@ -287,27 +216,13 @@ func (s *reviewDetailHandleGrpc) TrashedReview(ctx context.Context, request *pb.
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Review ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, reviewdetail_errors.ErrGrpcInvalidID
 	}
 
 	Review, err := s.reviewDetailService.TrashedReviewDetail(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseReviewDetailDeleteAt("success", "Successfully trashed Review", Review)
@@ -319,27 +234,13 @@ func (s *reviewDetailHandleGrpc) RestoreReview(ctx context.Context, request *pb.
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Review ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, reviewdetail_errors.ErrGrpcInvalidID
 	}
 
 	Review, err := s.reviewDetailService.RestoreReviewDetail(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseReviewDetailDeleteAt("success", "Successfully restored Review", Review)
@@ -351,27 +252,13 @@ func (s *reviewDetailHandleGrpc) DeleteReviewPermanent(ctx context.Context, requ
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Review ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, reviewdetail_errors.ErrGrpcInvalidID
 	}
 
 	_, err := s.reviewDetailService.DeleteReviewDetailPermanent(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mappingReview.ToProtoResponseReviewDelete("success", "Successfully deleted Review permanently")
@@ -383,14 +270,7 @@ func (s *reviewDetailHandleGrpc) RestoreAllReview(ctx context.Context, _ *emptyp
 	_, err := s.reviewDetailService.RestoreAllReviewDetail()
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mappingReview.ToProtoResponseReviewAll("success", "Successfully restore all Review")
@@ -402,14 +282,7 @@ func (s *reviewDetailHandleGrpc) DeleteAllReviewPermanent(ctx context.Context, _
 	_, err := s.reviewDetailService.DeleteAllReviewDetailPermanent()
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mappingReview.ToProtoResponseReviewAll("success", "Successfully delete Review permanen")

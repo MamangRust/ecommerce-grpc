@@ -5,8 +5,8 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	merchantbusiness_errors "ecommerce/pkg/errors/merchant_business"
 	"ecommerce/pkg/logger"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -56,11 +56,7 @@ func (s *merchantBusinessService) FindAll(req *requests.FindAllMerchant) ([]*res
 			zap.Int("pageSize", req.PageSize),
 			zap.String("search", req.Search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve merchants list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, merchantbusiness_errors.ErrFailedFindAllMerchantBusiness
 	}
 
 	s.logger.Debug("Successfully fetched merchants",
@@ -98,11 +94,7 @@ func (s *merchantBusinessService) FindByActive(req *requests.FindAllMerchant) ([
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active merchant",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, merchantbusiness_errors.ErrFailedFindActiveMerchantBusiness
 	}
 
 	s.logger.Debug("Successfully fetched active merchant",
@@ -140,11 +132,7 @@ func (s *merchantBusinessService) FindByTrashed(req *requests.FindAllMerchant) (
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed merchant",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, merchantbusiness_errors.ErrFailedFindTrashedMerchantBusiness
 	}
 
 	s.logger.Debug("Successfully fetched trashed merchant",
@@ -165,11 +153,7 @@ func (s *merchantBusinessService) FindById(merchantID int) (*response.MerchantBu
 			zap.Error(err),
 			zap.Int("merchant_id", merchantID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve merchant details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, merchantbusiness_errors.ErrFailedFindMerchantBusinessById
 	}
 
 	return s.mapping.ToMerchantBusinessResponseRelation(merchant), nil
@@ -185,11 +169,7 @@ func (s *merchantBusinessService) CreateMerchant(req *requests.CreateMerchantBus
 			zap.Error(err),
 			zap.Any("request", req))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create new merchant record",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, merchantbusiness_errors.ErrFailedCreateMerchantBusiness
 	}
 
 	return s.mapping.ToMerchantBusinessResponse(merchant), nil
@@ -205,11 +185,7 @@ func (s *merchantBusinessService) UpdateMerchant(req *requests.UpdateMerchantBus
 			zap.Error(err),
 			zap.Any("request", req))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update merchant record",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, merchantbusiness_errors.ErrFailedUpdateMerchantBusiness
 	}
 
 	return s.mapping.ToMerchantBusinessResponse(merchant), nil
@@ -225,11 +201,7 @@ func (s *merchantBusinessService) TrashedMerchant(merchantID int) (*response.Mer
 			zap.Error(err),
 			zap.Int("merchant_id", merchantID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to move merchant to trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, merchantbusiness_errors.ErrFailedTrashedMerchantBusiness
 	}
 
 	return s.mapping.ToMerchantBusinessResponseDeleteAt(merchant), nil
@@ -245,11 +217,7 @@ func (s *merchantBusinessService) RestoreMerchant(merchantID int) (*response.Mer
 			zap.Error(err),
 			zap.Int("merchant_id", merchantID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore merchant from trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, merchantbusiness_errors.ErrFailedRestoreMerchantBusiness
 	}
 
 	return s.mapping.ToMerchantBusinessResponseDeleteAt(merchant), nil
@@ -265,11 +233,7 @@ func (s *merchantBusinessService) DeleteMerchantPermanent(merchantID int) (bool,
 			zap.Error(err),
 			zap.Int("merchant_id", merchantID))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete merchant",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, merchantbusiness_errors.ErrFailedDeleteMerchantBusinessPermanent
 	}
 
 	return success, nil
@@ -284,11 +248,7 @@ func (s *merchantBusinessService) RestoreAllMerchant() (bool, *response.ErrorRes
 		s.logger.Error("Failed to restore all trashed merchants",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all trashed merchants",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, merchantbusiness_errors.ErrFailedRestoreAllMerchantBusiness
 	}
 
 	return success, nil
@@ -303,11 +263,7 @@ func (s *merchantBusinessService) DeleteAllMerchantPermanent() (bool, *response.
 		s.logger.Error("Failed to permanently delete all trashed merchants",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all trashed merchants",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, merchantbusiness_errors.ErrFailedDeleteAllMerchantBusinessPermanent
 	}
 
 	return success, nil

@@ -2,9 +2,9 @@ package api
 
 import (
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	"ecommerce/pkg/errors/transaction_errors"
 	"ecommerce/pkg/logger"
 	"net/http"
 	"strconv"
@@ -90,11 +90,7 @@ func (h *transactionHandleApi) FindAllTransaction(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch transactions", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the transaction list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindAll(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationTransaction(res)
@@ -121,11 +117,7 @@ func (h *transactionHandleApi) FindByMerchant(c echo.Context) error {
 
 	if err != nil || merchantID <= 0 {
 		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid merchant ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMerchantId(c)
 	}
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
@@ -153,11 +145,7 @@ func (h *transactionHandleApi) FindByMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch transaction", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the transaction list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationTransaction(res)
@@ -181,11 +169,7 @@ func (h *transactionHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid transaction ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid transaction ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -198,11 +182,7 @@ func (h *transactionHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch transaction details", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the transaction details. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionNotFound(c)
 	}
 
 	so := h.mapping.ToApiResponseTransaction(res)
@@ -247,11 +227,7 @@ func (h *transactionHandleApi) FindByActive(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch active transactions", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the active transactions list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindByActive(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationTransactionDeleteAt(res)
@@ -297,11 +273,7 @@ func (h *transactionHandleApi) FindByTrashed(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch archived transactions", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the archived transactions list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindByTrashed(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationTransactionDeleteAt(res)
@@ -329,20 +301,12 @@ func (h *transactionHandleApi) FindMonthStatusSuccess(c echo.Context) error {
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid year",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	month, err := strconv.Atoi(monthStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid month",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMonth(c)
 	}
 
 	ctx := c.Request().Context()
@@ -355,11 +319,7 @@ func (h *transactionHandleApi) FindMonthStatusSuccess(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly transaction status success", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly transaction status success: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindMonthSuccess(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionMonthAmountSuccess(res)
@@ -385,11 +345,7 @@ func (h *transactionHandleApi) FindYearStatusSuccess(c echo.Context) error {
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid year",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	ctx := c.Request().Context()
@@ -401,11 +357,7 @@ func (h *transactionHandleApi) FindYearStatusSuccess(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly transaction status success", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly transaction status success: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindYearSuccess(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionYearAmountSuccess(res)
@@ -433,20 +385,12 @@ func (h *transactionHandleApi) FindMonthStatusFailed(c echo.Context) error {
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid year",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	month, err := strconv.Atoi(monthStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid month",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMonth(c)
 	}
 
 	ctx := c.Request().Context()
@@ -459,11 +403,7 @@ func (h *transactionHandleApi) FindMonthStatusFailed(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly transaction status failed", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly transaction status failed: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindMonthFailed(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionMonthAmountFailed(res)
@@ -489,11 +429,7 @@ func (h *transactionHandleApi) FindYearStatusFailed(c echo.Context) error {
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid year",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	ctx := c.Request().Context()
@@ -505,11 +441,7 @@ func (h *transactionHandleApi) FindYearStatusFailed(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly transaction status failed", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly transaction status failed: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindYearFailed(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionYearAmountFailed(res)
@@ -540,31 +472,19 @@ func (h *transactionHandleApi) FindMonthStatusSuccessByMerchant(c echo.Context) 
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid year",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	month, err := strconv.Atoi(monthStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid month",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMonth(c)
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -578,11 +498,7 @@ func (h *transactionHandleApi) FindMonthStatusSuccessByMerchant(c echo.Context) 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly transaction status success", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly transaction status success: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindMonthSuccessByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionMonthAmountSuccess(res)
@@ -611,22 +527,14 @@ func (h *transactionHandleApi) FindYearStatusSuccessByMerchant(c echo.Context) e
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid year",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -639,11 +547,7 @@ func (h *transactionHandleApi) FindYearStatusSuccessByMerchant(c echo.Context) e
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly transaction status success", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly transaction status success: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindYearSuccessByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionYearAmountSuccess(res)
@@ -674,31 +578,19 @@ func (h *transactionHandleApi) FindMonthStatusFailedByMerchant(c echo.Context) e
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid year",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	month, err := strconv.Atoi(monthStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid month",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMonth(c)
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -712,11 +604,7 @@ func (h *transactionHandleApi) FindMonthStatusFailedByMerchant(c echo.Context) e
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly transaction status failed", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly transaction status failed: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindMonthFailedByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionMonthAmountFailed(res)
@@ -745,22 +633,14 @@ func (h *transactionHandleApi) FindYearStatusFailedByMerchant(c echo.Context) er
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Bad Request: Invalid year",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -773,11 +653,7 @@ func (h *transactionHandleApi) FindYearStatusFailedByMerchant(c echo.Context) er
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly transaction status failed", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly transaction status failed: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindYearFailedByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionYearAmountFailed(res)
@@ -803,11 +679,7 @@ func (h *transactionHandleApi) FindMonthMethod(c echo.Context) error {
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	ctx := c.Request().Context()
@@ -817,11 +689,7 @@ func (h *transactionHandleApi) FindMonthMethod(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly transaction methods", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly transaction methods",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindMonthMethod(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionMonthMethod(res)
@@ -847,11 +715,7 @@ func (h *transactionHandleApi) FindYearMethod(c echo.Context) error {
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	ctx := c.Request().Context()
@@ -861,11 +725,7 @@ func (h *transactionHandleApi) FindYearMethod(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly transaction methods", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly transaction methods",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindYearMethod(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionYearMethod(res)
@@ -895,21 +755,14 @@ func (h *transactionHandleApi) FindMonthMethodByMerchant(c echo.Context) error {
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -921,11 +774,7 @@ func (h *transactionHandleApi) FindMonthMethodByMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly transaction methods", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly transaction methods",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindMonthMethodByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionMonthMethod(res)
@@ -955,22 +804,14 @@ func (h *transactionHandleApi) FindYearMethodByMerchant(c echo.Context) error {
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidYear(c)
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -981,11 +822,7 @@ func (h *transactionHandleApi) FindYearMethodByMerchant(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly transaction methods", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly transaction methods",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedFindYearMethodByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionYearMethod(res)
@@ -1009,20 +846,12 @@ func (h *transactionHandleApi) Create(c echo.Context) error {
 
 	if err := c.Bind(&req); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "Invalid request format. Please check your input.",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiBindCreateTransaction(c)
 	}
 
 	if err := c.Validate(&req); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid transaction information.",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiValidateCreateTransaction(c)
 	}
 
 	ctx := c.Request().Context()
@@ -1036,11 +865,7 @@ func (h *transactionHandleApi) Create(c echo.Context) error {
 	res, err := h.client.Create(ctx, grpcReq)
 	if err != nil {
 		h.logger.Error("transaction creation failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "creation_failed",
-			Message: "We couldn't create the transaction. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedCreate(c)
 	}
 
 	so := h.mapping.ToApiResponseTransaction(res)
@@ -1066,13 +891,7 @@ func (h *transactionHandleApi) Update(c echo.Context) error {
 	idInt, err := strconv.Atoi(id)
 
 	if err != nil {
-		h.logger.Debug("Invalid id parameter", zap.Error(err))
-
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidId(c)
 	}
 
 	var req requests.UpdateTransactionRequest
@@ -1080,21 +899,13 @@ func (h *transactionHandleApi) Update(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
 
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "Invalid request format. Please check your input.",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiBindUpdateTransaction(c)
 	}
 
 	if err := c.Validate(&req); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
 
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid transaction information.",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiValidateUpdateTransaction(c)
 	}
 
 	ctx := c.Request().Context()
@@ -1110,11 +921,7 @@ func (h *transactionHandleApi) Update(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("transaction update failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "update_failed",
-			Message: "We couldn't update the transaction information. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedUpdate(c)
 	}
 
 	so := h.mapping.ToApiResponseTransaction(res)
@@ -1139,11 +946,7 @@ func (h *transactionHandleApi) TrashedTransaction(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid transaction ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid transaction ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -1156,11 +959,7 @@ func (h *transactionHandleApi) TrashedTransaction(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to archive transaction", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "archive_failed",
-			Message: "We couldn't archive the transaction. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedTrashed(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionDeleteAt(res)
@@ -1185,11 +984,7 @@ func (h *transactionHandleApi) RestoreTransaction(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid transaction ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid transaction ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -1202,11 +997,7 @@ func (h *transactionHandleApi) RestoreTransaction(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to restore transaction", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restore_failed",
-			Message: "We couldn't restore the transaction. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedRestore(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionDeleteAt(res)
@@ -1231,11 +1022,7 @@ func (h *transactionHandleApi) DeleteTransactionPermanent(c echo.Context) error 
 
 	if err != nil {
 		h.logger.Debug("Invalid transaction ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid transaction ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return transaction_errors.ErrApiTransactionInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -1248,11 +1035,7 @@ func (h *transactionHandleApi) DeleteTransactionPermanent(c echo.Context) error 
 
 	if err != nil {
 		h.logger.Error("Failed to delete transaction", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete the transaction. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedDeletePermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionDelete(res)
@@ -1277,11 +1060,7 @@ func (h *transactionHandleApi) RestoreAllTransaction(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk transactions restoration failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restoration_failed",
-			Message: "We couldn't restore all transactions. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedRestoreAll(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionAll(res)
@@ -1308,11 +1087,7 @@ func (h *transactionHandleApi) DeleteAllTransactionPermanent(c echo.Context) err
 
 	if err != nil {
 		h.logger.Error("Bulk transactions deletion failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete all transactions. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return transaction_errors.ErrApiTransactionFailedDeleteAllPermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseTransactionAll(res)

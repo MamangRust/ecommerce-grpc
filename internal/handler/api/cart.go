@@ -2,9 +2,9 @@ package api
 
 import (
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	"ecommerce/pkg/errors/cart_errors"
 	"ecommerce/pkg/logger"
 	"net/http"
 	"strconv"
@@ -58,11 +58,7 @@ func (h *cartHandleApi) FindAll(c echo.Context) error {
 
 	if err != nil || userID <= 0 {
 		h.logger.Debug("Invalid user ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "The user ID must be a valid number",
-			Code:    http.StatusBadRequest,
-		})
+		return cart_errors.ErrApiFailedInvalidUserId(c)
 	}
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
@@ -90,11 +86,7 @@ func (h *cartHandleApi) FindAll(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch cart details", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the cart details. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return cart_errors.ErrApiFailedFindAllCarts(c)
 	}
 
 	so := h.mapping.ToApiResponseCartPagination(res)
@@ -118,20 +110,12 @@ func (h *cartHandleApi) Create(c echo.Context) error {
 
 	if err := c.Bind(&body); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "Invalid request format. Please check your input.",
-			Code:    http.StatusBadRequest,
-		})
+		return cart_errors.ErrApiBindCreateCart(c)
 	}
 
 	if err := body.Validate(); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid cart information.",
-			Code:    http.StatusBadRequest,
-		})
+		return cart_errors.ErrApiValidateCreateCart(c)
 	}
 
 	ctx := c.Request().Context()
@@ -144,11 +128,7 @@ func (h *cartHandleApi) Create(c echo.Context) error {
 	res, err := h.client.Create(ctx, req)
 	if err != nil {
 		h.logger.Error("cart creation failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "creation_failed",
-			Message: "We couldn't create the cart account. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return cart_errors.ErrApiFailedCreateCart(c)
 	}
 
 	so := h.mapping.ToApiResponseCart(res)
@@ -174,11 +154,7 @@ func (h *cartHandleApi) Delete(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Invalid id parameter", zap.Error(err))
 
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return cart_errors.ErrApiInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -191,11 +167,7 @@ func (h *cartHandleApi) Delete(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to delete cart", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete the cart. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return cart_errors.ErrApiFailedDeleteCart(c)
 	}
 
 	so := h.mapping.ToApiResponseCartDelete(res)
@@ -216,11 +188,12 @@ func (h *cartHandleApi) DeleteAll(c echo.Context) error {
 	var req requests.DeleteCartRequest
 	if err := c.Bind(&req); err != nil {
 		h.logger.Debug("Invalid request parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid request parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return cart_errors.ErrApiBindDeleteAllCart(c)
+	}
+
+	if err := req.Validate(); err != nil {
+		h.logger.Debug("Validation failed", zap.Error(err))
+		return cart_errors.ErrApiValidateDeleteAllCart(c)
 	}
 
 	ctx := c.Request().Context()
@@ -238,11 +211,7 @@ func (h *cartHandleApi) DeleteAll(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to delete cart items", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "delete_failed",
-			Message: "We couldn't delete the cart items. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return cart_errors.ErrApiFailedDeleteAllCarts(c)
 	}
 
 	so := h.mapping.ToApiResponseCartAll(res)

@@ -90,32 +90,6 @@ definitions:
     - merchant_id
     - title
     type: object
-  requests.CreateMerchantDetailRequest:
-    properties:
-      cover_image_url:
-        type: string
-      display_name:
-        type: string
-      logo_url:
-        type: string
-      merchant_id:
-        type: integer
-      short_description:
-        type: string
-      social_links:
-        items:
-          $ref: '#/definitions/requests.CreateMerchantSocialRequest'
-        type: array
-      website_url:
-        type: string
-    required:
-    - cover_image_url
-    - display_name
-    - logo_url
-    - merchant_id
-    - short_description
-    - social_links
-    type: object
   requests.CreateMerchantPolicyRequest:
     properties:
       description:
@@ -156,19 +130,6 @@ definitions:
     - name
     - status
     - user_id
-    type: object
-  requests.CreateMerchantSocialRequest:
-    properties:
-      merchant_detail_id:
-        type: integer
-      platform:
-        type: string
-      url:
-        type: string
-    required:
-    - merchant_detail_id
-    - platform
-    - url
     type: object
   requests.CreateOrderItemRequest:
     properties:
@@ -288,6 +249,15 @@ definitions:
     - lastname
     - password
     type: object
+  requests.DeleteCartRequest:
+    properties:
+      cart_ids:
+        items:
+          type: integer
+        type: array
+    required:
+    - cart_ids
+    type: object
   requests.RefreshTokenRequest:
     properties:
       refresh_token:
@@ -367,32 +337,6 @@ definitions:
     - merchant_certification_id
     - title
     type: object
-  requests.UpdateMerchantDetailRequest:
-    properties:
-      cover_image_url:
-        type: string
-      display_name:
-        type: string
-      logo_url:
-        type: string
-      merchant_detail_id:
-        type: integer
-      short_description:
-        type: string
-      social_links:
-        items:
-          $ref: '#/definitions/requests.UpdateMerchantSocialRequest'
-        type: array
-      website_url:
-        type: string
-    required:
-    - cover_image_url
-    - display_name
-    - logo_url
-    - merchant_detail_id
-    - short_description
-    - social_links
-    type: object
   requests.UpdateMerchantPolicyRequest:
     properties:
       description:
@@ -435,22 +379,6 @@ definitions:
     - name
     - status
     - user_id
-    type: object
-  requests.UpdateMerchantSocialRequest:
-    properties:
-      id:
-        type: integer
-      merchant_detail_id:
-        type: integer
-      platform:
-        type: string
-      url:
-        type: string
-    required:
-    - id
-    - merchant_detail_id
-    - platform
-    - url
     type: object
   requests.UpdateOrderItemRequest:
     properties:
@@ -2539,6 +2467,19 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/auth/hello:
+    get:
+      description: Returns a simple "Hello" message for testing purposes.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Hello
+          schema:
+            type: string
+      summary: Returns a "Hello" message
+      tags:
+      - Auth
   /api/auth/login:
     post:
       consumes:
@@ -3133,7 +3074,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/response.ApiResponseCartAll'
+          $ref: '#/definitions/requests.DeleteCartRequest'
       produces:
       - application/json
       responses:
@@ -4816,16 +4757,44 @@ paths:
   /api/merchant-detail/create:
     post:
       consumes:
-      - application/json
+      - multipart/form-data
       description: Create a new merchant detail with display name, cover image, logo,
         etc.
       parameters:
-      - description: Merchant detail payload
-        in: body
-        name: request
+      - description: Merchant ID
+        in: formData
+        name: merchant_id
         required: true
-        schema:
-          $ref: '#/definitions/requests.CreateMerchantDetailRequest'
+        type: integer
+      - description: Display name
+        in: formData
+        name: display_name
+        required: true
+        type: string
+      - description: Short description
+        in: formData
+        name: short_description
+        required: true
+        type: string
+      - description: Website URL
+        in: formData
+        name: website_url
+        type: string
+      - description: Cover image file
+        in: formData
+        name: cover_image_url
+        required: true
+        type: file
+      - description: Logo file
+        in: formData
+        name: logo_url
+        required: true
+        type: file
+      - description: Social links in JSON format (e.g., [{\
+        in: formData
+        name: social_links
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -5033,12 +5002,40 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Merchant detail update payload
-        in: body
-        name: request
+      - description: Merchant ID
+        in: formData
+        name: merchant_id
         required: true
-        schema:
-          $ref: '#/definitions/requests.UpdateMerchantDetailRequest'
+        type: integer
+      - description: Display name
+        in: formData
+        name: display_name
+        required: true
+        type: string
+      - description: Short description
+        in: formData
+        name: short_description
+        required: true
+        type: string
+      - description: Website URL
+        in: formData
+        name: website_url
+        type: string
+      - description: Cover image file
+        in: formData
+        name: cover_image_url
+        required: true
+        type: file
+      - description: Logo file
+        in: formData
+        name: logo_url
+        required: true
+        type: file
+      - description: Social links in JSON format (e.g., [{\
+        in: formData
+        name: social_links
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -7906,68 +7903,7 @@ paths:
       summary: Get all roles
       tags:
       - Role
-    post:
-      consumes:
-      - application/json
-      description: Create a new role with the provided details.
-      parameters:
-      - description: Role data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/requests.CreateRoleRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Created role data
-          schema:
-            $ref: '#/definitions/response.ApiResponseRole'
-        "400":
-          description: Invalid request body
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "500":
-          description: Failed to create role
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - Bearer: []
-      summary: Create a new role
-      tags:
-      - Role
   /api/role/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Soft-delete a role by its ID.
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Soft-deleted role data
-          schema:
-            $ref: '#/definitions/response.ApiResponseRole'
-        "400":
-          description: Invalid role ID
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "500":
-          description: Failed to soft-delete role
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - Bearer: []
-      summary: Soft-delete a role
-      tags:
-      - Role
     get:
       consumes:
       - application/json
@@ -7996,42 +7932,6 @@ paths:
       security:
       - Bearer: []
       summary: Get a role by ID
-      tags:
-      - Role
-    post:
-      consumes:
-      - application/json
-      description: Update an existing role with the provided details.
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Role data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/requests.UpdateRoleRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Updated role data
-          schema:
-            $ref: '#/definitions/response.ApiResponseRole'
-        "400":
-          description: Invalid role ID or request body
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "500":
-          description: Failed to update role
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - Bearer: []
-      summary: Update a role
       tags:
       - Role
   /api/role/active:
@@ -8073,25 +7973,36 @@ paths:
       summary: Get active roles
       tags:
       - Role
-  /api/role/permanent-all:
-    delete:
+  /api/role/create:
+    post:
       consumes:
       - application/json
-      description: Permanently delete all roles.
+      description: Create a new role with the provided details.
+      parameters:
+      - description: Role data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CreateRoleRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: Permanently deleted roles data
+          description: Created role data
           schema:
-            $ref: '#/definitions/response.ApiResponseRoleAll'
+            $ref: '#/definitions/response.ApiResponseRole'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
-          description: Failed to delete all roles permanently
+          description: Failed to create role
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - Bearer: []
-      summary: Permanently delete all roles
+      summary: Create a new role
       tags:
       - Role
   /api/role/permanent/{id}:
@@ -8125,29 +8036,29 @@ paths:
       summary: Permanently delete a role
       tags:
       - Role
-  /api/role/restore-all:
-    put:
+  /api/role/permanent/all:
+    delete:
       consumes:
       - application/json
-      description: Restore all soft-deleted roles.
+      description: Permanently delete all roles.
       produces:
       - application/json
       responses:
         "200":
-          description: Restored roles data
+          description: Permanently deleted roles data
           schema:
             $ref: '#/definitions/response.ApiResponseRoleAll'
         "500":
-          description: Failed to restore all roles
+          description: Failed to delete all roles permanently
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - Bearer: []
-      summary: Restore all soft-deleted roles
+      summary: Permanently delete all roles
       tags:
       - Role
   /api/role/restore/{id}:
-    put:
+    post:
       consumes:
       - application/json
       description: Restore a soft-deleted role by its ID.
@@ -8175,6 +8086,27 @@ paths:
       security:
       - Bearer: []
       summary: Restore a soft-deleted role
+      tags:
+      - Role
+  /api/role/restore/all:
+    post:
+      consumes:
+      - application/json
+      description: Restore all soft-deleted roles.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Restored roles data
+          schema:
+            $ref: '#/definitions/response.ApiResponseRoleAll'
+        "500":
+          description: Failed to restore all roles
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Restore all soft-deleted roles
       tags:
       - Role
   /api/role/trashed:
@@ -8214,6 +8146,74 @@ paths:
       security:
       - Bearer: []
       summary: Get trashed roles
+      tags:
+      - Role
+  /api/role/trashed/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Soft-delete a role by its ID.
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Soft-deleted role data
+          schema:
+            $ref: '#/definitions/response.ApiResponseRole'
+        "400":
+          description: Invalid role ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to soft-delete role
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Soft-delete a role
+      tags:
+      - Role
+  /api/role/update/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Update an existing role with the provided details.
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated role data
+          schema:
+            $ref: '#/definitions/response.ApiResponseRole'
+        "400":
+          description: Invalid role ID or request body
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Failed to update role
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update a role
       tags:
       - Role
   /api/role/user/{user_id}:
@@ -10112,11 +10112,6 @@ paths:
       - application/json
       description: Update an existing user record with the provided details
       parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
       - description: Update user request
         in: body
         name: UpdateUserRequest
@@ -10143,17 +10138,4 @@ paths:
       summary: Update an existing user
       tags:
       - User
-  /auth/hello:
-    get:
-      description: Returns a simple "Hello" message for testing purposes.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Hello
-          schema:
-            type: string
-      summary: Returns a "Hello" message
-      tags:
-      - Auth
 swagger: "2.0"

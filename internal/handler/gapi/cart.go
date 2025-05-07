@@ -3,14 +3,12 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
+	"ecommerce/internal/domain/response"
 	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
-	"ecommerce/pkg/errors_custom"
+	"ecommerce/pkg/errors/cart_errors"
 	"math"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type cartHandleGrpc struct {
@@ -52,14 +50,7 @@ func (s *cartHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllCartReq
 	cartItems, totalRecords, err := s.cartService.FindAll(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -83,27 +74,13 @@ func (s *cartHandleGrpc) Create(ctx context.Context, request *pb.CreateCartReque
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Unable to create new cart. Please check your input.",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, cart_errors.ErrGrpcValidateCreateCart
 	}
 
 	cartItem, err := s.cartService.CreateCart(req)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseCart("success", "Successfully added item to cart", cartItem)
@@ -111,28 +88,16 @@ func (s *cartHandleGrpc) Create(ctx context.Context, request *pb.CreateCartReque
 }
 
 func (s *cartHandleGrpc) Delete(ctx context.Context, request *pb.FindByIdCartRequest) (*pb.ApiResponseCartDelete, error) {
-	if request.GetId() == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Cart ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+	id := int(request.GetId())
+
+	if id == 0 {
+		return nil, cart_errors.ErrGrpcCartInvalidId
 	}
 
-	_, err := s.cartService.DeletePermanent(int(request.GetId()))
+	_, err := s.cartService.DeletePermanent(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseCartDelete("success", "Successfully removed item from cart")
@@ -153,14 +118,7 @@ func (s *cartHandleGrpc) DeleteAll(ctx context.Context, req *pb.DeleteCartReques
 	_, err := s.cartService.DeleteAllPermanently(deleteRequest)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseCartAll("success", "Successfully cleared cart")

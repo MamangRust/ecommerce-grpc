@@ -7,7 +7,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	merchantaward_errors "ecommerce/pkg/errors/merchant_award"
 	"time"
 )
 
@@ -41,7 +41,7 @@ func (r *merchantAwardRepository) FindAllMerchants(req *requests.FindAllMerchant
 	res, err := r.db.GetMerchantCertificationsAndAwards(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch merchants: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, merchantaward_errors.ErrFindAllMerchantAwards
 	}
 
 	var totalCount int
@@ -67,7 +67,7 @@ func (r *merchantAwardRepository) FindByActive(req *requests.FindAllMerchant) ([
 	res, err := r.db.GetMerchantCertificationsAndAwardsActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch merchants active: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, merchantaward_errors.ErrFindByActiveMerchantAwards
 	}
 
 	var totalCount int
@@ -93,7 +93,7 @@ func (r *merchantAwardRepository) FindByTrashed(req *requests.FindAllMerchant) (
 	res, err := r.db.GetMerchantCertificationsAndAwardsTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch merchants trashed: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, merchantaward_errors.ErrFindByTrashedMerchantAwards
 	}
 
 	var totalCount int
@@ -111,7 +111,7 @@ func (r *merchantAwardRepository) FindById(user_id int) (*record.MerchantAwardRe
 	res, err := r.db.GetMerchantCertificationOrAward(r.ctx, int32(user_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find merchant: %w", err)
+		return nil, merchantaward_errors.ErrFindByIdMerchantAward
 	}
 
 	return r.mapping.ToMerchantAwardRecord(res), nil
@@ -130,7 +130,7 @@ func (r *merchantAwardRepository) CreateMerchantAward(request *requests.CreateMe
 
 	award, err := r.db.CreateMerchantCertificationOrAward(r.ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create merchant certification or award: %w", err)
+		return nil, merchantaward_errors.ErrCreateMerchantAward
 	}
 
 	return r.mapping.ToMerchantAwardRecord(award), nil
@@ -149,7 +149,7 @@ func (r *merchantAwardRepository) UpdateMerchantAward(request *requests.UpdateMe
 
 	res, err := r.db.UpdateMerchantCertificationOrAward(r.ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update merchant certification or award: %w", err)
+		return nil, merchantaward_errors.ErrUpdateMerchantAward
 	}
 
 	return r.mapping.ToMerchantAwardRecord(res), nil
@@ -159,7 +159,7 @@ func (r *merchantAwardRepository) TrashedMerchantAward(merchant_id int) (*record
 	res, err := r.db.TrashMerchantCertificationOrAward(r.ctx, int32(merchant_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash Merchant: %w", err)
+		return nil, merchantaward_errors.ErrTrashedMerchantAward
 	}
 
 	return r.mapping.ToMerchantAwardRecord(res), nil
@@ -169,7 +169,7 @@ func (r *merchantAwardRepository) RestoreMerchantAward(merchant_id int) (*record
 	res, err := r.db.RestoreMerchantCertificationOrAward(r.ctx, int32(merchant_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore Merchants: %w", err)
+		return nil, merchantaward_errors.ErrRestoreMerchantAward
 	}
 
 	return r.mapping.ToMerchantAwardRecord(res), nil
@@ -179,7 +179,7 @@ func (r *merchantAwardRepository) DeleteMerchantPermanent(Merchant_id int) (bool
 	err := r.db.DeleteMerchantCertificationOrAwardPermanently(r.ctx, int32(Merchant_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete Merchant: %w", err)
+		return false, merchantaward_errors.ErrDeleteMerchantAwardPermanent
 	}
 
 	return true, nil
@@ -189,7 +189,7 @@ func (r *merchantAwardRepository) RestoreAllMerchantAward() (bool, error) {
 	err := r.db.RestoreAllMerchantCertificationsAndAwards(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all Merchants: %w", err)
+		return false, merchantaward_errors.ErrRestoreAllMerchantAwards
 	}
 	return true, nil
 }
@@ -198,7 +198,7 @@ func (r *merchantAwardRepository) DeleteAllMerchantAwardPermanent() (bool, error
 	err := r.db.DeleteAllPermanentMerchantCertificationsAndAwards(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all Merchants permanently: %w", err)
+		return false, merchantaward_errors.ErrDeleteAllMerchantAwardsPermanent
 	}
 	return true, nil
 }

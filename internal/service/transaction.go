@@ -5,8 +5,11 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	merchant_errors "ecommerce/pkg/errors/merchant"
+	"ecommerce/pkg/errors/order_errors"
+	orderitem_errors "ecommerce/pkg/errors/order_item_errors"
+	"ecommerce/pkg/errors/transaction_errors"
 	"ecommerce/pkg/logger"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -64,11 +67,7 @@ func (s *transactionService) FindAllTransactions(req *requests.FindAllTransactio
 			zap.Int("page", page),
 			zap.Int("page_size", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve transaction list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, transaction_errors.ErrFailedFindAllTransactions
 	}
 
 	s.logger.Debug("Successfully fetched transactions",
@@ -107,11 +106,7 @@ func (s *transactionService) FindByMerchant(req *requests.FindAllTransactionByMe
 			zap.Int("page", page),
 			zap.Int("page_size", pageSize),
 			zap.Error(err))
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve merchant's transactions",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, transaction_errors.ErrFailedFindTransactionsByMerchant
 	}
 
 	s.logger.Debug("Successfully fetched transactions",
@@ -149,11 +144,7 @@ func (s *transactionService) FindByActive(req *requests.FindAllTransactions) ([]
 			zap.Int("page_size", pageSize),
 			zap.Error(err))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active transactions",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, transaction_errors.ErrFailedFindTransactionsByActive
 	}
 
 	s.logger.Debug("Successfully fetched transactions",
@@ -191,11 +182,7 @@ func (s *transactionService) FindByTrashed(req *requests.FindAllTransactions) ([
 			zap.Int("page_size", pageSize),
 			zap.Error(err))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed transactions",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, transaction_errors.ErrFailedFindTransactionsByTrashed
 	}
 
 	s.logger.Debug("Successfully fetched transactions",
@@ -217,11 +204,7 @@ func (s *transactionService) FindMonthlyAmountSuccess(req *requests.MonthAmountT
 			zap.Int("year", year),
 			zap.Int("month", month),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve monthly successful transactions data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindMonthlyAmountSuccess
 	}
 
 	return s.mapping.ToTransactionMonthlyAmountSuccess(res), nil
@@ -233,11 +216,7 @@ func (s *transactionService) FindYearlyAmountSuccess(year int) ([]*response.Tran
 		s.logger.Error("failed to get yearly successful transaction amounts",
 			zap.Int("year", year),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve yearly successful transactions data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindYearlyAmountSuccess
 	}
 
 	return s.mapping.ToTransactionYearlyAmountSuccess(res), nil
@@ -253,11 +232,7 @@ func (s *transactionService) FindMonthlyAmountFailed(req *requests.MonthAmountTr
 			zap.Int("year", year),
 			zap.Int("month", month),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve monthly failed transactions data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindMonthlyAmountFailed
 	}
 
 	return s.mapping.ToTransactionMonthlyAmountFailed(res), nil
@@ -270,11 +245,7 @@ func (s *transactionService) FindYearlyAmountFailed(year int) ([]*response.Trans
 		s.logger.Error("failed to get yearly failed transaction amounts",
 			zap.Int("year", year),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve yearly failed transactions data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindYearlyAmountFailed
 	}
 
 	return s.mapping.ToTransactionYearlyAmountFailed(res), nil
@@ -293,11 +264,7 @@ func (s *transactionService) FindMonthlyAmountSuccessByMerchant(req *requests.Mo
 			zap.Int("month", month),
 			zap.Int("merchantID", merchantId),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve merchant's monthly successful transactions",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindMonthlyAmountSuccessByMerchant
 	}
 
 	return s.mapping.ToTransactionMonthlyAmountSuccess(res), nil
@@ -313,11 +280,7 @@ func (s *transactionService) FindYearlyAmountSuccessByMerchant(req *requests.Yea
 			zap.Int("year", year),
 			zap.Int("merchantID", merchantId),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve merchant's yearly successful transactions",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindYearlyAmountSuccessByMerchant
 	}
 
 	return s.mapping.ToTransactionYearlyAmountSuccess(res), nil
@@ -335,11 +298,7 @@ func (s *transactionService) FindMonthlyAmountFailedByMerchant(req *requests.Mon
 			zap.Int("month", month),
 			zap.Int("merchantID", merchantId),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve merchant's monthly failed transactions",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindMonthlyAmountFailedByMerchant
 	}
 
 	return s.mapping.ToTransactionMonthlyAmountFailed(res), nil
@@ -355,11 +314,7 @@ func (s *transactionService) FindYearlyAmountFailedByMerchant(req *requests.Year
 			zap.Int("year", year),
 			zap.Int("merchantID", merchantId),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve merchant's yearly failed transactions",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindYearlyAmountFailedByMerchant
 	}
 
 	return s.mapping.ToTransactionYearlyAmountFailed(res), nil
@@ -371,11 +326,7 @@ func (s *transactionService) FindMonthlyMethod(year int) ([]*response.Transactio
 		s.logger.Error("failed to get monthly transaction methods",
 			zap.Int("year", year),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve monthly transaction methods data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindMonthlyMethod
 	}
 
 	return s.mapping.ToTransactionMonthlyMethod(res), nil
@@ -388,11 +339,7 @@ func (s *transactionService) FindYearlyMethod(year int) ([]*response.Transaction
 		s.logger.Error("failed to get yearly transaction methods",
 			zap.Int("year", year),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve yearly transaction methods data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindYearlyMethod
 	}
 
 	return s.mapping.ToTransactionYearlyMethod(res), nil
@@ -408,11 +355,7 @@ func (s *transactionService) FindMonthlyMethodByMerchant(req *requests.MonthlyYe
 			zap.Int("year", year),
 			zap.Int("merchant_id", merchantId),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve merchant's monthly transaction methods",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindMonthlyMethodByMerchant
 	}
 
 	return s.mapping.ToTransactionMonthlyMethod(res), nil
@@ -429,11 +372,7 @@ func (s *transactionService) FindYearlyMethodByMerchant(req *requests.MonthlyYea
 			zap.Int("year", year),
 			zap.Int("merchant_id", merchantId),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve merchant's yearly transaction methods",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindYearlyMethodByMerchant
 	}
 
 	return s.mapping.ToTransactionYearlyMethod(res), nil
@@ -449,11 +388,7 @@ func (s *transactionService) FindById(transactionID int) (*response.TransactionR
 			zap.Int("transaction_id", transactionID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve transaction details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindTransactionById
 	}
 
 	return s.mapping.ToTransactionResponse(transaction), nil
@@ -469,11 +404,7 @@ func (s *transactionService) FindByOrderId(orderID int) (*response.TransactionRe
 			zap.Int("order_id", orderID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve transaction by order",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedFindTransactionByOrderId
 	}
 
 	return s.mapping.ToTransactionResponse(transaction), nil
@@ -487,11 +418,7 @@ func (s *transactionService) CreateTransaction(req *requests.CreateTransactionRe
 	if err != nil {
 		s.logger.Error("Merchant not found", zap.Int("merchantId", req.MerchantID), zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "The requested Merchant was not found",
-			Code:    http.StatusNotFound,
-		}
+		return nil, merchant_errors.ErrFailedFindMerchantById
 	}
 
 	_, err = s.orderRepository.FindById(req.OrderID)
@@ -499,11 +426,7 @@ func (s *transactionService) CreateTransaction(req *requests.CreateTransactionRe
 	if err != nil {
 		s.logger.Error("Order not found", zap.Int("orderID", req.OrderID), zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "fail",
-			Message: "The specified order does not exist in our system",
-			Code:    http.StatusNotFound,
-		}
+		return nil, order_errors.ErrFailedFindOrderById
 	}
 
 	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(req.OrderID)
@@ -511,29 +434,17 @@ func (s *transactionService) CreateTransaction(req *requests.CreateTransactionRe
 	if err != nil {
 		s.logger.Error("Failed to fetch order items", zap.Int("orderID", req.OrderID), zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Unable to retrieve order details at this time",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, orderitem_errors.ErrFailedFindOrderItemByOrder
 	}
 
 	if len(orderItems) == 0 {
-		return nil, &response.ErrorResponse{
-			Status:  "fail",
-			Message: "Cannot process transaction for an empty order",
-			Code:    http.StatusUnprocessableEntity,
-		}
+		return nil, orderitem_errors.ErrFailedFindOrderItemByOrder
 	}
 
 	var totalAmount int
 	for _, item := range orderItems {
 		if item.Quantity <= 0 {
-			return nil, &response.ErrorResponse{
-				Status:  "fail",
-				Message: "Invalid item quantity in order",
-				Code:    http.StatusBadRequest,
-			}
+			return nil, orderitem_errors.ErrFailedFindOrderItemByOrder
 		}
 
 		totalAmount += item.Price * item.Quantity
@@ -545,11 +456,7 @@ func (s *transactionService) CreateTransaction(req *requests.CreateTransactionRe
 			paymentStatus = "paid"
 		} else {
 			paymentStatus = "failed"
-			return nil, &response.ErrorResponse{
-				Status:  "fail",
-				Message: "Payment amount is insufficient to complete the transaction",
-				Code:    http.StatusPaymentRequired,
-			}
+			return nil, transaction_errors.ErrFailedPaymentInsufficientBalance
 		}
 	}
 
@@ -560,11 +467,7 @@ func (s *transactionService) CreateTransaction(req *requests.CreateTransactionRe
 	if err != nil {
 		s.logger.Error("Failed to create transaction record", zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to process transaction due to system error",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedCreateTransaction
 	}
 
 	return s.mapping.ToTransactionResponse(transaction), nil
@@ -578,19 +481,11 @@ func (s *transactionService) UpdateTransaction(req *requests.UpdateTransactionRe
 	if err != nil {
 		s.logger.Error("Transaction not found", zap.Int("transactionID", *req.TransactionID), zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "fail",
-			Message: "The transaction record was not found",
-			Code:    http.StatusNotFound,
-		}
+		return nil, transaction_errors.ErrFailedFindTransactionById
 	}
 
 	if existingTx.PaymentStatus == "paid" || existingTx.PaymentStatus == "refunded" {
-		return nil, &response.ErrorResponse{
-			Status:  "fail",
-			Message: "Completed transactions cannot be modified",
-			Code:    http.StatusConflict,
-		}
+		return nil, transaction_errors.ErrFailedPaymentStatusCannotBeModified
 	}
 
 	_, err = s.merchantRepository.FindById(req.MerchantID)
@@ -598,11 +493,7 @@ func (s *transactionService) UpdateTransaction(req *requests.UpdateTransactionRe
 	if err != nil {
 		s.logger.Error("Merchant not found", zap.Int("merchantId", req.MerchantID), zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "fail",
-			Message: "The merchant account is no longer available",
-			Code:    http.StatusNotFound,
-		}
+		return nil, merchant_errors.ErrFailedFindMerchantById
 	}
 
 	_, err = s.orderRepository.FindById(req.OrderID)
@@ -610,11 +501,7 @@ func (s *transactionService) UpdateTransaction(req *requests.UpdateTransactionRe
 	if err != nil {
 		s.logger.Error("Order not found", zap.Int("orderID", req.OrderID), zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "fail",
-			Message: "The associated order was not found",
-			Code:    http.StatusNotFound,
-		}
+		return nil, order_errors.ErrFailedFindOrderById
 	}
 
 	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(req.OrderID)
@@ -622,11 +509,7 @@ func (s *transactionService) UpdateTransaction(req *requests.UpdateTransactionRe
 	if err != nil {
 		s.logger.Error("Failed to retrieve order items", zap.Int("orderID", req.OrderID), zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Unable to retrieve order details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, orderitem_errors.ErrFailedFindOrderItemByOrder
 	}
 
 	var totalAmount int
@@ -642,11 +525,7 @@ func (s *transactionService) UpdateTransaction(req *requests.UpdateTransactionRe
 		} else {
 			paymentStatus = "failed"
 
-			return nil, &response.ErrorResponse{
-				Status:  "fail",
-				Message: "Updated payment amount is insufficient",
-				Code:    http.StatusBadRequest,
-			}
+			return nil, transaction_errors.ErrFailedPaymentInsufficientBalance
 		}
 	}
 
@@ -657,11 +536,7 @@ func (s *transactionService) UpdateTransaction(req *requests.UpdateTransactionRe
 	if err != nil {
 		s.logger.Error("Failed to update transaction", zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update transaction due to system error",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedUpdateTransaction
 	}
 
 	return s.mapping.ToTransactionResponse(transaction), nil
@@ -677,11 +552,7 @@ func (s *transactionService) TrashedTransaction(transaction_id int) (*response.T
 			zap.Int("transaction_id", transaction_id),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to move transaction to trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedTrashedTransaction
 	}
 
 	so := s.mapping.ToTransactionResponseDeleteAt(res)
@@ -701,11 +572,7 @@ func (s *transactionService) RestoreTransaction(transaction_id int) (*response.T
 			zap.Int("transaction_id", transaction_id),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore transaction from trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, transaction_errors.ErrFailedRestoreTransaction
 	}
 
 	so := s.mapping.ToTransactionResponseDeleteAt(res)
@@ -725,11 +592,7 @@ func (s *transactionService) DeleteTransactionPermanently(transactionID int) (bo
 			zap.Int("transaction_id", transactionID),
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete transaction",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, transaction_errors.ErrFailedDeleteTransactionPermanently
 	}
 
 	return success, nil
@@ -743,11 +606,7 @@ func (s *transactionService) RestoreAllTransactions() (bool, *response.ErrorResp
 	if err != nil {
 		s.logger.Error("Failed to restore all trashed transactions",
 			zap.Error(err))
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all transactions",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, transaction_errors.ErrFailedRestoreAllTransactions
 	}
 
 	return success, nil
@@ -761,11 +620,7 @@ func (s *transactionService) DeleteAllTransactionPermanent() (bool, *response.Er
 	if err != nil {
 		s.logger.Error("Failed to permanently delete all trashed transactions",
 			zap.Error(err))
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all transactions",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, transaction_errors.ErrFailedDeleteAllTransactionPermanent
 	}
 
 	return success, nil

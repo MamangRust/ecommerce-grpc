@@ -2,19 +2,17 @@ package api
 
 import (
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	"ecommerce/pkg/errors/product_errors"
 	"ecommerce/pkg/logger"
 	"ecommerce/pkg/upload_image"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -99,11 +97,7 @@ func (h *productHandleApi) FindAllProduct(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve product data", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product data: ",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedFindAll(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationProduct(res)
@@ -128,11 +122,7 @@ func (h *productHandleApi) FindByMerchant(c echo.Context) error {
 	merchantID, err := strconv.Atoi(c.Param("merchant_id"))
 	if err != nil || merchantID <= 0 {
 		h.logger.Debug("Invalid merchant ID", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant ID",
-			Code:    http.StatusBadRequest,
-		})
+		return product_errors.ErrApiProductInvalidMerchantId(c)
 	}
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
@@ -164,16 +154,7 @@ func (h *productHandleApi) FindByMerchant(c echo.Context) error {
 			zap.Any("request", req),
 		)
 
-		statusCode := http.StatusInternalServerError
-		if status, ok := status.FromError(err); ok {
-			statusCode = runtime.HTTPStatusFromCode(status.Code())
-		}
-
-		return c.JSON(statusCode, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product data",
-			Code:    statusCode,
-		})
+		return product_errors.ErrApiProductFailedFindByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationProduct(res)
@@ -196,10 +177,7 @@ func (h *productHandleApi) FindByMerchant(c echo.Context) error {
 func (h *productHandleApi) FindByCategory(c echo.Context) error {
 	categoryName := c.Param("category_name")
 	if categoryName == "" {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Category name is required",
-		})
+		return product_errors.ErrApiProductInvalidCategoryName(c)
 	}
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
@@ -227,11 +205,7 @@ func (h *productHandleApi) FindByCategory(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve product data by category", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product data: ",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedFindByCategory(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationProduct(res)
@@ -254,11 +228,7 @@ func (h *productHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid product ID", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid product ID",
-			Code:    http.StatusBadRequest,
-		})
+		return product_errors.ErrApiProductInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -271,11 +241,7 @@ func (h *productHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve product data", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product data: ",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedFindById(c)
 	}
 
 	so := h.mapping.ToApiResponseProduct(res)
@@ -320,11 +286,7 @@ func (h *productHandleApi) FindByActive(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve product data", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product data: ",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedFindByActive(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationProductDeleteAt(res)
@@ -369,11 +331,7 @@ func (h *productHandleApi) FindByTrashed(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve product data", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product data: ",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedFindByTrashed(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationProductDeleteAt(res)
@@ -406,11 +364,7 @@ func (h *productHandleApi) FindByTrashed(c echo.Context) error {
 func (h *productHandleApi) Create(c echo.Context) error {
 	formData, err := h.parseProductForm(c, true)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "invalid body",
-			Code:    http.StatusBadRequest,
-		})
+		return product_errors.ErrApiInvalidBody(c)
 	}
 
 	ctx := c.Request().Context()
@@ -430,6 +384,8 @@ func (h *productHandleApi) Create(c echo.Context) error {
 	if err != nil {
 		if formData.ImagePath != "" {
 			h.upload_image.CleanupImageOnFailure(formData.ImagePath)
+
+			return product_errors.ErrApiProductFailedCreate(c)
 		}
 
 		h.logger.Error("Product creation failed",
@@ -437,11 +393,7 @@ func (h *productHandleApi) Create(c echo.Context) error {
 			zap.Any("request", req),
 		)
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "creation_failed",
-			Message: "Failed to create Product",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedCreate(c)
 	}
 
 	so := h.mapping.ToApiResponseProduct(res)
@@ -474,20 +426,12 @@ func (h *productHandleApi) Create(c echo.Context) error {
 func (h *productHandleApi) Update(c echo.Context) error {
 	productID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid product ID",
-			Code:    http.StatusBadRequest,
-		})
+		return product_errors.ErrApiProductInvalidId(c)
 	}
 
 	formData, err := h.parseProductForm(c, false)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "invalid body",
-			Code:    http.StatusBadRequest,
-		})
+		return product_errors.ErrApiInvalidBody(c)
 	}
 
 	ctx := c.Request().Context()
@@ -515,11 +459,7 @@ func (h *productHandleApi) Update(c echo.Context) error {
 			zap.Any("request", req),
 		)
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "update_failed",
-			Message: "Failed to update product. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedUpdate(c)
 	}
 
 	so := h.mapping.ToApiResponseProduct(res)
@@ -543,11 +483,7 @@ func (h *productHandleApi) TrashedProduct(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid product ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid product ID",
-			Code:    http.StatusBadRequest,
-		})
+		return product_errors.ErrApiProductInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -560,11 +496,7 @@ func (h *productHandleApi) TrashedProduct(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to archive product", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "archive_failed",
-			Message: "We couldn't archive the product. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedTrashed(c)
 	}
 
 	so := h.mapping.ToApiResponsesProductDeleteAt(res)
@@ -589,11 +521,7 @@ func (h *productHandleApi) RestoreProduct(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid product ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid product ID",
-			Code:    http.StatusBadRequest,
-		})
+		return product_errors.ErrApiProductInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -606,11 +534,7 @@ func (h *productHandleApi) RestoreProduct(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to restore product", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restore_failed",
-			Message: "We couldn't restore the product. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedRestore(c)
 	}
 
 	so := h.mapping.ToApiResponsesProductDeleteAt(res)
@@ -635,11 +559,7 @@ func (h *productHandleApi) DeleteProductPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid product ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid product ID",
-			Code:    http.StatusBadRequest,
-		})
+		return product_errors.ErrApiProductInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -652,11 +572,7 @@ func (h *productHandleApi) DeleteProductPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to permanently delete product", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete the product. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedDeletePermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseProductDelete(res)
@@ -681,11 +597,7 @@ func (h *productHandleApi) RestoreAllProduct(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk products restoration failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "bulk_restore_failed",
-			Message: "We couldn't restore all products. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedRestoreAll(c)
 	}
 
 	so := h.mapping.ToApiResponseProductAll(res)
@@ -712,11 +624,7 @@ func (h *productHandleApi) DeleteAllProductPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk products deletion failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "bulk_deletion_failed",
-			Message: "We couldn't permanently delete all products. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return product_errors.ErrApiProductFailedDeleteAllPermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseProductAll(res)
@@ -732,29 +640,17 @@ func (h *productHandleApi) parseProductForm(c echo.Context, requireImage bool) (
 
 	formData.MerchantID, err = strconv.Atoi(c.FormValue("merchant_id"))
 	if err != nil || formData.MerchantID <= 0 {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_merchant",
-			Message: "Please provide a valid merchant ID",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, product_errors.ErrApiProductInvalidMerchantId(c)
 	}
 
 	formData.CategoryID, err = strconv.Atoi(c.FormValue("category_id"))
 	if err != nil || formData.CategoryID <= 0 {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_category",
-			Message: "Please provide a valid category ID",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, product_errors.ErrApiProductInvalidCategoryId(c)
 	}
 
 	formData.Name = strings.TrimSpace(c.FormValue("name"))
 	if formData.Name == "" {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Product name is required",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, product_errors.ErrApiProductNameRequired(c)
 	}
 
 	formData.Description = strings.TrimSpace(c.FormValue("description"))
@@ -762,40 +658,24 @@ func (h *productHandleApi) parseProductForm(c echo.Context, requireImage bool) (
 
 	formData.Price, err = strconv.Atoi(c.FormValue("price"))
 	if err != nil || formData.Price <= 0 {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_price",
-			Message: "Please provide a valid positive price",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, product_errors.ErrApiProductInvalidPrice(c)
 	}
 
 	formData.CountInStock, err = strconv.Atoi(c.FormValue("count_in_stock"))
 	if err != nil || formData.CountInStock < 0 {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_stock",
-			Message: "Please provide a valid stock count (zero or positive)",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, product_errors.ErrApiProductInvalidStock(c)
 	}
 
 	formData.Weight, err = strconv.Atoi(c.FormValue("weight"))
 	if err != nil || formData.Weight <= 0 {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_weight",
-			Message: "Please provide a valid positive weight",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, product_errors.ErrApiProductInvalidWeight(c)
 	}
 
 	file, err := c.FormFile("image_product")
 	if err != nil {
 		if requireImage {
 			h.logger.Debug("Image upload error", zap.Error(err))
-			return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-				Status:  "image_required",
-				Message: "A product image is required",
-				Code:    http.StatusBadRequest,
-			})
+			return formData, product_errors.ErrApiProductImageRequired(c)
 		}
 
 		return formData, nil

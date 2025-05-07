@@ -7,7 +7,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	"ecommerce/pkg/errors/order_errors"
 	"time"
 )
 
@@ -37,7 +37,7 @@ func (r *orderRepository) FindAllOrders(req *requests.FindAllOrder) ([]*record.O
 	res, err := r.db.GetOrders(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find orders: %w", err)
+		return nil, nil, order_errors.ErrFindAllOrders
 	}
 
 	var totalCount int
@@ -63,7 +63,7 @@ func (r *orderRepository) FindByActive(req *requests.FindAllOrder) ([]*record.Or
 	res, err := r.db.GetOrdersActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find active orders: %w", err)
+		return nil, nil, order_errors.ErrFindByActive
 	}
 
 	var totalCount int
@@ -89,7 +89,7 @@ func (r *orderRepository) FindByTrashed(req *requests.FindAllOrder) ([]*record.O
 	res, err := r.db.GetOrdersTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find trashed orders: %w", err)
+		return nil, nil, order_errors.ErrFindByTrashed
 	}
 
 	var totalCount int
@@ -116,7 +116,7 @@ func (r *orderRepository) FindByMerchant(req *requests.FindAllOrderByMerchant) (
 	res, err := r.db.GetOrdersByMerchant(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find order merchant: %w", err)
+		return nil, nil, order_errors.ErrFindByMerchant
 	}
 
 	var totalCount int
@@ -144,7 +144,7 @@ func (r *orderRepository) GetMonthlyTotalRevenue(req *requests.MonthTotalRevenue
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get monthly revenue: no data available for %d-%02d", req.Year, req.Month)
+		return nil, order_errors.ErrGetMonthlyTotalRevenue
 	}
 
 	so := r.mapping.ToOrderMonthlyTotalRevenues(res)
@@ -156,7 +156,7 @@ func (r *orderRepository) GetYearlyTotalRevenue(year int) ([]*record.OrderYearly
 	res, err := r.db.GetYearlyTotalRevenue(r.ctx, int32(year))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get yearly revenue: no data available for year %d", year)
+		return nil, order_errors.ErrGetYearlyTotalRevenue
 	}
 
 	so := r.mapping.ToOrderYearlyTotalRevenues(res)
@@ -179,7 +179,7 @@ func (r *orderRepository) GetMonthlyTotalRevenueById(req *requests.MonthTotalRev
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get order %d monthly revenue: no data for %d-%02d", req.OrderID, req.Year, req.Month)
+		return nil, order_errors.ErrGetMonthlyTotalRevenueById
 	}
 
 	so := r.mapping.ToOrderMonthlyTotalRevenuesById(res)
@@ -194,7 +194,7 @@ func (r *orderRepository) GetYearlyTotalRevenueById(req *requests.YearTotalReven
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get order %d yearly revenue: no data for year %d", req.OrderID, req.Year)
+		return nil, order_errors.ErrGetYearlyTotalRevenueById
 	}
 
 	so := r.mapping.ToOrderYearlyTotalRevenuesById(res)
@@ -217,7 +217,7 @@ func (r *orderRepository) GetMonthlyTotalRevenueByMerchant(req *requests.MonthTo
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merchant %d monthly revenue: no data for %d-%02d", req.MerchantID, req.Year, req.Month)
+		return nil, order_errors.ErrGetMonthlyTotalRevenueByMerchant
 	}
 
 	so := r.mapping.ToOrderMonthlyTotalRevenuesByMerchant(res)
@@ -232,7 +232,7 @@ func (r *orderRepository) GetYearlyTotalRevenueByMerchant(req *requests.YearTota
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merchant %d yearly revenue: no data for year %d", req.MerchantID, req.Year)
+		return nil, order_errors.ErrGetYearlyTotalRevenueByMerchant
 	}
 
 	so := r.mapping.ToOrderYearlyTotalRevenuesByMerchant(res)
@@ -245,7 +245,7 @@ func (r *orderRepository) GetMonthlyOrder(year int) ([]*record.OrderMonthlyRecor
 	res, err := r.db.GetMonthlyOrder(r.ctx, yearStart)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get monthly orders: no data available for year %d", year)
+		return nil, order_errors.ErrGetMonthlyOrder
 	}
 
 	return r.mapping.ToOrderMonthlyPrices(res), nil
@@ -256,7 +256,7 @@ func (r *orderRepository) GetYearlyOrder(year int) ([]*record.OrderYearlyRecord,
 
 	res, err := r.db.GetYearlyOrder(r.ctx, yearStart)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get yearly orders: no data available for year %d", year)
+		return nil, order_errors.ErrGetYearlyOrder
 	}
 
 	return r.mapping.ToOrderYearlyPrices(res), nil
@@ -270,7 +270,7 @@ func (r *orderRepository) GetMonthlyOrderByMerchant(req *requests.MonthOrderMerc
 		MerchantID: int32(req.MerchantID),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merchant %d monthly orders: no data for year %d", req.MerchantID, req.Year)
+		return nil, order_errors.ErrGetMonthlyOrderByMerchant
 	}
 
 	return r.mapping.ToOrderMonthlyPricesByMerchant(res), nil
@@ -285,7 +285,7 @@ func (r *orderRepository) GetYearlyOrderByMerchant(req *requests.YearOrderMercha
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merchant %d yearly orders: no data for year %d", req.MerchantID, req.Year)
+		return nil, order_errors.ErrGetYearlyOrderByMerchant
 	}
 
 	return r.mapping.ToOrderYearlyPricesByMerchant(res), nil
@@ -295,9 +295,7 @@ func (r *orderRepository) FindById(user_id int) (*record.OrderRecord, error) {
 	res, err := r.db.GetOrderByID(r.ctx, int32(user_id))
 
 	if err != nil {
-		fmt.Printf("Error fetching user: %v\n", err)
-
-		return nil, fmt.Errorf("failed to find order: %w", err)
+		return nil, order_errors.ErrFindById
 	}
 
 	return r.mapping.ToOrderRecord(res), nil
@@ -313,7 +311,7 @@ func (r *orderRepository) CreateOrder(request *requests.CreateOrderRecordRequest
 	user, err := r.db.CreateOrder(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed create order: %w", err)
+		return nil, order_errors.ErrCreateOrder
 	}
 
 	return r.mapping.ToOrderRecord(user), nil
@@ -328,7 +326,7 @@ func (r *orderRepository) UpdateOrder(request *requests.UpdateOrderRecordRequest
 	res, err := r.db.UpdateOrder(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to update order: %w", err)
+		return nil, order_errors.ErrUpdateOrder
 	}
 
 	return r.mapping.ToOrderRecord(res), nil
@@ -338,7 +336,7 @@ func (r *orderRepository) TrashedOrder(user_id int) (*record.OrderRecord, error)
 	res, err := r.db.TrashedOrder(r.ctx, int32(user_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash order: %w", err)
+		return nil, order_errors.ErrTrashedOrder
 	}
 
 	return r.mapping.ToOrderRecord(res), nil
@@ -348,7 +346,7 @@ func (r *orderRepository) RestoreOrder(user_id int) (*record.OrderRecord, error)
 	res, err := r.db.RestoreOrder(r.ctx, int32(user_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore order: %w", err)
+		return nil, order_errors.ErrRestoreOrder
 	}
 
 	return r.mapping.ToOrderRecord(res), nil
@@ -358,7 +356,7 @@ func (r *orderRepository) DeleteOrderPermanent(user_id int) (bool, error) {
 	err := r.db.DeleteOrderPermanently(r.ctx, int32(user_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete order: %w", err)
+		return false, order_errors.ErrDeleteOrderPermanent
 	}
 
 	return true, nil
@@ -368,7 +366,7 @@ func (r *orderRepository) RestoreAllOrder() (bool, error) {
 	err := r.db.RestoreAllOrders(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all orders: %w", err)
+		return false, order_errors.ErrRestoreAllOrder
 	}
 	return true, nil
 }
@@ -377,7 +375,7 @@ func (r *orderRepository) DeleteAllOrderPermanent() (bool, error) {
 	err := r.db.DeleteAllPermanentOrders(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all orders permanently: %w", err)
+		return false, order_errors.ErrDeleteAllOrderPermanent
 	}
 	return true, nil
 }

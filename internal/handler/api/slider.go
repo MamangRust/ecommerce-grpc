@@ -2,9 +2,9 @@ package api
 
 import (
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	"ecommerce/pkg/errors/slider_errors"
 	"ecommerce/pkg/logger"
 	"ecommerce/pkg/upload_image"
 	"net/http"
@@ -95,11 +95,7 @@ func (h *sliderHandleApi) FindAllSlider(c echo.Context) error {
 	if err != nil {
 		h.logger.Error("Failed to fetch sliders", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the slider list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedFindAllSliders(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationSlider(res)
@@ -145,11 +141,7 @@ func (h *sliderHandleApi) FindByActive(c echo.Context) error {
 	if err != nil {
 		h.logger.Error("Failed to fetch active sliders", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the active sliders list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedFindActiveSliders(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationSliderDeleteAt(res)
@@ -195,11 +187,7 @@ func (h *sliderHandleApi) FindByTrashed(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch archived sliders", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the archived sliders list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedFindTrashedSliders(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationSliderDeleteAt(res)
@@ -223,11 +211,7 @@ func (h *sliderHandleApi) FindByTrashed(c echo.Context) error {
 func (h *sliderHandleApi) Create(c echo.Context) error {
 	formData, err := h.parseSliderForm(c, true)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "invalid body",
-			Code:    http.StatusBadRequest,
-		})
+		return slider_errors.ErrApiFailedCreateSlider(c)
 	}
 
 	ctx := c.Request().Context()
@@ -245,11 +229,7 @@ func (h *sliderHandleApi) Create(c echo.Context) error {
 			zap.Any("request", req),
 		)
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "creation_failed",
-			Message: "Failed to create slider",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedCreateSlider(c)
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -272,20 +252,12 @@ func (h *sliderHandleApi) Create(c echo.Context) error {
 func (h *sliderHandleApi) Update(c echo.Context) error {
 	sliderID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid slider ID",
-			Code:    http.StatusBadRequest,
-		})
+		return slider_errors.ErrApiInvalidId(c)
 	}
 
 	formData, err := h.parseSliderForm(c, true)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "invalid body",
-			Code:    http.StatusBadRequest,
-		})
+		return slider_errors.ErrApiInvalidBody(c)
 	}
 
 	ctx := c.Request().Context()
@@ -304,11 +276,7 @@ func (h *sliderHandleApi) Update(c echo.Context) error {
 			zap.Any("request", req),
 		)
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "update_failed",
-			Message: "Failed to update slider",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedUpdateSlider(c)
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -331,11 +299,7 @@ func (h *sliderHandleApi) TrashedSlider(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid slider ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid slider ID",
-			Code:    http.StatusBadRequest,
-		})
+		return slider_errors.ErrApiInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -348,11 +312,7 @@ func (h *sliderHandleApi) TrashedSlider(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to archive slider", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "archive_failed",
-			Message: "We couldn't archive the slider. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedTrashSlider(c)
 	}
 
 	so := h.mapping.ToApiResponseSliderDeleteAt(res)
@@ -377,11 +337,7 @@ func (h *sliderHandleApi) RestoreSlider(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid slider ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid slider ID",
-			Code:    http.StatusBadRequest,
-		})
+		return slider_errors.ErrApiInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -394,11 +350,7 @@ func (h *sliderHandleApi) RestoreSlider(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to restore slider", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restore_failed",
-			Message: "We couldn't restore the slider. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedRestoreSlider(c)
 	}
 
 	so := h.mapping.ToApiResponseSliderDeleteAt(res)
@@ -423,11 +375,7 @@ func (h *sliderHandleApi) DeleteSliderPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid slider ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid slider ID",
-			Code:    http.StatusBadRequest,
-		})
+		return slider_errors.ErrApiInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -440,11 +388,7 @@ func (h *sliderHandleApi) DeleteSliderPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to permanently delete slider", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete the slider. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedDeleteSliderPermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseSliderDelete(res)
@@ -471,11 +415,7 @@ func (h *sliderHandleApi) RestoreAllSlider(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk slider restoration failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "bulk_restore_failed",
-			Message: "We couldn't restore all slider. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedRestoreAllSliders(c)
 	}
 
 	so := h.mapping.ToApiResponseSliderAll(res)
@@ -504,11 +444,7 @@ func (h *sliderHandleApi) DeleteAllSliderPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk slider deletion failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "bulk_deletion_failed",
-			Message: "We couldn't permanently delete all slider. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return slider_errors.ErrApiFailedDeleteAllPermanentSliders(c)
 	}
 
 	so := h.mapping.ToApiResponseSliderAll(res)
@@ -523,22 +459,14 @@ func (h *sliderHandleApi) parseSliderForm(c echo.Context, requireImage bool) (re
 
 	formData.Nama = strings.TrimSpace(c.FormValue("name"))
 	if formData.Nama == "" {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Slider name is required",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, slider_errors.ErrApiInvalidName(c)
 	}
 
 	file, err := c.FormFile("image_slider")
 	if err != nil {
 		if requireImage {
 			h.logger.Debug("Image upload error", zap.Error(err))
-			return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-				Status:  "image_required",
-				Message: "A category image is required",
-				Code:    http.StatusBadRequest,
-			})
+			return formData, slider_errors.ErrApiImageRequired(c)
 		}
 		return formData, nil
 	}

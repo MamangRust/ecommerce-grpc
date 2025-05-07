@@ -7,7 +7,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	merchantbusiness_errors "ecommerce/pkg/errors/merchant_business"
 )
 
 type merchantBusinessRepository struct {
@@ -40,7 +40,7 @@ func (r *merchantBusinessRepository) FindAllMerchants(req *requests.FindAllMerch
 	res, err := r.db.GetMerchantsBusinessInformation(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch merchants: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, merchantbusiness_errors.ErrFindAllMerchantBusinesses
 	}
 
 	var totalCount int
@@ -66,7 +66,7 @@ func (r *merchantBusinessRepository) FindByActive(req *requests.FindAllMerchant)
 	res, err := r.db.GetMerchantsBusinessInformationActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch merchants active: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, merchantbusiness_errors.ErrFindActiveMerchantBusinesses
 	}
 
 	var totalCount int
@@ -92,7 +92,7 @@ func (r *merchantBusinessRepository) FindByTrashed(req *requests.FindAllMerchant
 	res, err := r.db.GetMerchantsBusinessInformationTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch merchants trashed: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, merchantbusiness_errors.ErrFindTrashedMerchantBusinesses
 	}
 
 	var totalCount int
@@ -110,7 +110,7 @@ func (r *merchantBusinessRepository) FindById(user_id int) (*record.MerchantBusi
 	res, err := r.db.GetMerchantBusinessInformation(r.ctx, int32(user_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find merchant: %w", err)
+		return nil, merchantbusiness_errors.ErrMerchantBusinessNotFound
 	}
 
 	return r.mapping.ToMerchantBusinessRecord(res), nil
@@ -128,7 +128,7 @@ func (r *merchantBusinessRepository) CreateMerchantBusiness(request *requests.Cr
 
 	merchant, err := r.db.CreateMerchantBusinessInformation(r.ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create merchant business info: %w", err)
+		return nil, merchantbusiness_errors.ErrCreateMerchantBusiness
 	}
 
 	return r.mapping.ToMerchantBusinessRecord(merchant), nil
@@ -146,7 +146,7 @@ func (r *merchantBusinessRepository) UpdateMerchantBusiness(request *requests.Up
 
 	merchant, err := r.db.UpdateMerchantBusinessInformation(r.ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update merchant business info: %w", err)
+		return nil, merchantbusiness_errors.ErrUpdateMerchantBusiness
 	}
 
 	return r.mapping.ToMerchantBusinessRecord(merchant), nil
@@ -156,7 +156,7 @@ func (r *merchantBusinessRepository) TrashedMerchantBusiness(merchant_id int) (*
 	res, err := r.db.TrashMerchantBusinessInformation(r.ctx, int32(merchant_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash Merchant: %w", err)
+		return nil, merchantbusiness_errors.ErrTrashMerchantBusiness
 	}
 
 	return r.mapping.ToMerchantBusinessRecord(res), nil
@@ -166,7 +166,7 @@ func (r *merchantBusinessRepository) RestoreMerchantBusiness(merchant_id int) (*
 	res, err := r.db.RestoreMerchantBusinessInformation(r.ctx, int32(merchant_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore Merchants: %w", err)
+		return nil, merchantbusiness_errors.ErrRestoreMerchantBusiness
 	}
 
 	return r.mapping.ToMerchantBusinessRecord(res), nil
@@ -176,7 +176,7 @@ func (r *merchantBusinessRepository) DeleteMerchantBusinessPermanent(Merchant_id
 	err := r.db.DeleteMerchantBusinessInformationPermanently(r.ctx, int32(Merchant_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete Merchant: %w", err)
+		return false, merchantbusiness_errors.ErrDeletePermanentMerchantBusiness
 	}
 
 	return true, nil
@@ -186,7 +186,7 @@ func (r *merchantBusinessRepository) RestoreAllMerchantBusiness() (bool, error) 
 	err := r.db.RestoreAllMerchants(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all Merchants: %w", err)
+		return false, merchantbusiness_errors.ErrRestoreAllMerchantBusinesses
 	}
 	return true, nil
 }
@@ -195,7 +195,7 @@ func (r *merchantBusinessRepository) DeleteAllMerchantBusinessPermanent() (bool,
 	err := r.db.DeleteAllPermanentMerchants(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all Merchants permanently: %w", err)
+		return false, merchantbusiness_errors.ErrDeleteAllPermanentMerchantBusinesses
 	}
 	return true, nil
 }

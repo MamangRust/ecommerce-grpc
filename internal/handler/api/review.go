@@ -2,9 +2,9 @@ package api
 
 import (
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	review_errors "ecommerce/pkg/errors/review"
 	"ecommerce/pkg/logger"
 	"net/http"
 	"strconv"
@@ -89,11 +89,7 @@ func (h *reviewHandleApi) FindAll(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch reviews", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the reviews list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedFindAllReviews(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationReview(res)
@@ -118,11 +114,7 @@ func (h *reviewHandleApi) FindAll(c echo.Context) error {
 func (h *reviewHandleApi) FindByProduct(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid product ID",
-			Code:    http.StatusBadRequest,
-		})
+		return review_errors.ErrApiReviewInvalidProductId(c)
 	}
 
 	page, _ := strconv.Atoi(c.QueryParam("page"))
@@ -148,11 +140,7 @@ func (h *reviewHandleApi) FindByProduct(c echo.Context) error {
 	res, err := h.client.FindByProduct(ctx, req)
 	if err != nil {
 		h.logger.Error("Failed to fetch reviews product", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the reviews product list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedFindProductReviews(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationReviewsDetail(res)
@@ -176,11 +164,7 @@ func (h *reviewHandleApi) FindByProduct(c echo.Context) error {
 func (h *reviewHandleApi) FindByMerchant(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant ID",
-			Code:    http.StatusBadRequest,
-		})
+		return review_errors.ErrApiReviewInvalidMerchantId(c)
 	}
 
 	page, _ := strconv.Atoi(c.QueryParam("page"))
@@ -206,11 +190,7 @@ func (h *reviewHandleApi) FindByMerchant(c echo.Context) error {
 	res, err := h.client.FindByMerchant(ctx, req)
 	if err != nil {
 		h.logger.Error("Failed to fetch reviews merchant", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the reviews merchant list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedFindMerchantReviews(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationReviewsDetail(res)
@@ -255,11 +235,7 @@ func (h *reviewHandleApi) FindByActive(c echo.Context) error {
 	if err != nil {
 		h.logger.Error("Failed to fetch review details", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the review details. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedFindActiveReviews(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationReviewDeleteAt(res)
@@ -305,11 +281,7 @@ func (h *reviewHandleApi) FindByTrashed(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch archived reviews", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the archived reviews list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedFindTrashedReviews(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationReviewDeleteAt(res)
@@ -334,20 +306,12 @@ func (h *reviewHandleApi) Create(c echo.Context) error {
 
 	if err := c.Bind(&req); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "Invalid request body",
-			Code:    http.StatusBadRequest,
-		})
+		return review_errors.ErrApiBindCreateReview(c)
 	}
 
 	if err := req.Validate(); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid review information.",
-			Code:    http.StatusBadRequest,
-		})
+		return review_errors.ErrApiValidateCreateReview(c)
 	}
 
 	ctx := c.Request().Context()
@@ -367,11 +331,7 @@ func (h *reviewHandleApi) Create(c echo.Context) error {
 			zap.Any("request", req),
 		)
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "creation_failed",
-			Message: "Failed to create review",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedCreateReview(c)
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -397,21 +357,13 @@ func (h *reviewHandleApi) Update(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return review_errors.ErrApiReviewInvalidId(c)
 	}
 
 	var req requests.UpdateReviewRequest
 
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "Invalid request body",
-			Code:    http.StatusBadRequest,
-		})
+		return review_errors.ErrApiBindUpdateReview(c)
 	}
 
 	ctx := c.Request().Context()
@@ -431,11 +383,7 @@ func (h *reviewHandleApi) Update(c echo.Context) error {
 			zap.Any("request", req),
 		)
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "update_failed",
-			Message: "Failed to update review",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedUpdateReview(c)
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -458,11 +406,7 @@ func (h *reviewHandleApi) TrashedReview(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid review ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid review ID",
-			Code:    http.StatusBadRequest,
-		})
+		return review_errors.ErrApiReviewInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -475,11 +419,7 @@ func (h *reviewHandleApi) TrashedReview(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to archive review", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "archive_failed",
-			Message: "We couldn't archive the review. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedTrashedReview(c)
 	}
 
 	so := h.mapping.ToApiResponseReviewDeleteAt(res)
@@ -504,11 +444,7 @@ func (h *reviewHandleApi) RestoreReview(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid review ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid review ID",
-			Code:    http.StatusBadRequest,
-		})
+		return review_errors.ErrApiReviewInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -521,11 +457,7 @@ func (h *reviewHandleApi) RestoreReview(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to restore review", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restore_failed",
-			Message: "We couldn't restore the review. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedRestoreReview(c)
 	}
 
 	so := h.mapping.ToApiResponseReviewDeleteAt(res)
@@ -550,11 +482,7 @@ func (h *reviewHandleApi) DeleteReviewPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid review ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid review ID",
-			Code:    http.StatusBadRequest,
-		})
+		return review_errors.ErrApiReviewInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -567,11 +495,7 @@ func (h *reviewHandleApi) DeleteReviewPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to permanently delete review", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete the review. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedDeleteReviewPermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseReviewDelete(res)
@@ -598,11 +522,7 @@ func (h *reviewHandleApi) RestoreAllReview(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk review restoration failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "bulk_restore_failed",
-			Message: "We couldn't restore all reviews. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedRestoreAllReviews(c)
 	}
 
 	so := h.mapping.ToApiResponseReviewAll(res)
@@ -631,11 +551,7 @@ func (h *reviewHandleApi) DeleteAllReviewPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk review deletion failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "bulk_deletion_failed",
-			Message: "We couldn't permanently delete all reviews. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return review_errors.ErrApiFailedDeleteAllReviewsPermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseReviewAll(res)

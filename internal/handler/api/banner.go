@@ -2,9 +2,9 @@ package api
 
 import (
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	"ecommerce/pkg/errors/banner_errors"
 	"ecommerce/pkg/logger"
 	"net/http"
 	"strconv"
@@ -89,11 +89,7 @@ func (h *bannerHandleApi) FindAllBanner(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch Banners", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the Banners list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedFindAllBanner(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationBanner(res)
@@ -117,11 +113,7 @@ func (h *bannerHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid Banner ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "The Banner ID must be a valid number",
-			Code:    http.StatusBadRequest,
-		})
+		return banner_errors.ErrApiBannerInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -134,11 +126,7 @@ func (h *bannerHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch Banner details", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the Banner details. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedFindById(c)
 	}
 
 	so := h.mapping.ToApiResponseBanner(res)
@@ -183,11 +171,7 @@ func (h *bannerHandleApi) FindByActive(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch active Banners", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the active Banners list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedFindByActive(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationBannerDeleteAt(res)
@@ -231,12 +215,8 @@ func (h *bannerHandleApi) FindByTrashed(c echo.Context) error {
 	res, err := h.client.FindByTrashed(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to fetch archived Banners", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the archived Banners list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		h.logger.Error("Failed to fetch trashed Banners", zap.Error(err))
+		return banner_errors.ErrApiFailedFindByTrashed(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationBannerDeleteAt(res)
@@ -261,20 +241,12 @@ func (h *bannerHandleApi) Create(c echo.Context) error {
 
 	if err := c.Bind(&body); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "The request format is invalid. Please check your input.",
-			Code:    http.StatusBadRequest,
-		})
+		return banner_errors.ErrApiBindCreateBanner(c)
 	}
 
 	if err := body.Validate(); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid banner information.",
-			Code:    http.StatusBadRequest,
-		})
+		return banner_errors.ErrApiValidateCreateBanner(c)
 	}
 
 	ctx := c.Request().Context()
@@ -291,11 +263,7 @@ func (h *bannerHandleApi) Create(c echo.Context) error {
 	res, err := h.client.Create(ctx, req)
 	if err != nil {
 		h.logger.Error("Banner creation failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "creation_failed",
-			Message: "We couldn't create the banner. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedCreateBanner(c)
 	}
 
 	so := h.mapping.ToApiResponseBanner(res)
@@ -320,30 +288,18 @@ func (h *bannerHandleApi) Update(c echo.Context) error {
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
 		h.logger.Debug("Invalid id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return banner_errors.ErrApiBannerInvalidId(c)
 	}
 
 	var body requests.UpdateBannerRequest
 	if err := c.Bind(&body); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "The request format is invalid. Please check your input.",
-			Code:    http.StatusBadRequest,
-		})
+		return banner_errors.ErrApiBindUpdateBanner(c)
 	}
 
 	if err := body.Validate(); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid banner information.",
-			Code:    http.StatusBadRequest,
-		})
+		return banner_errors.ErrApiValidateCreateBanner(c)
 	}
 
 	ctx := c.Request().Context()
@@ -361,11 +317,7 @@ func (h *bannerHandleApi) Update(c echo.Context) error {
 	res, err := h.client.Update(ctx, req)
 	if err != nil {
 		h.logger.Error("Banner update failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "update_failed",
-			Message: "We couldn't update the banner. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedUpdateBanner(c)
 	}
 
 	so := h.mapping.ToApiResponseBanner(res)
@@ -389,11 +341,7 @@ func (h *bannerHandleApi) TrashedBanner(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid banner ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid Banner ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return banner_errors.ErrApiBannerInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -406,11 +354,7 @@ func (h *bannerHandleApi) TrashedBanner(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to archive banner", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "archive_failed",
-			Message: "We couldn't archive the banner. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedTrashedBanner(c)
 	}
 
 	so := h.mapping.ToApiResponseBannerDeleteAt(res)
@@ -435,11 +379,7 @@ func (h *bannerHandleApi) RestoreBanner(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid Banner ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid Banner ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return banner_errors.ErrApiBannerInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -452,11 +392,7 @@ func (h *bannerHandleApi) RestoreBanner(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to restore Banner", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restore_failed",
-			Message: "We couldn't restore the Banner. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedRestoreBanner(c)
 	}
 
 	so := h.mapping.ToApiResponseBannerDeleteAt(res)
@@ -481,11 +417,7 @@ func (h *bannerHandleApi) DeleteBannerPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid Banner ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid Banner ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return banner_errors.ErrApiBannerInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -498,11 +430,7 @@ func (h *bannerHandleApi) DeleteBannerPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to delete Banner", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete the Banner. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedDeletePermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseBannerDelete(res)
@@ -529,11 +457,7 @@ func (h *bannerHandleApi) RestoreAllBanner(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk Banner restoration failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restoration_failed",
-			Message: "We couldn't restore all Banner. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedRestoreAllBanner(c)
 	}
 
 	so := h.mapping.ToApiResponseBannerAll(res)
@@ -562,11 +486,7 @@ func (h *bannerHandleApi) DeleteAllBannerPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk banner deletion failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete all banner. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return banner_errors.ErrApiFailedDeleteAllPermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseBannerAll(res)

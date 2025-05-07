@@ -34,14 +34,14 @@ type UserService interface {
 	FindByActive(req *requests.FindAllUsers) ([]*response.UserResponseDeleteAt, *int, *response.ErrorResponse)
 	FindByTrashed(req *requests.FindAllUsers) ([]*response.UserResponseDeleteAt, *int, *response.ErrorResponse)
 	FindByID(id int) (*response.UserResponse, *response.ErrorResponse)
-	CreateUser(request *requests.CreateUserRequest) (*response.UserResponse, *response.ErrorResponse)
-	UpdateUser(request *requests.UpdateUserRequest) (*response.UserResponse, *response.ErrorResponse)
-	TrashedUser(user_id int) (*response.UserResponseDeleteAt, *response.ErrorResponse)
-	RestoreUser(user_id int) (*response.UserResponseDeleteAt, *response.ErrorResponse)
-	DeleteUserPermanent(user_id int) (bool, *response.ErrorResponse)
+	Create(request *requests.CreateUserRequest) (*response.UserResponse, *response.ErrorResponse)
+	Update(request *requests.UpdateUserRequest) (*response.UserResponse, *response.ErrorResponse)
+	Trashed(user_id int) (*response.UserResponseDeleteAt, *response.ErrorResponse)
+	Restore(user_id int) (*response.UserResponseDeleteAt, *response.ErrorResponse)
+	DeletePermanent(user_id int) (bool, *response.ErrorResponse)
 
-	RestoreAllUser() (bool, *response.ErrorResponse)
-	DeleteAllUserPermanent() (bool, *response.ErrorResponse)
+	RestoreAll() (bool, *response.ErrorResponse)
+	DeleteAllPermanent() (bool, *response.ErrorResponse)
 }
 
 type BannerService interface {

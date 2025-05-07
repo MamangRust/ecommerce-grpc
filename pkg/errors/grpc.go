@@ -1,4 +1,4 @@
-package errors_custom
+package errors
 
 import (
 	"ecommerce/internal/pb"

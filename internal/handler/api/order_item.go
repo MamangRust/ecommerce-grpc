@@ -1,9 +1,9 @@
 package api
 
 import (
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	orderitem_errors "ecommerce/pkg/errors/order_item_errors"
 	"ecommerce/pkg/logger"
 	"net/http"
 	"strconv"
@@ -78,11 +78,7 @@ func (h *orderItemHandleApi) FindAllOrderItems(c echo.Context) error {
 	if err != nil {
 		h.logger.Error("Failed to fetch order-items", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the order-items list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return orderitem_errors.ErrApiOrderItemFailedFindAll(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationOrderItem(res)
@@ -127,11 +123,7 @@ func (h *orderItemHandleApi) FindByActive(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch active order-items", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the active order-items list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return orderitem_errors.ErrApiOrderItemFailedFindByActive(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationOrderItemDeleteAt(res)
@@ -176,11 +168,7 @@ func (h *orderItemHandleApi) FindByTrashed(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch archived order-items", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the archived order-items list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return orderitem_errors.ErrApiOrderItemFailedFindByTrashed(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationOrderItemDeleteAt(res)
@@ -204,11 +192,7 @@ func (h *orderItemHandleApi) FindOrderItemByOrder(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid order ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid order ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return orderitem_errors.ErrApiOrderItemInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -221,11 +205,7 @@ func (h *orderItemHandleApi) FindOrderItemByOrder(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch order item details", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the order item details. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return orderitem_errors.ErrApiOrderItemFailedFindByOrderId(c)
 	}
 
 	so := h.mapping.ToApiResponsesOrderItem(res)
