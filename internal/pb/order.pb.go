@@ -690,9 +690,10 @@ func (x *CreateOrderRequest) GetShipping() *CreateShippingAddressRequest {
 type UpdateOrderRequest struct {
 	state         protoimpl.MessageState        `protogen:"open.v1"`
 	OrderId       int32                         `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	TotalPrice    int32                         `protobuf:"varint,2,opt,name=total_price,json=totalPrice,proto3" json:"total_price,omitempty"`
-	Items         []*UpdateOrderItemRequest     `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`
-	Shipping      *UpdateShippingAddressRequest `protobuf:"bytes,4,opt,name=shipping,proto3" json:"shipping,omitempty"`
+	UserId        int32                         `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	TotalPrice    int32                         `protobuf:"varint,3,opt,name=total_price,json=totalPrice,proto3" json:"total_price,omitempty"`
+	Items         []*UpdateOrderItemRequest     `protobuf:"bytes,4,rep,name=items,proto3" json:"items,omitempty"`
+	Shipping      *UpdateShippingAddressRequest `protobuf:"bytes,5,opt,name=shipping,proto3" json:"shipping,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -730,6 +731,13 @@ func (*UpdateOrderRequest) Descriptor() ([]byte, []int) {
 func (x *UpdateOrderRequest) GetOrderId() int32 {
 	if x != nil {
 		return x.OrderId
+	}
+	return 0
+}
+
+func (x *UpdateOrderRequest) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
 	}
 	return 0
 }
@@ -2082,13 +2090,14 @@ const file_order_proto_rawDesc = "" +
 	"\vtotal_price\x18\x03 \x01(\x05R\n" +
 	"totalPrice\x120\n" +
 	"\x05items\x18\x04 \x03(\v2\x1a.pb.CreateOrderItemRequestR\x05items\x12<\n" +
-	"\bshipping\x18\x05 \x01(\v2 .pb.CreateShippingAddressRequestR\bshipping\"\xc0\x01\n" +
+	"\bshipping\x18\x05 \x01(\v2 .pb.CreateShippingAddressRequestR\bshipping\"\xd9\x01\n" +
 	"\x12UpdateOrderRequest\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\x05R\aorderId\x12\x1f\n" +
-	"\vtotal_price\x18\x02 \x01(\x05R\n" +
+	"\border_id\x18\x01 \x01(\x05R\aorderId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x05R\x06userId\x12\x1f\n" +
+	"\vtotal_price\x18\x03 \x01(\x05R\n" +
 	"totalPrice\x120\n" +
-	"\x05items\x18\x03 \x03(\v2\x1a.pb.UpdateOrderItemRequestR\x05items\x12<\n" +
-	"\bshipping\x18\x04 \x01(\v2 .pb.UpdateShippingAddressRequestR\bshipping\"i\n" +
+	"\x05items\x18\x04 \x03(\v2\x1a.pb.UpdateOrderItemRequestR\x05items\x12<\n" +
+	"\bshipping\x18\x05 \x01(\v2 .pb.UpdateShippingAddressRequestR\bshipping\"i\n" +
 	"\x16CreateOrderItemRequest\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\x05R\tproductId\x12\x1a\n" +

@@ -3,14 +3,13 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
+	"ecommerce/internal/domain/response"
 	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
-	"ecommerce/pkg/errors_custom"
+	"ecommerce/pkg/errors/banner_errors"
 	"math"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -51,14 +50,7 @@ func (s *bannerHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllBanne
 	Banner, totalRecords, err := s.bannerService.FindAll(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -78,27 +70,13 @@ func (s *bannerHandleGrpc) FindById(ctx context.Context, request *pb.FindByIdBan
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Error(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "invalid_request",
-				Message: "Valid banner ID is required",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, banner_errors.ErrGrpcBannerInvalidId
 	}
 
-	Banner, err := s.bannerService.FindById(int(request.GetId()))
+	Banner, err := s.bannerService.FindById(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseBanner("success", "Successfully fetched banner", Banner)
@@ -128,14 +106,7 @@ func (s *bannerHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAll
 	Banner, totalRecords, err := s.bannerService.FindByActive(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -173,14 +144,7 @@ func (s *bannerHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAl
 	users, totalRecords, err := s.bannerService.FindByTrashed(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -208,26 +172,12 @@ func (s *bannerHandleGrpc) Create(ctx context.Context, request *pb.CreateBannerR
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Unable to create new Banner. Please check your input.",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, banner_errors.ErrGrpcValidateCreateBanner
 	}
 
 	Banner, err := s.bannerService.CreateBanner(req)
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseBanner("success", "Successfully created banner", Banner)
@@ -238,14 +188,7 @@ func (s *bannerHandleGrpc) Update(ctx context.Context, request *pb.UpdateBannerR
 	id := int(request.GetBannerId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Banner ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, banner_errors.ErrGrpcBannerInvalidId
 	}
 
 	req := &requests.UpdateBannerRequest{
@@ -259,26 +202,12 @@ func (s *bannerHandleGrpc) Update(ctx context.Context, request *pb.UpdateBannerR
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Unable to process Banner update. Please review your data.",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, banner_errors.ErrGrpcValidateUpdateBanner
 	}
 
 	Banner, err := s.bannerService.UpdateBanner(req)
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseBanner("success", "Successfully updated banner", Banner)
@@ -289,27 +218,13 @@ func (s *bannerHandleGrpc) TrashedBanner(ctx context.Context, request *pb.FindBy
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Banner ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, banner_errors.ErrGrpcBannerInvalidId
 	}
 
 	Banner, err := s.bannerService.TrashedBanner(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseBannerDeleteAt("success", "Successfully trashed Banner", Banner)
@@ -321,27 +236,13 @@ func (s *bannerHandleGrpc) RestoreBanner(ctx context.Context, request *pb.FindBy
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Banner ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, banner_errors.ErrGrpcBannerInvalidId
 	}
 
 	Banner, err := s.bannerService.RestoreBanner(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseBannerDeleteAt("success", "Successfully restored Banner", Banner)
@@ -353,27 +254,13 @@ func (s *bannerHandleGrpc) DeleteBannerPermanent(ctx context.Context, request *p
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Banner ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, banner_errors.ErrGrpcBannerInvalidId
 	}
 
 	_, err := s.bannerService.DeleteBannerPermanent(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseBannerDelete("success", "Successfully deleted Banner permanently")
@@ -385,14 +272,7 @@ func (s *bannerHandleGrpc) RestoreAllBanner(ctx context.Context, _ *emptypb.Empt
 	_, err := s.bannerService.RestoreAllBanner()
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseBannerAll("success", "Successfully restore all Banner")
@@ -404,14 +284,7 @@ func (s *bannerHandleGrpc) DeleteAllBannerPermanent(ctx context.Context, _ *empt
 	_, err := s.bannerService.DeleteAllBannerPermanent()
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseBannerAll("success", "Successfully delete Banner permanen")

@@ -5,8 +5,8 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	reviewdetail_errors "ecommerce/pkg/errors/review_detail"
 	"ecommerce/pkg/logger"
-	"net/http"
 	"os"
 
 	"go.uber.org/zap"
@@ -57,11 +57,7 @@ func (s *reviewDetailService) FindAll(req *requests.FindAllReview) ([]*response.
 			zap.Int("pageSize", req.PageSize),
 			zap.String("search", req.Search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve Review Details list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, reviewdetail_errors.ErrFailedFindAllReview
 	}
 
 	s.logger.Debug("Successfully fetched Review Details",
@@ -99,11 +95,7 @@ func (s *reviewDetailService) FindByActive(req *requests.FindAllReview) ([]*resp
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active Review Detail",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, reviewdetail_errors.ErrFailedFindActiveReview
 	}
 
 	s.logger.Debug("Successfully fetched active Review Detail",
@@ -141,11 +133,7 @@ func (s *reviewDetailService) FindByTrashed(req *requests.FindAllReview) ([]*res
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed Review Detail",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, reviewdetail_errors.ErrFailedFindTrashedReview
 	}
 
 	s.logger.Debug("Successfully fetched trashed Review Detail",
@@ -166,11 +154,7 @@ func (s *reviewDetailService) FindById(review_id int) (*response.ReviewDetailsRe
 			zap.Error(err),
 			zap.Int("review_id", review_id))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve Review Detail details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, reviewdetail_errors.ErrReviewDetailNotFoundRes
 	}
 
 	return s.mapping.ToReviewDetailsResponse(res), nil
@@ -186,11 +170,7 @@ func (s *reviewDetailService) CreateReviewDetail(req *requests.CreateReviewDetai
 			zap.Error(err),
 			zap.Any("request", req))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create new Review Detail record",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, reviewdetail_errors.ErrFailedCreateReviewDetail
 	}
 
 	return s.mapping.ToReviewDetailsResponse(res), nil
@@ -206,11 +186,7 @@ func (s *reviewDetailService) UpdateReviewDetail(req *requests.UpdateReviewDetai
 			zap.Error(err),
 			zap.Any("request", req))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update Review Detail record",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, reviewdetail_errors.ErrFailedUpdateReviewDetail
 	}
 
 	return s.mapping.ToReviewDetailsResponse(res), nil
@@ -226,11 +202,7 @@ func (s *reviewDetailService) TrashedReviewDetail(review_id int) (*response.Revi
 			zap.Error(err),
 			zap.Int("Review Detail_id", review_id))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to move Review Detail to trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, reviewdetail_errors.ErrFailedTrashedReviewDetail
 	}
 
 	return s.mapping.ToReviewDetailResponseDeleteAt(res), nil
@@ -246,11 +218,7 @@ func (s *reviewDetailService) RestoreReviewDetail(review_id int) (*response.Revi
 			zap.Error(err),
 			zap.Int("Review Detail_id", review_id))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore Review Detail from trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, reviewdetail_errors.ErrFailedRestoreReviewDetail
 	}
 
 	return s.mapping.ToReviewDetailResponseDeleteAt(res), nil
@@ -266,11 +234,7 @@ func (s *reviewDetailService) DeleteReviewDetailPermanent(review_id int) (bool, 
 			zap.Int("review_id", review_id),
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to verify review detail existence",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, reviewdetail_errors.ErrFailedDeletePermanentReview
 	}
 
 	if res.Url != "" {
@@ -279,16 +243,14 @@ func (s *reviewDetailService) DeleteReviewDetailPermanent(review_id int) (bool, 
 			if os.IsNotExist(err) {
 				s.logger.Debug("review detail upload path file not found, continuing with review detail deletion",
 					zap.String("upload path", res.Url))
+
+				return false, reviewdetail_errors.ErrFailedImageNotFound
 			} else {
 				s.logger.Debug("Failed to delete review detail upload path",
 					zap.String("upload path", res.Url),
 					zap.Error(err))
 
-				return false, &response.ErrorResponse{
-					Status:  "error",
-					Message: "Failed to delete review detail upload path",
-					Code:    http.StatusInternalServerError,
-				}
+				return false, reviewdetail_errors.ErrFailedRemoveImage
 			}
 		} else {
 			s.logger.Debug("Successfully deleted review detail upload path",
@@ -303,11 +265,7 @@ func (s *reviewDetailService) DeleteReviewDetailPermanent(review_id int) (bool, 
 			zap.Error(err),
 			zap.Int("Review Detail_id", review_id))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete Review Detail",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, reviewdetail_errors.ErrFailedDeletePermanentReview
 	}
 
 	return success, nil
@@ -322,11 +280,7 @@ func (s *reviewDetailService) RestoreAllReviewDetail() (bool, *response.ErrorRes
 		s.logger.Error("Failed to restore all trashed Review Details",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all trashed Review Details",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, reviewdetail_errors.ErrFailedRestoreAllReviewDetail
 	}
 
 	return success, nil
@@ -341,11 +295,7 @@ func (s *reviewDetailService) DeleteAllReviewDetailPermanent() (bool, *response.
 		s.logger.Error("Failed to permanently delete all trashed Review Details",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all trashed Review Details",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, reviewdetail_errors.ErrFailedDeleteAllReviewDetail
 	}
 
 	return success, nil

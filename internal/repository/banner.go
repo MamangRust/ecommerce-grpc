@@ -7,7 +7,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	"ecommerce/pkg/errors/banner_errors"
 	"time"
 )
 
@@ -37,7 +37,7 @@ func (r *bannerRepository) FindAllBanners(req *requests.FindAllBanner) ([]*recor
 	res, err := r.db.GetBanners(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch Banners: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, banner_errors.ErrFindAllBanners
 	}
 
 	var totalCount int
@@ -63,7 +63,7 @@ func (r *bannerRepository) FindByActive(req *requests.FindAllBanner) ([]*record.
 	res, err := r.db.GetBannersActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch Banners active: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, banner_errors.ErrFindActiveBanners
 	}
 
 	var totalCount int
@@ -89,7 +89,7 @@ func (r *bannerRepository) FindByTrashed(req *requests.FindAllBanner) ([]*record
 	res, err := r.db.GetBannersTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch Banners trashed: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, banner_errors.ErrFindTrashedBanners
 	}
 
 	var totalCount int
@@ -107,7 +107,7 @@ func (r *bannerRepository) FindById(user_id int) (*record.BannerRecord, error) {
 	res, err := r.db.GetBanner(r.ctx, int32(user_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find Banner: %w", err)
+		return nil, banner_errors.ErrBannerNotFound
 	}
 
 	return r.mapping.ToBannerRecord(res), nil
@@ -116,22 +116,22 @@ func (r *bannerRepository) FindById(user_id int) (*record.BannerRecord, error) {
 func (r *bannerRepository) CreateBanner(request *requests.CreateBannerRequest) (*record.BannerRecord, error) {
 	startDate, err := time.Parse("2006-01-02", request.StartDate)
 	if err != nil {
-		return nil, fmt.Errorf("invalid start_date format: %w", err)
+		return nil, banner_errors.ErrBannerStartDate
 	}
 
 	endDate, err := time.Parse("2006-01-02", request.EndDate)
 	if err != nil {
-		return nil, fmt.Errorf("invalid end_date format: %w", err)
+		return nil, banner_errors.ErrBannerEndDate
 	}
 
 	startTime, err := time.Parse("15:04", request.StartTime)
 	if err != nil {
-		return nil, fmt.Errorf("invalid start_time format: %w", err)
+		return nil, banner_errors.ErrBannerStartTime
 	}
 
 	endTime, err := time.Parse("15:04", request.EndTime)
 	if err != nil {
-		return nil, fmt.Errorf("invalid end_time format: %w", err)
+		return nil, banner_errors.ErrBannerEndTime
 	}
 
 	req := db.CreateBannerParams{
@@ -145,7 +145,7 @@ func (r *bannerRepository) CreateBanner(request *requests.CreateBannerRequest) (
 
 	result, err := r.db.CreateBanner(r.ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create banner: %w", err)
+		return nil, banner_errors.ErrCreateBanner
 	}
 
 	return r.mapping.ToBannerRecord(result), nil
@@ -154,22 +154,22 @@ func (r *bannerRepository) CreateBanner(request *requests.CreateBannerRequest) (
 func (r *bannerRepository) UpdateBanner(request *requests.UpdateBannerRequest) (*record.BannerRecord, error) {
 	startDate, err := time.Parse("2006-01-02", request.StartDate)
 	if err != nil {
-		return nil, fmt.Errorf("invalid start_date format: %w", err)
+		return nil, banner_errors.ErrBannerStartDate
 	}
 
 	endDate, err := time.Parse("2006-01-02", request.EndDate)
 	if err != nil {
-		return nil, fmt.Errorf("invalid end_date format: %w", err)
+		return nil, banner_errors.ErrBannerEndDate
 	}
 
 	startTime, err := time.Parse("15:04", request.StartTime)
 	if err != nil {
-		return nil, fmt.Errorf("invalid start_time format: %w", err)
+		return nil, banner_errors.ErrBannerStartTime
 	}
 
 	endTime, err := time.Parse("15:04", request.EndTime)
 	if err != nil {
-		return nil, fmt.Errorf("invalid end_time format: %w", err)
+		return nil, banner_errors.ErrBannerEndTime
 	}
 
 	req := db.UpdateBannerParams{
@@ -184,7 +184,7 @@ func (r *bannerRepository) UpdateBanner(request *requests.UpdateBannerRequest) (
 
 	result, err := r.db.UpdateBanner(r.ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update banner: %w", err)
+		return nil, banner_errors.ErrUpdateBanner
 	}
 
 	return r.mapping.ToBannerRecord(result), nil
@@ -194,7 +194,7 @@ func (r *bannerRepository) TrashedBanner(Banner_id int) (*record.BannerRecord, e
 	res, err := r.db.TrashBanner(r.ctx, int32(Banner_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash Banner: %w", err)
+		return nil, banner_errors.ErrTrashedBanner
 	}
 
 	return r.mapping.ToBannerRecord(res), nil
@@ -204,7 +204,7 @@ func (r *bannerRepository) RestoreBanner(Banner_id int) (*record.BannerRecord, e
 	res, err := r.db.RestoreBanner(r.ctx, int32(Banner_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore Banners: %w", err)
+		return nil, banner_errors.ErrRestoreBanner
 	}
 
 	return r.mapping.ToBannerRecord(res), nil
@@ -214,7 +214,7 @@ func (r *bannerRepository) DeleteBannerPermanent(Banner_id int) (bool, error) {
 	err := r.db.DeleteBannerPermanently(r.ctx, int32(Banner_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete Banner: %w", err)
+		return false, banner_errors.ErrDeleteBannerPermanent
 	}
 
 	return true, nil
@@ -224,7 +224,7 @@ func (r *bannerRepository) RestoreAllBanner() (bool, error) {
 	err := r.db.RestoreAllBanners(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all Banners: %w", err)
+		return false, banner_errors.ErrRestoreAllBanners
 	}
 	return true, nil
 }
@@ -233,7 +233,7 @@ func (r *bannerRepository) DeleteAllBannerPermanent() (bool, error) {
 	err := r.db.DeleteAllPermanentBanners(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all Banners permanently: %w", err)
+		return false, banner_errors.ErrDeleteAllBanners
 	}
 	return true, nil
 }

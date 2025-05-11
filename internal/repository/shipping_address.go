@@ -6,7 +6,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	shippingaddress_errors "ecommerce/pkg/errors/shipping_address_errors"
 )
 
 type shippingAdddressRepository struct {
@@ -39,7 +39,7 @@ func (r *shippingAdddressRepository) FindAllShippingAddress(req *requests.FindAl
 	res, err := r.db.GetShippingAddress(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find all shipping address: %w", err)
+		return nil, nil, shippingaddress_errors.ErrFindAllShippingAddress
 	}
 
 	var totalCount int
@@ -65,7 +65,7 @@ func (r *shippingAdddressRepository) FindByActive(req *requests.FindAllShippingA
 	res, err := r.db.GetShippingAddressActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find active shipping address: %w", err)
+		return nil, nil, shippingaddress_errors.ErrFindActiveShippingAddress
 	}
 
 	var totalCount int
@@ -91,7 +91,7 @@ func (r *shippingAdddressRepository) FindByTrashed(req *requests.FindAllShipping
 	res, err := r.db.GetShippingAddressTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find trashed shipping address: %w", err)
+		return nil, nil, shippingaddress_errors.ErrFindTrashedShippingAddress
 	}
 
 	var totalCount int
@@ -109,8 +109,7 @@ func (r *shippingAdddressRepository) FindById(shipping_id int) (*record.Shipping
 	res, err := r.db.GetShippingByID(r.ctx, int32(shipping_id))
 
 	if err != nil {
-
-		return nil, fmt.Errorf("failed to find shipping address: %w", err)
+		return nil, shippingaddress_errors.ErrFindShippingAddressByID
 	}
 
 	return r.mapping.ToShippingAddressRecord(res), nil
@@ -120,7 +119,7 @@ func (r *shippingAdddressRepository) FindByOrder(order_id int) (*record.Shipping
 	res, err := r.db.GetShippingAddressByOrderID(r.ctx, int32(order_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find order shipping address: %w", err)
+		return nil, shippingaddress_errors.ErrFindShippingAddressByOrder
 	}
 
 	return r.mapping.ToShippingAddressRecord(res), nil
@@ -128,7 +127,7 @@ func (r *shippingAdddressRepository) FindByOrder(order_id int) (*record.Shipping
 
 func (r *shippingAdddressRepository) CreateShippingAddress(request *requests.CreateShippingAddressRequest) (*record.ShippingAddressRecord, error) {
 	req := db.CreateShippingAddressParams{
-		OrderID:        int32(request.OrderID),
+		OrderID:        int32(*request.OrderID),
 		Alamat:         request.Alamat,
 		Provinsi:       request.Provinsi,
 		Kota:           request.Kota,
@@ -141,7 +140,7 @@ func (r *shippingAdddressRepository) CreateShippingAddress(request *requests.Cre
 	address, err := r.db.CreateShippingAddress(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create shipping address: %w", err)
+		return nil, shippingaddress_errors.ErrCreateShippingAddress
 	}
 
 	return r.mapping.ToShippingAddressRecord(address), nil
@@ -159,10 +158,10 @@ func (r *shippingAdddressRepository) UpdateShippingAddress(request *requests.Upd
 		ShippingCost:      float64(request.ShippingCost),
 	}
 
-	res, err := r.db.UpdateShippingAddress(r.ctx, req)
 
+	res, err := r.db.UpdateShippingAddress(r.ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update shipping address: %w", err)
+		return nil, shippingaddress_errors.ErrUpdateShippingAddress
 	}
 
 	return r.mapping.ToShippingAddressRecord(res), nil
@@ -172,7 +171,7 @@ func (r *shippingAdddressRepository) TrashShippingAddress(shipping_id int) (*rec
 	res, err := r.db.TrashShippingAddress(r.ctx, int32(shipping_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash shipping address: %w", err)
+		return nil, shippingaddress_errors.ErrTrashShippingAddress
 	}
 
 	return r.mapping.ToShippingAddressRecord(res), nil
@@ -182,7 +181,7 @@ func (r *shippingAdddressRepository) RestoreShippingAddress(category_id int) (*r
 	res, err := r.db.RestoreShippingAddress(r.ctx, int32(category_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore shipping address: %w", err)
+		return nil, shippingaddress_errors.ErrRestoreShippingAddress
 	}
 
 	return r.mapping.ToShippingAddressRecord(res), nil
@@ -192,7 +191,7 @@ func (r *shippingAdddressRepository) DeleteShippingAddressPermanently(category_i
 	err := r.db.DeleteShippingAddressPermanently(r.ctx, int32(category_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete permanent shipping address: %w", err)
+		return false, shippingaddress_errors.ErrDeleteShippingAddressPermanent
 	}
 
 	return true, nil
@@ -202,7 +201,7 @@ func (r *shippingAdddressRepository) RestoreAllShippingAddress() (bool, error) {
 	err := r.db.RestoreAllShippingAddress(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all shipping address: %w", err)
+		return false, shippingaddress_errors.ErrRestoreAllShippingAddresses
 	}
 	return true, nil
 }
@@ -211,7 +210,7 @@ func (r *shippingAdddressRepository) DeleteAllPermanentShippingAddress() (bool, 
 	err := r.db.DeleteAllPermanentShippingAddress(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all shipping address permanently: %w", err)
+		return false, shippingaddress_errors.ErrDeleteAllPermanentShippingAddress
 	}
 	return true, nil
 }

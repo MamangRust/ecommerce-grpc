@@ -2,9 +2,9 @@ package api
 
 import (
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	merchantaward_errors "ecommerce/pkg/errors/merchant_award"
 	"ecommerce/pkg/logger"
 	"net/http"
 	"strconv"
@@ -92,11 +92,7 @@ func (h *merchantAwardHandleApi) FindAllMerchantAward(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch merchants", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the merchants list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedFindAllMerchantAward(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationMerchantAward(res)
@@ -120,11 +116,7 @@ func (h *merchantAwardHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "The merchant ID must be a valid number",
-			Code:    http.StatusBadRequest,
-		})
+		return merchantaward_errors.ErrApiFailedInvalidMerchantAwardId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -137,11 +129,7 @@ func (h *merchantAwardHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch merchant details", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the merchant details. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedFindMerchantAwardById(c)
 	}
 
 	so := h.mapping.ToApiResponseMerchantAward(res)
@@ -186,11 +174,7 @@ func (h *merchantAwardHandleApi) FindByActive(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch active merchants", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the active merchants list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedFindActiveMerchantAward(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationMerchantAwardDeleteAt(res)
@@ -233,11 +217,7 @@ func (h *merchantAwardHandleApi) FindByTrashed(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch archived merchants", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the archived merchants list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedFindTrashedMerchantAward(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationMerchantAwardDeleteAt(res)
@@ -262,20 +242,12 @@ func (h *merchantAwardHandleApi) Create(c echo.Context) error {
 
 	if err := c.Bind(&body); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "The request format is invalid. Please check your input.",
-			Code:    http.StatusBadRequest,
-		})
+		return merchantaward_errors.ErrApiBindCreateMerchantAward(c)
 	}
 
 	if err := body.Validate(); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid certification or award information.",
-			Code:    http.StatusBadRequest,
-		})
+		return merchantaward_errors.ErrApiValidateCreateMerchantAward(c)
 	}
 
 	ctx := c.Request().Context()
@@ -293,11 +265,7 @@ func (h *merchantAwardHandleApi) Create(c echo.Context) error {
 	res, err := h.client.Create(ctx, req)
 	if err != nil {
 		h.logger.Error("Merchant award creation failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "creation_failed",
-			Message: "We couldn't create the merchant certification or award. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedCreateMerchantAward(c)
 	}
 
 	so := h.mapping.ToApiResponseMerchantAward(res)
@@ -323,31 +291,19 @@ func (h *merchantAwardHandleApi) Update(c echo.Context) error {
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
 		h.logger.Debug("Invalid id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return merchantaward_errors.ErrApiFailedInvalidMerchantAwardId(c)
 	}
 
 	var body requests.UpdateMerchantCertificationOrAwardRequest
 
 	if err := c.Bind(&body); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "The request format is invalid. Please check your input.",
-			Code:    http.StatusBadRequest,
-		})
+		return merchantaward_errors.ErrApiBindUpdateMerchantAward(c)
 	}
 
 	if err := body.Validate(); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid certification or award information.",
-			Code:    http.StatusBadRequest,
-		})
+		return merchantaward_errors.ErrApiValidateUpdateMerchantAward(c)
 	}
 
 	ctx := c.Request().Context()
@@ -365,11 +321,7 @@ func (h *merchantAwardHandleApi) Update(c echo.Context) error {
 	res, err := h.client.Update(ctx, req)
 	if err != nil {
 		h.logger.Error("Merchant award update failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "update_failed",
-			Message: "We couldn't update the merchant certification or award. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedUpdateMerchantAward(c)
 	}
 
 	so := h.mapping.ToApiResponseMerchantAward(res)
@@ -393,11 +345,7 @@ func (h *merchantAwardHandleApi) TrashedMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid merchant ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return merchantaward_errors.ErrApiFailedInvalidMerchantAwardId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -410,11 +358,7 @@ func (h *merchantAwardHandleApi) TrashedMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to archive merchant", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "archive_failed",
-			Message: "We couldn't archive the merchant account. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedTrashedMerchantAward(c)
 	}
 
 	so := h.mapping.ToApiResponseMerchantAwardDeleteAt(res)
@@ -439,11 +383,7 @@ func (h *merchantAwardHandleApi) RestoreMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid merchant ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return merchantaward_errors.ErrApiFailedInvalidMerchantAwardId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -456,11 +396,7 @@ func (h *merchantAwardHandleApi) RestoreMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to restore merchant", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restore_failed",
-			Message: "We couldn't restore the merchant. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedRestoreMerchantAward(c)
 	}
 
 	so := h.mapping.ToApiResponseMerchantAwardDeleteAt(res)
@@ -485,11 +421,7 @@ func (h *merchantAwardHandleApi) DeleteMerchantPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid merchant ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return merchantaward_errors.ErrApiFailedInvalidMerchantAwardId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -502,11 +434,7 @@ func (h *merchantAwardHandleApi) DeleteMerchantPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to delete merchant", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete the merchant. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedDeleteMerchantAwardPermanent(c)
 	}
 
 	so := h.mappingMerchant.ToApiResponseMerchantDelete(res)
@@ -533,11 +461,7 @@ func (h *merchantAwardHandleApi) RestoreAllMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk merchant restoration failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restoration_failed",
-			Message: "We couldn't restore all merchant. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedRestoreAllMerchantAward(c)
 	}
 
 	so := h.mappingMerchant.ToApiResponseMerchantAll(res)
@@ -566,11 +490,7 @@ func (h *merchantAwardHandleApi) DeleteAllMerchantPermanent(c echo.Context) erro
 
 	if err != nil {
 		h.logger.Error("Bulk merchant deletion failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete all merchant. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return merchantaward_errors.ErrApiFailedDeleteAllMerchantAwardPermanent(c)
 	}
 
 	so := h.mappingMerchant.ToApiResponseMerchantAll(res)

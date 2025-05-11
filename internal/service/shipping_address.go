@@ -5,8 +5,8 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	shippingaddress_errors "ecommerce/pkg/errors/shipping_address_errors"
 	"ecommerce/pkg/logger"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -56,11 +56,7 @@ func (s *shippingAddressService) FindAll(req *requests.FindAllShippingAddress) (
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve shipping address list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, shippingaddress_errors.ErrFailedFindAllShippingAddresses
 	}
 
 	shippingRes := s.mapping.ToShippingAddressesResponse(shipping)
@@ -83,11 +79,7 @@ func (s *shippingAddressService) FindById(shipping_id int) (*response.ShippingAd
 			zap.Int("Shipping Address ID", shipping_id),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve Shipping Address details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, shippingaddress_errors.ErrFailedFindShippingAddressByID
 	}
 
 	return s.mapping.ToShippingAddressResponse(shipping), nil
@@ -103,11 +95,7 @@ func (s *shippingAddressService) FindByOrder(order_id int) (*response.ShippingAd
 			zap.Int("Order ID", order_id),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve Shipping Address details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, shippingaddress_errors.ErrFailedFindShippingAddressByOrder
 	}
 
 	return s.mapping.ToShippingAddressResponse(shipping), nil
@@ -140,11 +128,7 @@ func (s *shippingAddressService) FindByActive(req *requests.FindAllShippingAddre
 			zap.Int("page_size", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active Shipping Address",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, shippingaddress_errors.ErrFailedFindActiveShippingAddresses
 	}
 
 	s.logger.Debug("Successfully fetched shipping address",
@@ -182,11 +166,7 @@ func (s *shippingAddressService) FindByTrashed(req *requests.FindAllShippingAddr
 			zap.Int("page_size", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed shipping address",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, shippingaddress_errors.ErrFailedFindTrashedShippingAddresses
 	}
 
 	s.logger.Debug("Successfully fetched shipping address",
@@ -207,11 +187,7 @@ func (s *shippingAddressService) TrashShippingAddress(shipping_id int) (*respons
 			zap.Int("shipping_id", shipping_id),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to move shipping address to trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, shippingaddress_errors.ErrFailedTrashShippingAddress
 	}
 
 	return s.mapping.ToShippingAddressResponseDeleteAt(category), nil
@@ -227,11 +203,7 @@ func (s *shippingAddressService) RestoreShippingAddress(shipping_id int) (*respo
 			zap.Int("shipping_id", shipping_id),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore Shipping Address from trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, shippingaddress_errors.ErrFailedRestoreShippingAddress
 	}
 
 	return s.mapping.ToShippingAddressResponseDeleteAt(shipping), nil
@@ -247,11 +219,7 @@ func (s *shippingAddressService) DeleteShippingAddressPermanently(shipping_id in
 			zap.Int("shipping_address", shipping_id),
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete Shipping address",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, shippingaddress_errors.ErrFailedDeleteShippingAddressPermanent
 	}
 
 	return success, nil
@@ -265,11 +233,7 @@ func (s *shippingAddressService) RestoreAllShippingAddress() (bool, *response.Er
 	if err != nil {
 		s.logger.Error("Failed to restore all trashed shipping address",
 			zap.Error(err))
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all shipping address",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, shippingaddress_errors.ErrFailedRestoreAllShippingAddresses
 	}
 
 	return success, nil
@@ -284,11 +248,7 @@ func (s *shippingAddressService) DeleteAllPermanentShippingAddress() (bool, *res
 		s.logger.Error("Failed to permanently delete all trashed shipping address",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all shipping address",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, shippingaddress_errors.ErrFailedDeleteAllShippingAddressesPermanent
 	}
 
 	return success, nil

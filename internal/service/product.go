@@ -5,10 +5,11 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	"ecommerce/pkg/errors/category_errors"
+	merchant_errors "ecommerce/pkg/errors/merchant"
+	"ecommerce/pkg/errors/product_errors"
 	"ecommerce/pkg/logger"
 	"ecommerce/pkg/utils"
-	"fmt"
-	"net/http"
 	"os"
 
 	"go.uber.org/zap"
@@ -65,11 +66,7 @@ func (s *productService) FindAll(req *requests.FindAllProduct) ([]*response.Prod
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, product_errors.ErrFailedFindAllProducts
 	}
 
 	s.logger.Debug("Successfully fetched products",
@@ -110,11 +107,7 @@ func (s *productService) FindByMerchant(req *requests.FindAllProductByMerchant) 
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve order list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, product_errors.ErrFailedFindProductsByMerchant
 	}
 
 	s.logger.Debug("Successfully fetched products",
@@ -155,11 +148,7 @@ func (s *productService) FindByCategory(req *requests.FindAllProductByCategory) 
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve category product list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, product_errors.ErrFailedFindProductsByCategory
 	}
 
 	s.logger.Debug("Successfully fetched products",
@@ -180,11 +169,7 @@ func (s *productService) FindById(productID int) (*response.ProductResponse, *re
 			zap.Error(err),
 			zap.Int("productID", productID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, product_errors.ErrFailedFindProductById
 	}
 
 	return s.mapping.ToProductResponse(product), nil
@@ -217,11 +202,7 @@ func (s *productService) FindByActive(req *requests.FindAllProduct) ([]*response
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active products",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, product_errors.ErrFailedFindProductsByActive
 	}
 
 	s.logger.Debug("Successfully fetched products",
@@ -259,11 +240,7 @@ func (s *productService) FindByTrashed(req *requests.FindAllProduct) ([]*respons
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed products",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, product_errors.ErrFailedFindProductsByTrashed
 	}
 
 	s.logger.Debug("Successfully fetched products",
@@ -284,11 +261,7 @@ func (s *productService) CreateProduct(req *requests.CreateProductRequest) (*res
 			zap.Int("categoryID", req.CategoryID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to verify category",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, category_errors.ErrFailedFindCategoryById
 	}
 
 	_, err = s.merchantRepository.FindById(req.MerchantID)
@@ -298,11 +271,7 @@ func (s *productService) CreateProduct(req *requests.CreateProductRequest) (*res
 			zap.Int("merchantID", req.MerchantID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to verify merchant",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, merchant_errors.ErrFailedFindMerchantById
 	}
 
 	slug := utils.GenerateSlug(req.Name)
@@ -315,11 +284,7 @@ func (s *productService) CreateProduct(req *requests.CreateProductRequest) (*res
 		s.logger.Error("Failed to create product record",
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create product",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, product_errors.ErrFailedCreateProduct
 	}
 
 	s.logger.Debug("Product created successfully", zap.Int("productID", product.ID))
@@ -337,11 +302,7 @@ func (s *productService) UpdateProduct(req *requests.UpdateProductRequest) (*res
 			zap.Int("categoryID", req.CategoryID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to verify category",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, category_errors.ErrFailedFindCategoryById
 	}
 
 	_, err = s.merchantRepository.FindById(req.MerchantID)
@@ -351,11 +312,7 @@ func (s *productService) UpdateProduct(req *requests.UpdateProductRequest) (*res
 			zap.Int("merchantID", req.MerchantID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to verify merchant",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, merchant_errors.ErrFailedFindMerchantById
 	}
 
 	slug := utils.GenerateSlug(req.Name)
@@ -368,11 +325,7 @@ func (s *productService) UpdateProduct(req *requests.UpdateProductRequest) (*res
 		s.logger.Error("Failed to update product record",
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update product",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, product_errors.ErrFailedUpdateProduct
 	}
 
 	s.logger.Debug("Product updated successfully", zap.Int("productID", product.ID))
@@ -389,11 +342,7 @@ func (s *productService) TrashProduct(productID int) (*response.ProductResponseD
 			zap.Int("product_id", productID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to move product to trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, product_errors.ErrFailedTrashProduct
 	}
 
 	return s.mapping.ToProductResponseDeleteAt(product), nil
@@ -409,11 +358,7 @@ func (s *productService) RestoreProduct(productID int) (*response.ProductRespons
 			zap.Int("product_id", productID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore product from trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, product_errors.ErrFailedRestoreProduct
 	}
 
 	return s.mapping.ToProductResponseDeleteAt(product), nil
@@ -429,11 +374,7 @@ func (s *productService) DeleteProductPermanent(productID int) (bool, *response.
 			zap.Int("product_id", productID),
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to verify product existence",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, product_errors.ErrFailedFindProductTrashedById
 	}
 
 	if res.ImageProduct != "" {
@@ -447,11 +388,7 @@ func (s *productService) DeleteProductPermanent(productID int) (bool, *response.
 					zap.String("image_path", res.ImageProduct),
 					zap.Error(err))
 
-				return false, &response.ErrorResponse{
-					Status:  "error",
-					Message: "Failed to delete product image",
-					Code:    http.StatusInternalServerError,
-				}
+				return false, product_errors.ErrFailedDeleteImageProduct
 			}
 		} else {
 			s.logger.Debug("Successfully deleted product image",
@@ -459,29 +396,14 @@ func (s *productService) DeleteProductPermanent(productID int) (bool, *response.
 		}
 	}
 
-	success, err := s.productRepository.DeleteProductPermanent(productID)
+	_, err = s.productRepository.DeleteProductPermanent(productID)
 
 	if err != nil {
 		s.logger.Error("Failed to permanently delete product",
 			zap.Int("product_id", productID),
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete product",
-			Code:    http.StatusInternalServerError,
-		}
-	}
-
-	if !success {
-		s.logger.Debug("No rows were affected when deleting product",
-			zap.Int("product_id", productID))
-
-		return false, &response.ErrorResponse{
-			Status:  "not_found",
-			Message: fmt.Sprintf("Product with ID %d not found", productID),
-			Code:    http.StatusNotFound,
-		}
+		return false, product_errors.ErrFailedDeleteProductPermanent
 	}
 
 	s.logger.Debug("Product permanently deleted successfully",
@@ -499,11 +421,7 @@ func (s *productService) RestoreAllProducts() (bool, *response.ErrorResponse) {
 		s.logger.Error("Failed to restore all trashed products",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all products",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, product_errors.ErrFailedRestoreAllProducts
 	}
 
 	s.logger.Debug("All trashed products restored successfully",
@@ -521,11 +439,7 @@ func (s *productService) DeleteAllProductsPermanent() (bool, *response.ErrorResp
 		s.logger.Error("Failed to permanently delete all trashed products",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all products",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, product_errors.ErrFailedDeleteAllProductsPermanent
 	}
 
 	s.logger.Debug("All trashed products permanently deleted successfully",

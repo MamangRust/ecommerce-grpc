@@ -29,7 +29,6 @@ message FindAllShippingOrderRequest{
 }
 
 message CreateShippingAddressRequest {
-    int32 order_id = 1;
     string alamat = 2;
     string provinsi = 3;
     string kota = 4;
@@ -41,7 +40,6 @@ message CreateShippingAddressRequest {
 
 message UpdateShippingAddressRequest {
     int32 shipping_id = 1;
-    int32 order_id = 2;
     string alamat = 3;
     string provinsi = 4;
     string kota = 5;
@@ -59,8 +57,10 @@ message ShippingResponse {
     string provinsi = 4;
     string negara = 5;
     string kota = 6;
-    string created_at = 7;
-    string updated_at = 8;
+    string shippingMethod = 7;
+    int32 shippingCost = 8;
+    string created_at = 9;
+    string updated_at = 10;
 }
 
 
@@ -71,9 +71,11 @@ message ShippingResponseDeleteAt {
     string provinsi = 4;
     string negara = 5;
     string kota = 6;
-    string created_at = 7;
-    string updated_at = 8;
-    google.protobuf.StringValue deleted_at = 9;
+    string shippingMethod = 7;
+    int32 shippingCost = 8;
+    string created_at = 9;
+    string updated_at = 10;
+    google.protobuf.StringValue deleted_at = 11;
 }
 
 

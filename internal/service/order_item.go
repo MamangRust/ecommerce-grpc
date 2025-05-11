@@ -5,8 +5,8 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	orderitem_errors "ecommerce/pkg/errors/order_item_errors"
 	"ecommerce/pkg/logger"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -56,11 +56,7 @@ func (s *orderItemService) FindAllOrderItems(req *requests.FindAllOrderItems) ([
 			zap.Int("pageSize", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve all order items list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, orderitem_errors.ErrFailedFindAllOrderItems
 	}
 
 	s.logger.Debug("Successfully fetched order-item",
@@ -98,11 +94,7 @@ func (s *orderItemService) FindByActive(req *requests.FindAllOrderItems) ([]*res
 			zap.Int("pageSize", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active order-items",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, orderitem_errors.ErrFailedFindOrderItemsByActive
 	}
 
 	s.logger.Debug("Successfully fetched order-items",
@@ -140,11 +132,7 @@ func (s *orderItemService) FindByTrashed(req *requests.FindAllOrderItems) ([]*re
 			zap.Int("pageSize", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed order-items",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, orderitem_errors.ErrFailedFindOrderItemsByTrashed
 	}
 
 	s.logger.Debug("Successfully fetched order-items",
@@ -164,11 +152,7 @@ func (s *orderItemService) FindOrderItemByOrder(orderID int) ([]*response.OrderI
 		s.logger.Error("Failed to retrieve order items",
 			zap.Error(err),
 			zap.Int("order_id", orderID))
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Unable to retrieve order items",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, orderitem_errors.ErrFailedFindOrderItemByOrder
 	}
 	return s.mapping.ToOrderItemsResponse(orderItems), nil
 }

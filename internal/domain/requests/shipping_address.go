@@ -9,7 +9,7 @@ type FindAllShippingAddress struct {
 }
 
 type CreateShippingAddressRequest struct {
-	OrderID        int    `json:"order_id" validate:"required"`
+	OrderID        *int   `json:"order_id"`
 	Alamat         string `json:"alamat" validate:"required,min=5"`
 	Provinsi       string `json:"provinsi" validate:"required"`
 	Kota           string `json:"kota" validate:"required"`
@@ -21,7 +21,7 @@ type CreateShippingAddressRequest struct {
 
 type UpdateShippingAddressRequest struct {
 	ShippingID     *int   `json:"shipping_id" `
-	OrderID        int    `json:"order_id" validate:"required"`
+	OrderID        *int   `json:"order_id"`
 	Alamat         string `json:"alamat,omitempty" validate:"omitempty,min=5"`
 	Provinsi       string `json:"provinsi,omitempty" validate:"omitempty"`
 	Kota           string `json:"kota,omitempty" validate:"omitempty"`

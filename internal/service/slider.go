@@ -5,8 +5,8 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	"ecommerce/pkg/errors/slider_errors"
 	"ecommerce/pkg/logger"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -56,11 +56,7 @@ func (s *sliderService) FindAll(req *requests.FindAllSlider) ([]*response.Slider
 			zap.Int("page_size", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve sliders list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, slider_errors.ErrFailedFindAllSliders
 	}
 
 	slidersResponse := s.mapping.ToSlidersResponse(sliders)
@@ -100,11 +96,7 @@ func (s *sliderService) FindByActive(req *requests.FindAllSlider) ([]*response.S
 			zap.Int("page_size", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active sliders",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, slider_errors.ErrFailedFindActiveSliders
 	}
 
 	s.logger.Debug("Successfully fetched sliders",
@@ -142,11 +134,7 @@ func (s *sliderService) FindByTrashed(req *requests.FindAllSlider) ([]*response.
 			zap.Int("page_size", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed roles",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, slider_errors.ErrFailedFindTrashedSliders
 	}
 
 	s.logger.Debug("Successfully fetched slider",
@@ -167,11 +155,7 @@ func (s *sliderService) CreateSlider(req *requests.CreateSliderRequest) (*respon
 			zap.String("slider", req.Nama),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create new slider",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, slider_errors.ErrFailedCreateSlider
 	}
 
 	return s.mapping.ToSliderResponse(slider), nil
@@ -188,11 +172,7 @@ func (s *sliderService) UpdateSlider(req *requests.UpdateSliderRequest) (*respon
 			zap.String("new_name", req.Nama),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update slider",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, slider_errors.ErrFailedUpdateSlider
 	}
 
 	return s.mapping.ToSliderResponse(slider), nil
@@ -208,11 +188,7 @@ func (s *sliderService) TrashedSlider(slider_id int) (*response.SliderResponseDe
 			zap.Int("slider_id", slider_id),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to move slider to trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, slider_errors.ErrFailedTrashSlider
 	}
 
 	return s.mapping.ToSliderResponseDeleteAt(slider), nil
@@ -228,11 +204,7 @@ func (s *sliderService) RestoreSlider(sliderID int) (*response.SliderResponseDel
 			zap.Int("sliderID", sliderID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore slider from trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, slider_errors.ErrFailedRestoreSlider
 	}
 
 	return s.mapping.ToSliderResponseDeleteAt(slider), nil
@@ -248,11 +220,7 @@ func (s *sliderService) DeleteSliderPermanent(sliderID int) (bool, *response.Err
 			zap.Int("sliderID", sliderID),
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete slider",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, slider_errors.ErrFailedDeletePermanentSlider
 	}
 
 	return success, nil
@@ -267,11 +235,7 @@ func (s *sliderService) RestoreAllSliders() (bool, *response.ErrorResponse) {
 		s.logger.Error("Failed to restore all trashed sliders",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all sliders",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, slider_errors.ErrFailedRestoreAllSliders
 	}
 
 	return success, nil
@@ -286,11 +250,7 @@ func (s *sliderService) DeleteAllSlidersPermanent() (bool, *response.ErrorRespon
 		s.logger.Error("Failed to permanently delete all trashed sliders",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all sliders",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, slider_errors.ErrFailedDeleteAllPermanentSliders
 	}
 
 	return success, nil

@@ -74,7 +74,7 @@ type CreateOrderRequest struct {
 }
 
 type UpdateOrderRequest struct {
-	OrderID         *int                         `json:"order_id" validate:"required"`
+	OrderID         *int                         `json:"order_id"`
 	UserID          int                          `json:"user_id" validate:"required"`
 	TotalPrice      int                          `json:"total_price" validate:"required"`
 	Items           []UpdateOrderItemRequest     `json:"items" validate:"required"`

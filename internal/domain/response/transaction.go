@@ -6,7 +6,6 @@ type TransactionResponse struct {
 	MerchantID    int    `json:"merchant_id"`
 	PaymentMethod string `json:"payment_method"`
 	Amount        int    `json:"amount"`
-	ChangeAmount  int    `json:"change_amount"`
 	PaymentStatus string `json:"payment_status"`
 	CreatedAt     string `json:"created_at"`
 	UpdatedAt     string `json:"updated_at"`
@@ -18,7 +17,6 @@ type TransactionResponseDeleteAt struct {
 	MerchantID    int     `json:"merchant_id"`
 	PaymentMethod string  `json:"payment_method"`
 	Amount        int     `json:"amount"`
-	ChangeAmount  int     `json:"change_amount"`
 	PaymentStatus string  `json:"payment_status"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`

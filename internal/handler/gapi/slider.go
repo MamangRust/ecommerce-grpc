@@ -3,14 +3,13 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
+	"ecommerce/internal/domain/response"
 	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
-	"ecommerce/pkg/errors_custom"
+	"ecommerce/pkg/errors/slider_errors"
 	"math"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -51,14 +50,7 @@ func (s *sliderHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllSlide
 	category, totalRecords, err := s.sliderService.FindAll(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -95,14 +87,7 @@ func (s *sliderHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAll
 	users, totalRecords, err := s.sliderService.FindByActive(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -139,14 +124,7 @@ func (s *sliderHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAl
 	users, totalRecords, err := s.sliderService.FindByTrashed(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -170,27 +148,13 @@ func (s *sliderHandleGrpc) Create(ctx context.Context, request *pb.CreateSliderR
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Unable to create new  slider. Please check your input.",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, slider_errors.ErrGrpcValidateCreateSlider
 	}
 
 	slider, err := s.sliderService.CreateSlider(req)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	return s.mapping.ToProtoResponseSlider("success", "Successfully created slider", slider), nil
@@ -200,14 +164,7 @@ func (s *sliderHandleGrpc) Update(ctx context.Context, request *pb.UpdateSliderR
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Slider ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, slider_errors.ErrGrpcInvalidID
 	}
 
 	req := &requests.UpdateSliderRequest{
@@ -217,27 +174,13 @@ func (s *sliderHandleGrpc) Update(ctx context.Context, request *pb.UpdateSliderR
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Unable to process slider update. Please review your data.",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, slider_errors.ErrGrpcValidateUpdateSlider
 	}
 
 	slider, err := s.sliderService.UpdateSlider(req)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	return s.mapping.ToProtoResponseSlider("success", "Successfully updated slider", slider), nil
@@ -247,27 +190,13 @@ func (s *sliderHandleGrpc) TrashedSlider(ctx context.Context, request *pb.FindBy
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Slider ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, slider_errors.ErrGrpcInvalidID
 	}
 
 	slider, err := s.sliderService.TrashedSlider(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseSliderDeleteAt("success", "Successfully trashed slider", slider)
@@ -279,27 +208,13 @@ func (s *sliderHandleGrpc) RestoreSlider(ctx context.Context, request *pb.FindBy
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Slider ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, slider_errors.ErrGrpcInvalidID
 	}
 
 	slider, err := s.sliderService.RestoreSlider(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseSliderDeleteAt("success", "Successfully restored slider", slider)
@@ -311,27 +226,13 @@ func (s *sliderHandleGrpc) DeleteSliderPermanent(ctx context.Context, request *p
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Slider ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, slider_errors.ErrGrpcInvalidID
 	}
 
 	_, err := s.sliderService.DeleteSliderPermanent(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseSliderDelete("success", "Successfully deleted slider permanently")
@@ -343,14 +244,7 @@ func (s *sliderHandleGrpc) RestoreAllSlider(ctx context.Context, _ *emptypb.Empt
 	_, err := s.sliderService.RestoreAllSliders()
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseSliderAll("success", "Successfully restored all sliders")
@@ -362,14 +256,7 @@ func (s *sliderHandleGrpc) DeleteAllSliderPermanent(ctx context.Context, _ *empt
 	_, err := s.sliderService.DeleteAllSlidersPermanent()
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseSliderAll("success", "Successfully deleted all sliders permanently")

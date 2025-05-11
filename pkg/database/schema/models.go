@@ -135,7 +135,6 @@ type OrderItem struct {
 	OrderItemID int32        `json:"order_item_id"`
 	OrderID     int32        `json:"order_id"`
 	ProductID   int32        `json:"product_id"`
-	Name        string       `json:"name"`
 	Quantity    int32        `json:"quantity"`
 	Price       int32        `json:"price"`
 	CreatedAt   sql.NullTime `json:"created_at"`

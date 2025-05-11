@@ -2,9 +2,9 @@ package api
 
 import (
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	"ecommerce/pkg/errors/order_errors"
 	"ecommerce/pkg/logger"
 	"net/http"
 	"strconv"
@@ -99,11 +99,7 @@ func (h *orderHandleApi) FindAllOrders(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve order data", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve order data",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindAll(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationOrder(res)
@@ -127,11 +123,7 @@ func (h *orderHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid order ID", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid order ID",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -144,11 +136,7 @@ func (h *orderHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve order data", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve order data",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindById(c)
 	}
 
 	so := h.mapping.ToApiResponseOrder(res)
@@ -192,11 +180,7 @@ func (h *orderHandleApi) FindByActive(c echo.Context) error {
 	res, err := h.client.FindByActive(ctx, req)
 	if err != nil {
 		h.logger.Debug("Failed to retrieve active order data", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active order data",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindByActive(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationOrderDeleteAt(res)
@@ -241,11 +225,7 @@ func (h *orderHandleApi) FindByTrashed(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve trashed order data", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed order data",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindByTrashed(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationOrderDeleteAt(res)
@@ -275,11 +255,7 @@ func (h *orderHandleApi) FindMonthlyTotalRevenue(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
 
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidYear(c)
 	}
 
 	monthStr := c.QueryParam("month")
@@ -289,11 +265,7 @@ func (h *orderHandleApi) FindMonthlyTotalRevenue(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Invalid month parameter", zap.Error(err))
 
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid month parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidMonth(c)
 	}
 
 	ctx := c.Request().Context()
@@ -306,11 +278,7 @@ func (h *orderHandleApi) FindMonthlyTotalRevenue(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly order revenue", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly order revenue",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindMonthlyTotalRevenue(c)
 	}
 
 	so := h.mapping.ToApiResponseMonthlyTotalRevenue(res)
@@ -338,11 +306,7 @@ func (h *orderHandleApi) FindYearlyTotalRevenue(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidYear(c)
 	}
 
 	ctx := c.Request().Context()
@@ -354,11 +318,7 @@ func (h *orderHandleApi) FindYearlyTotalRevenue(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly order revenue", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly order revenue",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindYearlyTotalRevenue(c)
 	}
 
 	so := h.mapping.ToApiResponseYearlyTotalRevenue(res)
@@ -387,11 +347,7 @@ func (h *orderHandleApi) FindMonthlyTotalRevenueByMerchant(c echo.Context) error
 
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidYear(c)
 	}
 
 	monthStr := c.QueryParam("month")
@@ -400,11 +356,7 @@ func (h *orderHandleApi) FindMonthlyTotalRevenueByMerchant(c echo.Context) error
 
 	if err != nil {
 		h.logger.Debug("Invalid month parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid month parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidMonth(c)
 	}
 
 	merchantStr := c.QueryParam("merchant_id")
@@ -413,11 +365,7 @@ func (h *orderHandleApi) FindMonthlyTotalRevenueByMerchant(c echo.Context) error
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -430,11 +378,7 @@ func (h *orderHandleApi) FindMonthlyTotalRevenueByMerchant(c echo.Context) error
 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly order revenue", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly order revenue",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindMonthlyTotalRevenueByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseMonthlyTotalRevenue(res)
@@ -462,11 +406,7 @@ func (h *orderHandleApi) FindYearlyTotalRevenueByMerchant(c echo.Context) error 
 
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidYear(c)
 	}
 
 	merchantStr := c.QueryParam("merchant_id")
@@ -474,11 +414,7 @@ func (h *orderHandleApi) FindYearlyTotalRevenueByMerchant(c echo.Context) error 
 	merchant, err := strconv.Atoi(merchantStr)
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -491,11 +427,7 @@ func (h *orderHandleApi) FindYearlyTotalRevenueByMerchant(c echo.Context) error 
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly order revenue", zap.Error(err))
 
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly order revenue",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindYearlyTotalRevenueByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseYearlyTotalRevenue(res)
@@ -521,11 +453,7 @@ func (h *orderHandleApi) FindMonthlyRevenue(c echo.Context) error {
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidYear(c)
 	}
 
 	ctx := c.Request().Context()
@@ -535,11 +463,7 @@ func (h *orderHandleApi) FindMonthlyRevenue(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly order revenue", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly order revenue",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindMonthlyRevenue(c)
 	}
 
 	so := h.mapping.ToApiResponseMonthlyOrder(res)
@@ -565,11 +489,7 @@ func (h *orderHandleApi) FindYearlyRevenue(c echo.Context) error {
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidYear(c)
 	}
 
 	ctx := c.Request().Context()
@@ -579,11 +499,7 @@ func (h *orderHandleApi) FindYearlyRevenue(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly order revenue", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly order revenue",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindYearlyRevenue(c)
 	}
 
 	so := h.mapping.ToApiResponseYearlyOrder(res)
@@ -613,22 +529,14 @@ func (h *orderHandleApi) FindMonthlyRevenueByMerchant(c echo.Context) error {
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidYear(c)
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -639,11 +547,7 @@ func (h *orderHandleApi) FindMonthlyRevenueByMerchant(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Debug("Failed to retrieve monthly order revenue", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve monthly order revenue",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedFindMonthlyRevenueByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseMonthlyOrder(res)
@@ -674,22 +578,14 @@ func (h *orderHandleApi) FindYearlyRevenueByMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid year parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidYear(c)
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid merchant id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidMerchantId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -700,11 +596,7 @@ func (h *orderHandleApi) FindYearlyRevenueByMerchant(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Debug("Failed to retrieve yearly order revenue", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve yearly order revenue",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderFailedFindYearlyRevenueByMerchant(c)
 	}
 
 	so := h.mapping.ToApiResponseYearlyOrder(res)
@@ -729,21 +621,13 @@ func (h *orderHandleApi) Create(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
 
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "Invalid request format. Please check your input.",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiBindCreateOrder(c)
 	}
 
 	if err := req.Validate(); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
 
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid order information.",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiValidateCreateOrder(c)
 	}
 
 	ctx := c.Request().Context()
@@ -772,15 +656,13 @@ func (h *orderHandleApi) Create(c echo.Context) error {
 		})
 	}
 
+	h.logger.Debug("Creating new order", zap.Any("request", grpcReq))
+
 	res, err := h.client.Create(ctx, grpcReq)
 
 	if err != nil {
-		h.logger.Error("Cashier creation failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "creation_failed",
-			Message: "We couldn't create the order. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		h.logger.Error("Order creation failed", zap.Error(err))
+		return order_errors.ErrApiOrderFailedCreate(c)
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -806,42 +688,30 @@ func (h *orderHandleApi) Update(c echo.Context) error {
 	if err != nil {
 		h.logger.Debug("Invalid id parameter", zap.Error(err))
 
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidId(c)
 	}
 
 	var req requests.UpdateOrderRequest
 
 	if err := c.Bind(&req); err != nil {
 		h.logger.Debug("Invalid request format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_request",
-			Message: "Invalid request format. Please check your input.",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiBindUpdateOrder(c)
 	}
 
-	if err := c.Validate(req); err != nil {
+	if err := req.Validate(); err != nil {
 		h.logger.Debug("Validation failed", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Please provide valid order information.",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiValidateUpdateOrder(c)
 	}
 
 	ctx := c.Request().Context()
 
 	grpcReq := &pb.UpdateOrderRequest{
 		OrderId:    int32(idInt),
+		UserId:     int32(req.UserID),
 		TotalPrice: int32(req.TotalPrice),
 		Items:      []*pb.UpdateOrderItemRequest{},
 		Shipping: &pb.UpdateShippingAddressRequest{
 			ShippingId:     int32(*req.ShippingAddress.ShippingID),
-			OrderId:        int32(req.ShippingAddress.OrderID),
 			Alamat:         req.ShippingAddress.Alamat,
 			Provinsi:       req.ShippingAddress.Provinsi,
 			Kota:           req.ShippingAddress.Kota,
@@ -865,11 +735,7 @@ func (h *orderHandleApi) Update(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Failed to update order", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update order",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedUpdate(c)
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -892,11 +758,7 @@ func (h *orderHandleApi) TrashedOrder(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid order ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid order ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -909,11 +771,7 @@ func (h *orderHandleApi) TrashedOrder(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to archive order", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "archive_failed",
-			Message: "We couldn't archive the order. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedTrashed(c)
 	}
 
 	so := h.mapping.ToApiResponseOrderDeleteAt(res)
@@ -938,11 +796,7 @@ func (h *orderHandleApi) RestoreOrder(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid order ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid order ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -955,11 +809,7 @@ func (h *orderHandleApi) RestoreOrder(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to restore order", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restore_failed",
-			Message: "We couldn't restore the order. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedRestore(c)
 	}
 
 	so := h.mapping.ToApiResponseOrderDeleteAt(res)
@@ -984,11 +834,7 @@ func (h *orderHandleApi) DeleteOrderPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid order ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid order ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return order_errors.ErrApiOrderInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -1001,11 +847,7 @@ func (h *orderHandleApi) DeleteOrderPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to delete order", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete the order. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedDeletePermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseOrderDelete(res)
@@ -1030,11 +872,7 @@ func (h *orderHandleApi) RestoreAllOrder(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk orders restoration failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restoration_failed",
-			Message: "We couldn't restore all orders. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedRestoreAll(c)
 	}
 
 	so := h.mapping.ToApiResponseOrderAll(res)
@@ -1061,11 +899,7 @@ func (h *orderHandleApi) DeleteAllOrderPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk order deletion failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete all orders. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return order_errors.ErrApiOrderFailedDeleteAllPermanent(c)
 	}
 
 	so := h.mapping.ToApiResponseOrderAll(res)

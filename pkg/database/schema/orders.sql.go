@@ -968,7 +968,6 @@ WITH last_five_years AS (
         COUNT(o.order_id) AS order_count,
         SUM(o.total_price)::NUMERIC AS total_revenue,
         SUM(oi.quantity) AS total_items_sold,
-        COUNT(DISTINCT o.cashier_id) AS active_cashiers,
         COUNT(DISTINCT oi.product_id) AS unique_products_sold
     FROM
         orders o
@@ -986,7 +985,6 @@ SELECT
     order_count,
     total_revenue,
     total_items_sold,
-    active_cashiers,
     unique_products_sold
 FROM
     last_five_years
@@ -999,7 +997,6 @@ type GetYearlyOrderRow struct {
 	OrderCount         int64   `json:"order_count"`
 	TotalRevenue       float64 `json:"total_revenue"`
 	TotalItemsSold     int64   `json:"total_items_sold"`
-	ActiveCashiers     int64   `json:"active_cashiers"`
 	UniqueProductsSold int64   `json:"unique_products_sold"`
 }
 
@@ -1038,7 +1035,6 @@ func (q *Queries) GetYearlyOrder(ctx context.Context, dollar_1 time.Time) ([]*Ge
 			&i.OrderCount,
 			&i.TotalRevenue,
 			&i.TotalItemsSold,
-			&i.ActiveCashiers,
 			&i.UniqueProductsSold,
 		); err != nil {
 			return nil, err
@@ -1061,7 +1057,6 @@ WITH last_five_years AS (
         COUNT(o.order_id) AS order_count,
         SUM(o.total_price)::NUMERIC AS total_revenue,
         SUM(oi.quantity) AS total_items_sold,
-        COUNT(DISTINCT o.cashier_id) AS active_cashiers,
         COUNT(DISTINCT oi.product_id) AS unique_products_sold
     FROM
         orders o
@@ -1080,7 +1075,6 @@ SELECT
     order_count,
     total_revenue,
     total_items_sold,
-    active_cashiers,
     unique_products_sold
 FROM
     last_five_years
@@ -1098,7 +1092,6 @@ type GetYearlyOrderByMerchantRow struct {
 	OrderCount         int64   `json:"order_count"`
 	TotalRevenue       float64 `json:"total_revenue"`
 	TotalItemsSold     int64   `json:"total_items_sold"`
-	ActiveCashiers     int64   `json:"active_cashiers"`
 	UniqueProductsSold int64   `json:"unique_products_sold"`
 }
 
@@ -1137,7 +1130,6 @@ func (q *Queries) GetYearlyOrderByMerchant(ctx context.Context, arg GetYearlyOrd
 			&i.OrderCount,
 			&i.TotalRevenue,
 			&i.TotalItemsSold,
-			&i.ActiveCashiers,
 			&i.UniqueProductsSold,
 		); err != nil {
 			return nil, err

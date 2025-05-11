@@ -21,15 +21,17 @@ func (s *shippingAddressRecordMapper) ToShippingAddressRecord(address *db.Shippi
 	}
 
 	return &record.ShippingAddressRecord{
-		ID:        int(address.ShippingAddressID),
-		OrderID:   int(address.OrderID),
-		Alamat:    address.Alamat,
-		Provinsi:  address.Provinsi,
-		Negara:    address.Negara,
-		Kota:      address.Kota,
-		CreatedAt: address.CreatedAt.Time.Format("2006-01-02 15:04:05"),
-		UpdatedAt: address.UpdatedAt.Time.Format("2006-01-02 15:04:05"),
-		DeletedAt: deletedAt,
+		ID:             int(address.ShippingAddressID),
+		OrderID:        int(address.OrderID),
+		Alamat:         address.Alamat,
+		Provinsi:       address.Provinsi,
+		Negara:         address.Negara,
+		Kota:           address.Kota,
+		ShippingMethod: address.ShippingMethod,
+		ShippingCost:   int(address.ShippingCost),
+		CreatedAt:      address.CreatedAt.Time.Format("2006-01-02 15:04:05"),
+		UpdatedAt:      address.UpdatedAt.Time.Format("2006-01-02 15:04:05"),
+		DeletedAt:      deletedAt,
 	}
 }
 
@@ -42,15 +44,17 @@ func (s *shippingAddressRecordMapper) ToShippingAddressRecordPagination(address 
 	}
 
 	return &record.ShippingAddressRecord{
-		ID:        int(address.ShippingAddressID),
-		OrderID:   int(address.OrderID),
-		Alamat:    address.Alamat,
-		Provinsi:  address.Provinsi,
-		Negara:    address.Negara,
-		Kota:      address.Kota,
-		CreatedAt: address.CreatedAt.Time.Format("2006-01-02 15:04:05"),
-		UpdatedAt: address.UpdatedAt.Time.Format("2006-01-02 15:04:05"),
-		DeletedAt: deletedAt,
+		ID:             int(address.ShippingAddressID),
+		OrderID:        int(address.OrderID),
+		Alamat:         address.Alamat,
+		Provinsi:       address.Provinsi,
+		Negara:         address.Negara,
+		Kota:           address.Kota,
+		ShippingMethod: address.ShippingMethod,
+		ShippingCost:   int(address.ShippingCost),
+		CreatedAt:      address.CreatedAt.Time.Format("2006-01-02 15:04:05"),
+		UpdatedAt:      address.UpdatedAt.Time.Format("2006-01-02 15:04:05"),
+		DeletedAt:      deletedAt,
 	}
 }
 
@@ -72,15 +76,17 @@ func (s *shippingAddressRecordMapper) ToShippingAddressRecordActivePagination(ad
 	}
 
 	return &record.ShippingAddressRecord{
-		ID:        int(address.ShippingAddressID),
-		OrderID:   int(address.OrderID),
-		Alamat:    address.Alamat,
-		Provinsi:  address.Provinsi,
-		Negara:    address.Negara,
-		Kota:      address.Kota,
-		CreatedAt: address.CreatedAt.Time.Format("2006-01-02 15:04:05"),
-		UpdatedAt: address.UpdatedAt.Time.Format("2006-01-02 15:04:05"),
-		DeletedAt: deletedAt,
+		ID:             int(address.ShippingAddressID),
+		OrderID:        int(address.OrderID),
+		Alamat:         address.Alamat,
+		Provinsi:       address.Provinsi,
+		Negara:         address.Negara,
+		Kota:           address.Kota,
+		ShippingMethod: address.ShippingMethod,
+		ShippingCost:   int(address.ShippingCost),
+		CreatedAt:      address.CreatedAt.Time.Format("2006-01-02 15:04:05"),
+		UpdatedAt:      address.UpdatedAt.Time.Format("2006-01-02 15:04:05"),
+		DeletedAt:      deletedAt,
 	}
 }
 
@@ -102,15 +108,17 @@ func (s *shippingAddressRecordMapper) ToShippingAddressRecordTrashedPagination(a
 	}
 
 	return &record.ShippingAddressRecord{
-		ID:        int(address.ShippingAddressID),
-		OrderID:   int(address.OrderID),
-		Alamat:    address.Alamat,
-		Provinsi:  address.Provinsi,
-		Negara:    address.Negara,
-		Kota:      address.Kota,
-		CreatedAt: address.CreatedAt.Time.Format("2006-01-02 15:04:05"),
-		UpdatedAt: address.UpdatedAt.Time.Format("2006-01-02 15:04:05"),
-		DeletedAt: deletedAt,
+		ID:             int(address.ShippingAddressID),
+		OrderID:        int(address.OrderID),
+		Alamat:         address.Alamat,
+		Provinsi:       address.Provinsi,
+		Negara:         address.Negara,
+		Kota:           address.Kota,
+		ShippingMethod: address.ShippingMethod,
+		ShippingCost:   int(address.ShippingCost),
+		CreatedAt:      address.CreatedAt.Time.Format("2006-01-02 15:04:05"),
+		UpdatedAt:      address.UpdatedAt.Time.Format("2006-01-02 15:04:05"),
+		DeletedAt:      deletedAt,
 	}
 }
 

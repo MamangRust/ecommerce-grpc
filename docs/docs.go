@@ -15,6 +15,26 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/auth/hello": {
+            "get": {
+                "description": "Returns a simple \"Hello\" message for testing purposes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Returns a \"Hello\" message",
+                "responses": {
+                    "200": {
+                        "description": "Hello",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/auth/login": {
             "post": {
                 "description": "Authenticates a user using the provided email and password.",
@@ -906,7 +926,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/response.ApiResponseCartAll"
+                            "$ref": "#/definitions/requests.DeleteCartRequest"
                         }
                     }
                 ],
@@ -3532,7 +3552,7 @@ const docTemplate = `{
                 ],
                 "description": "Create a new merchant detail with display name, cover image, logo, etc.",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -3543,13 +3563,52 @@ const docTemplate = `{
                 "summary": "Create a new merchant detail",
                 "parameters": [
                     {
-                        "description": "Merchant detail payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/requests.CreateMerchantDetailRequest"
-                        }
+                        "type": "integer",
+                        "description": "Merchant ID",
+                        "name": "merchant_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Display name",
+                        "name": "display_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Short description",
+                        "name": "short_description",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Website URL",
+                        "name": "website_url",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Cover image file",
+                        "name": "cover_image_url",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Logo file",
+                        "name": "logo_url",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Social links in JSON format (e.g., [{\\",
+                        "name": "social_links",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -3880,13 +3939,52 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Merchant detail update payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/requests.UpdateMerchantDetailRequest"
-                        }
+                        "type": "integer",
+                        "description": "Merchant ID",
+                        "name": "merchant_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Display name",
+                        "name": "display_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Short description",
+                        "name": "short_description",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Website URL",
+                        "name": "website_url",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Cover image file",
+                        "name": "cover_image_url",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Logo file",
+                        "name": "logo_url",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Social links in JSON format (e.g., [{\\",
+                        "name": "social_links",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -8405,55 +8503,6 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "post": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Create a new role with the provided details.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Role"
-                ],
-                "summary": "Create a new role",
-                "parameters": [
-                    {
-                        "description": "Role data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/requests.CreateRoleRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Created role data",
-                        "schema": {
-                            "$ref": "#/definitions/response.ApiResponseRole"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request body",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to create role",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
             }
         },
         "/api/role/active": {
@@ -8516,7 +8565,58 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/role/permanent-all": {
+        "/api/role/create": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new role with the provided details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Role"
+                ],
+                "summary": "Create a new role",
+                "parameters": [
+                    {
+                        "description": "Role data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CreateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Created role data",
+                        "schema": {
+                            "$ref": "#/definitions/response.ApiResponseRole"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create role",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/role/permanent/all": {
             "delete": {
                 "security": [
                     {
@@ -8599,8 +8699,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/role/restore-all": {
-            "put": {
+        "/api/role/restore/all": {
+            "post": {
                 "security": [
                     {
                         "Bearer": []
@@ -8634,7 +8734,7 @@ const docTemplate = `{
             }
         },
         "/api/role/restore/{id}": {
-            "put": {
+            "post": {
                 "security": [
                     {
                         "Bearer": []
@@ -8742,6 +8842,113 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/role/trashed/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Soft-delete a role by its ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Role"
+                ],
+                "summary": "Soft-delete a role",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Role ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Soft-deleted role data",
+                        "schema": {
+                            "$ref": "#/definitions/response.ApiResponseRole"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid role ID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to soft-delete role",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/role/update/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update an existing role with the provided details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Role"
+                ],
+                "summary": "Update a role",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Role ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Role data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.UpdateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated role data",
+                        "schema": {
+                            "$ref": "#/definitions/response.ApiResponseRole"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid role ID or request body",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update role",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/role/user/{user_id}": {
             "get": {
                 "security": [
@@ -8833,109 +9040,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Failed to fetch role",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Update an existing role with the provided details.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Role"
-                ],
-                "summary": "Update a role",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Role ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Role data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/requests.UpdateRoleRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Updated role data",
-                        "schema": {
-                            "$ref": "#/definitions/response.ApiResponseRole"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid role ID or request body",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to update role",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Soft-delete a role by its ID.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Role"
-                ],
-                "summary": "Soft-delete a role",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Role ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Soft-deleted role data",
-                        "schema": {
-                            "$ref": "#/definitions/response.ApiResponseRole"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid role ID",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to soft-delete role",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -10276,7 +10380,75 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/transaction/merchant/monthly-methods": {
+        "/api/transaction/merchant/monthly-method-failed/{merchant_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Retrieve statistics of payment methods used by month for specific merchant",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction"
+                ],
+                "summary": "Get monthly payment method distribution by merchant",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Merchant ID",
+                        "name": "merchant_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Year in YYYY format (e.g., 2023)",
+                        "name": "year",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.ApiResponsesTransactionMonthMethod"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid merchant ID or year parameter",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Merchant not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transaction/merchant/monthly-method-success/{merchant_id}": {
             "get": {
                 "security": [
                     {
@@ -10487,7 +10659,75 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/transaction/merchant/yearly-methods": {
+        "/api/transaction/merchant/yearly-method-failed/{merchant_id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Retrieve statistics of payment methods used by year for specific merchant",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction"
+                ],
+                "summary": "Get yearly payment method distribution by merchant",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Merchant ID",
+                        "name": "merchant_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Year in YYYY format (e.g., 2023)",
+                        "name": "year",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.ApiResponsesTransactionYearMethod"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid merchant ID or year parameter",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Merchant not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transaction/merchant/yearly-method-success/{merchant_id}": {
             "get": {
                 "security": [
                     {
@@ -10623,7 +10863,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/transaction/merchant/{id}": {
+        "/api/transaction/merchant/{merchant_id}": {
             "get": {
                 "security": [
                     {
@@ -10754,7 +10994,62 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/transaction/monthly-methods": {
+        "/api/transaction/monthly-method-failed": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Retrieve statistics of payment methods used by month",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction"
+                ],
+                "summary": "Get monthly payment method distribution",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Year in YYYY format (e.g., 2023)",
+                        "name": "year",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.ApiResponsesTransactionMonthMethod"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid year parameter",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transaction/monthly-method-success": {
             "get": {
                 "security": [
                     {
@@ -11172,7 +11467,62 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/transaction/yearly-methods": {
+        "/api/transaction/yearly-method-failed": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Retrieve statistics of payment methods used by year",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction"
+                ],
+                "summary": "Get yearly payment method distribution",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Year in YYYY format (e.g., 2023)",
+                        "name": "year",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.ApiResponsesTransactionYearMethod"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid year parameter",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transaction/yearly-method-success": {
             "get": {
                 "security": [
                     {
@@ -11815,13 +12165,6 @@ const docTemplate = `{
                 "summary": "Update an existing user",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
                         "description": "Update user request",
                         "name": "UpdateUserRequest",
                         "in": "body",
@@ -11897,26 +12240,6 @@ const docTemplate = `{
                         "description": "Failed to retrieve user data",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/hello": {
-            "get": {
-                "description": "Returns a simple \"Hello\" message for testing purposes.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Returns a \"Hello\" message",
-                "responses": {
-                    "200": {
-                        "description": "Hello",
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 }
@@ -12054,43 +12377,6 @@ const docTemplate = `{
                 }
             }
         },
-        "requests.CreateMerchantDetailRequest": {
-            "type": "object",
-            "required": [
-                "cover_image_url",
-                "display_name",
-                "logo_url",
-                "merchant_id",
-                "short_description",
-                "social_links"
-            ],
-            "properties": {
-                "cover_image_url": {
-                    "type": "string"
-                },
-                "display_name": {
-                    "type": "string"
-                },
-                "logo_url": {
-                    "type": "string"
-                },
-                "merchant_id": {
-                    "type": "integer"
-                },
-                "short_description": {
-                    "type": "string"
-                },
-                "social_links": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/requests.CreateMerchantSocialRequest"
-                    }
-                },
-                "website_url": {
-                    "type": "string"
-                }
-            }
-        },
         "requests.CreateMerchantPolicyRequest": {
             "type": "object",
             "required": [
@@ -12146,25 +12432,6 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "integer"
-                }
-            }
-        },
-        "requests.CreateMerchantSocialRequest": {
-            "type": "object",
-            "required": [
-                "merchant_detail_id",
-                "platform",
-                "url"
-            ],
-            "properties": {
-                "merchant_detail_id": {
-                    "type": "integer"
-                },
-                "platform": {
-                    "type": "string"
-                },
-                "url": {
-                    "type": "string"
                 }
             }
         },
@@ -12251,7 +12518,6 @@ const docTemplate = `{
                 "courier",
                 "kota",
                 "negara",
-                "order_id",
                 "provinsi",
                 "shipping_cost",
                 "shipping_method"
@@ -12335,6 +12601,20 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "minLength": 6
+                }
+            }
+        },
+        "requests.DeleteCartRequest": {
+            "type": "object",
+            "required": [
+                "cart_ids"
+            ],
+            "properties": {
+                "cart_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -12450,43 +12730,6 @@ const docTemplate = `{
                 }
             }
         },
-        "requests.UpdateMerchantDetailRequest": {
-            "type": "object",
-            "required": [
-                "cover_image_url",
-                "display_name",
-                "logo_url",
-                "merchant_detail_id",
-                "short_description",
-                "social_links"
-            ],
-            "properties": {
-                "cover_image_url": {
-                    "type": "string"
-                },
-                "display_name": {
-                    "type": "string"
-                },
-                "logo_url": {
-                    "type": "string"
-                },
-                "merchant_detail_id": {
-                    "type": "integer"
-                },
-                "short_description": {
-                    "type": "string"
-                },
-                "social_links": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/requests.UpdateMerchantSocialRequest"
-                    }
-                },
-                "website_url": {
-                    "type": "string"
-                }
-            }
-        },
         "requests.UpdateMerchantPolicyRequest": {
             "type": "object",
             "required": [
@@ -12548,29 +12791,6 @@ const docTemplate = `{
                 }
             }
         },
-        "requests.UpdateMerchantSocialRequest": {
-            "type": "object",
-            "required": [
-                "id",
-                "merchant_detail_id",
-                "platform",
-                "url"
-            ],
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "merchant_detail_id": {
-                    "type": "integer"
-                },
-                "platform": {
-                    "type": "string"
-                },
-                "url": {
-                    "type": "string"
-                }
-            }
-        },
         "requests.UpdateOrderItemRequest": {
             "type": "object",
             "required": [
@@ -12598,7 +12818,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "items",
-                "order_id",
                 "total_price",
                 "user_id"
             ],
@@ -12689,7 +12908,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "courier",
-                "order_id",
                 "shipping_cost",
                 "shipping_method"
             ],
@@ -15462,6 +15680,12 @@ const docTemplate = `{
                 "provinsi": {
                     "type": "string"
                 },
+                "shipping_cost": {
+                    "type": "integer"
+                },
+                "shipping_method": {
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
                 }
@@ -15492,6 +15716,12 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "provinsi": {
+                    "type": "string"
+                },
+                "shipping_cost": {
+                    "type": "integer"
+                },
+                "shipping_method": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -15610,9 +15840,6 @@ const docTemplate = `{
                 "amount": {
                     "type": "integer"
                 },
-                "change_amount": {
-                    "type": "integer"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -15640,9 +15867,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
-                    "type": "integer"
-                },
-                "change_amount": {
                     "type": "integer"
                 },
                 "created_at": {

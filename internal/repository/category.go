@@ -7,8 +7,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"errors"
-	"fmt"
+	"ecommerce/pkg/errors/category_errors"
 	"time"
 )
 
@@ -25,7 +24,6 @@ func NewCategoryRepository(db *db.Queries, ctx context.Context, mapping recordma
 		mapping: mapping,
 	}
 }
-
 func (r *categoryRepository) FindAllCategory(req *requests.FindAllCategory) ([]*record.CategoriesRecord, *int, error) {
 	offset := (req.Page - 1) * req.PageSize
 
@@ -38,10 +36,7 @@ func (r *categoryRepository) FindAllCategory(req *requests.FindAllCategory) ([]*
 	res, err := r.db.GetCategories(r.ctx, reqDb)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, fmt.Errorf("no categories found for pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
-		}
-		return nil, nil, fmt.Errorf("failed to fetch categories: invalid pagination (page %d, size %d) or search query '%s': %w", req.Page, req.PageSize, req.Search, err)
+		return nil, nil, category_errors.ErrFindAllCategory
 	}
 
 	var totalCount int
@@ -66,10 +61,7 @@ func (r *categoryRepository) FindByActive(req *requests.FindAllCategory) ([]*rec
 	res, err := r.db.GetCategoriesActive(r.ctx, reqDb)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, fmt.Errorf("no categories found for pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
-		}
-		return nil, nil, fmt.Errorf("failed to fetch categories: invalid pagination (page %d, size %d) or search query '%s': %w", req.Page, req.PageSize, req.Search, err)
+		return nil, nil, category_errors.ErrFindByActiveCategory
 	}
 
 	var totalCount int
@@ -94,10 +86,7 @@ func (r *categoryRepository) FindByTrashed(req *requests.FindAllCategory) ([]*re
 	res, err := r.db.GetCategoriesTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, fmt.Errorf("no categories found for pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
-		}
-		return nil, nil, fmt.Errorf("failed to fetch categories: invalid pagination (page %d, size %d) or search query '%s': %w", req.Page, req.PageSize, req.Search, err)
+		return nil, nil, category_errors.ErrFindByTrashedCategory
 	}
 
 	var totalCount int
@@ -124,7 +113,7 @@ func (r *categoryRepository) GetMonthlyTotalPrice(req *requests.MonthTotalPrice)
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get monthly category totals: invalid date %d-%02d or no data available", req.Year, req.Month)
+		return nil, category_errors.ErrGetMonthlyTotalPrice
 	}
 
 	so := r.mapping.ToCategoryMonthlyTotalPrices(res)
@@ -136,7 +125,7 @@ func (r *categoryRepository) GetYearlyTotalPrices(year int) ([]*record.Categorie
 	res, err := r.db.GetYearlyTotalPrice(r.ctx, int32(year))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get yearly category totals: no data available for year %d", year)
+		return nil, category_errors.ErrGetYearlyTotalPrices
 	}
 
 	so := r.mapping.ToCategoryYearlyTotalPrices(res)
@@ -159,7 +148,7 @@ func (r *categoryRepository) GetMonthlyTotalPriceById(req *requests.MonthTotalPr
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get monthly totals for category %d: no data for %d-%02d or invalid category", req.CategoryID, req.Year, req.Month)
+		return nil, category_errors.ErrGetMonthlyTotalPriceById
 	}
 
 	so := r.mapping.ToCategoryMonthlyTotalPricesById(res)
@@ -174,7 +163,7 @@ func (r *categoryRepository) GetYearlyTotalPricesById(req *requests.YearTotalPri
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get yearly totals for category %d: no data for year %d or invalid category", req.CategoryID, req.Year)
+		return nil, category_errors.ErrGetYearlyTotalPricesById
 	}
 
 	so := r.mapping.ToCategoryYearlyTotalPricesById(res)
@@ -197,7 +186,7 @@ func (r *categoryRepository) GetMonthlyTotalPriceByMerchant(req *requests.MonthT
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merchant's monthly category totals: no data for merchant %d in %d-%02d", req.MerchantID, req.Year, req.Month)
+		return nil, category_errors.ErrGetMonthlyTotalPriceByMerchant
 	}
 
 	so := r.mapping.ToCategoryMonthlyTotalPricesByMerchant(res)
@@ -212,7 +201,7 @@ func (r *categoryRepository) GetYearlyTotalPricesByMerchant(req *requests.YearTo
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merchant's yearly category totals: no data for merchant %d in %d", req.MerchantID, req.Year)
+		return nil, category_errors.ErrGetYearlyTotalPricesByMerchant
 	}
 
 	so := r.mapping.ToCategoryYearlyTotalPricesByMerchant(res)
@@ -226,7 +215,7 @@ func (r *categoryRepository) GetMonthPrice(year int) ([]*record.CategoriesMonthP
 	res, err := r.db.GetMonthlyCategory(r.ctx, yearStart)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get monthly category price breakdown: no data available for year %d", year)
+		return nil, category_errors.ErrGetMonthPrice
 	}
 
 	return r.mapping.ToCategoryMonthlyPrices(res), nil
@@ -238,7 +227,7 @@ func (r *categoryRepository) GetYearPrice(year int) ([]*record.CategoriesYearPri
 	res, err := r.db.GetYearlyCategory(r.ctx, yearStart)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get yearly category price breakdown: no data available for year %d", year)
+		return nil, category_errors.ErrGetYearPrice
 	}
 
 	return r.mapping.ToCategoryYearlyPrices(res), nil
@@ -252,7 +241,7 @@ func (r *categoryRepository) GetMonthPriceByMerchant(req *requests.MonthPriceMer
 		MerchantID: int32(req.MerchantID),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merchant's monthly price breakdown: no data for merchant %d in %d", req.MerchantID, req.Year)
+		return nil, category_errors.ErrGetMonthPriceByMerchant
 	}
 
 	return r.mapping.ToCategoryMonthlyPricesByMerchant(res), nil
@@ -267,7 +256,7 @@ func (r *categoryRepository) GetYearPriceByMerchant(req *requests.YearPriceMerch
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merchant's yearly price breakdown: no data for merchant %d in %d", req.MerchantID, req.Year)
+		return nil, category_errors.ErrGetYearPriceByMerchant
 	}
 
 	return r.mapping.ToCategoryYearlyPricesByMerchant(res), nil
@@ -281,7 +270,7 @@ func (r *categoryRepository) GetMonthPriceById(req *requests.MonthPriceId) ([]*r
 		CategoryID: int32(req.CategoryID),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get monthly price details: no data for category %d in %d", req.CategoryID, req.Year)
+		return nil, category_errors.ErrGetMonthPriceById
 	}
 
 	return r.mapping.ToCategoryMonthlyPricesById(res), nil
@@ -296,7 +285,7 @@ func (r *categoryRepository) GetYearPriceById(req *requests.YearPriceId) ([]*rec
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get yearly price details: no data for category %d in %d", req.CategoryID, req.Year)
+		return nil, category_errors.ErrGetYearPriceById
 	}
 
 	return r.mapping.ToCategoryYearlyPricesById(res), nil
@@ -306,7 +295,7 @@ func (r *categoryRepository) FindById(category_id int) (*record.CategoriesRecord
 	res, err := r.db.GetCategoryByID(r.ctx, int32(category_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find category: %w", err)
+		return nil, category_errors.ErrFindCategoryById
 	}
 
 	return r.mapping.ToCategoryRecord(res), nil
@@ -316,7 +305,7 @@ func (r *categoryRepository) FindByIdTrashed(category_id int) (*record.Categorie
 	res, err := r.db.GetCategoryByIDTrashed(r.ctx, int32(category_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find category: %w", err)
+		return nil, category_errors.ErrFindCategoryByIdTrashed
 	}
 
 	return r.mapping.ToCategoryRecord(res), nil
@@ -341,7 +330,7 @@ func (r *categoryRepository) CreateCategory(request *requests.CreateCategoryRequ
 
 	category, err := r.db.CreateCategory(r.ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create category: %w", err)
+		return nil, category_errors.ErrCreateCategory
 	}
 
 	return r.mapping.ToCategoryRecord(category), nil
@@ -368,7 +357,7 @@ func (r *categoryRepository) UpdateCategory(request *requests.UpdateCategoryRequ
 	res, err := r.db.UpdateCategory(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to update category: %w", err)
+		return nil, category_errors.ErrUpdateCategory
 	}
 
 	return r.mapping.ToCategoryRecord(res), nil
@@ -378,7 +367,7 @@ func (r *categoryRepository) TrashedCategory(category_id int) (*record.Categorie
 	res, err := r.db.TrashCategory(r.ctx, int32(category_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash category: %w", err)
+		return nil, category_errors.ErrTrashedCategory
 	}
 
 	return r.mapping.ToCategoryRecord(res), nil
@@ -388,7 +377,7 @@ func (r *categoryRepository) RestoreCategory(category_id int) (*record.Categorie
 	res, err := r.db.RestoreCategory(r.ctx, int32(category_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore category: %w", err)
+		return nil, category_errors.ErrRestoreCategory
 	}
 
 	return r.mapping.ToCategoryRecord(res), nil
@@ -398,7 +387,7 @@ func (r *categoryRepository) DeleteCategoryPermanently(category_id int) (bool, e
 	err := r.db.DeleteCategoryPermanently(r.ctx, int32(category_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete category: %w", err)
+		return false, category_errors.ErrDeleteCategoryPermanently
 	}
 
 	return true, nil
@@ -408,7 +397,7 @@ func (r *categoryRepository) RestoreAllCategories() (bool, error) {
 	err := r.db.RestoreAllCategories(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all category: %w", err)
+		return false, category_errors.ErrRestoreAllCategories
 	}
 	return true, nil
 }
@@ -417,7 +406,7 @@ func (r *categoryRepository) DeleteAllPermanentCategories() (bool, error) {
 	err := r.db.DeleteAllPermanentCategories(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all category permanently: %w", err)
+		return false, category_errors.ErrDeleteAllPermanentCategories
 	}
 	return true, nil
 }

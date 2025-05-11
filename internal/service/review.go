@@ -5,8 +5,10 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	"ecommerce/pkg/errors/product_errors"
+	review_errors "ecommerce/pkg/errors/review"
+	"ecommerce/pkg/errors/user_errors"
 	"ecommerce/pkg/logger"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -30,8 +32,8 @@ func NewReviewService(
 		userRepository:    userRepository,
 	}
 }
-
 func (s *reviewService) FindAllReviews(req *requests.FindAllReview) ([]*response.ReviewResponse, *int, *response.ErrorResponse) {
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
@@ -57,11 +59,7 @@ func (s *reviewService) FindAllReviews(req *requests.FindAllReview) ([]*response
 			zap.Int("pageSize", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve review list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, review_errors.ErrFailedFindAllReviews
 	}
 
 	s.logger.Debug("Successfully fetched Reviews",
@@ -99,11 +97,7 @@ func (s *reviewService) FindByActive(req *requests.FindAllReview) ([]*response.R
 			zap.Int("pageSize", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve review active list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, review_errors.ErrFailedFindActiveReviews
 	}
 
 	s.logger.Debug("Successfully fetched Reviews",
@@ -141,11 +135,7 @@ func (s *reviewService) FindByTrashed(req *requests.FindAllReview) ([]*response.
 			zap.Int("pageSize", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve review trashed list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, review_errors.ErrFailedFindTrashedReviews
 	}
 
 	s.logger.Debug("Successfully fetched Reviews",
@@ -183,11 +173,7 @@ func (s *reviewService) FindByProduct(req *requests.FindAllReviewByProduct) ([]*
 			zap.Int("pageSize", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve revirew product list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, review_errors.ErrFailedFindByProductReviews
 	}
 
 	s.logger.Debug("Successfully fetched Reviews",
@@ -225,11 +211,7 @@ func (s *reviewService) FindByMerchant(req *requests.FindAllReviewByMerchant) ([
 			zap.Int("pageSize", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve revirew product list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, review_errors.ErrFailedFindByMerchantReviews
 	}
 
 	s.logger.Debug("Successfully fetched Reviews",
@@ -250,11 +232,7 @@ func (s *reviewService) CreateReview(req *requests.CreateReviewRequest) (*respon
 			zap.Error(err),
 			zap.Int("user_id", req.UserID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve user details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, user_errors.ErrUserNotFoundRes
 	}
 
 	_, err = s.productRepository.FindById(req.ProductID)
@@ -264,11 +242,7 @@ func (s *reviewService) CreateReview(req *requests.CreateReviewRequest) (*respon
 			zap.Error(err),
 			zap.Int("product_id", req.UserID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, product_errors.ErrFailedFindProductById
 	}
 
 	review, err := s.reviewRepository.CreateReview(req)
@@ -278,11 +252,7 @@ func (s *reviewService) CreateReview(req *requests.CreateReviewRequest) (*respon
 			zap.Error(err),
 			zap.Any("request", req))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create new review",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, review_errors.ErrFailedCreateReview
 	}
 
 	return s.mapping.ToReviewResponse(review), nil
@@ -298,11 +268,7 @@ func (s *reviewService) UpdateReview(req *requests.UpdateReviewRequest) (*respon
 			zap.Error(err),
 			zap.Int("review_id", *req.ReviewID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve category details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, review_errors.ErrFailedReviewNotFound
 	}
 
 	review, err := s.reviewRepository.UpdateReview(req)
@@ -312,11 +278,7 @@ func (s *reviewService) UpdateReview(req *requests.UpdateReviewRequest) (*respon
 			zap.Error(err),
 			zap.Any("request", req))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update category",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, review_errors.ErrFailedUpdateReview
 	}
 
 	return s.mapping.ToReviewResponse(review), nil
@@ -332,11 +294,7 @@ func (s *reviewService) TrashedReview(reviewID int) (*response.ReviewResponseDel
 			zap.Error(err),
 			zap.Int("reviewID", reviewID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to move category to trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, review_errors.ErrFailedTrashedReview
 	}
 
 	return s.mapping.ToReviewResponseDeleteAt(review), nil
@@ -352,11 +310,7 @@ func (s *reviewService) RestoreReview(reviewID int) (*response.ReviewResponseDel
 			zap.Error(err),
 			zap.Int("reviewID", reviewID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore review from trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, review_errors.ErrFailedRestoreReview
 	}
 
 	return s.mapping.ToReviewResponseDeleteAt(review), nil
@@ -372,11 +326,7 @@ func (s *reviewService) DeleteReviewPermanent(reviewID int) (bool, *response.Err
 			zap.Error(err),
 			zap.Int("reviewID", reviewID))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete category",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, review_errors.ErrFailedDeletePermanentReview
 	}
 	return success, nil
 }
@@ -389,11 +339,7 @@ func (s *reviewService) RestoreAllReviews() (bool, *response.ErrorResponse) {
 		s.logger.Error("Failed to restore all trashed reviews",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all reviews",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, review_errors.ErrFailedRestoreAllReviews
 	}
 
 	return success, nil
@@ -406,11 +352,7 @@ func (s *reviewService) DeleteAllReviewsPermanent() (bool, *response.ErrorRespon
 	if err != nil {
 		s.logger.Error("Failed to permanently delete all reviews", zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all reviews",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, review_errors.ErrFailedDeleteAllPermanentReviews
 	}
 
 	return success, nil

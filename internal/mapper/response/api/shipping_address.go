@@ -14,14 +14,16 @@ func NewShippingAddressResponseMapper() *shippingAddressResponseMapper {
 
 func (s *shippingAddressResponseMapper) ToResponseShippingAddress(pbResponse *pb.ShippingResponse) *response.ShippingAddressResponse {
 	return &response.ShippingAddressResponse{
-		ID:        int(pbResponse.Id),
-		OrderID:   int(pbResponse.OrderId),
-		Alamat:    pbResponse.Alamat,
-		Provinsi:  pbResponse.Provinsi,
-		Negara:    pbResponse.Negara,
-		Kota:      pbResponse.Kota,
-		CreatedAt: pbResponse.CreatedAt,
-		UpdatedAt: pbResponse.UpdatedAt,
+		ID:             int(pbResponse.Id),
+		OrderID:        int(pbResponse.OrderId),
+		Alamat:         pbResponse.Alamat,
+		Provinsi:       pbResponse.Provinsi,
+		Negara:         pbResponse.Negara,
+		Kota:           pbResponse.Kota,
+		ShippingMethod: pbResponse.ShippingMethod,
+		ShippingCost:   int(pbResponse.ShippingCost),
+		CreatedAt:      pbResponse.CreatedAt,
+		UpdatedAt:      pbResponse.UpdatedAt,
 	}
 }
 
@@ -40,15 +42,17 @@ func (s *shippingAddressResponseMapper) ToResponseShippingAddressDeleteAt(pbResp
 	}
 
 	return &response.ShippingAddressResponseDeleteAt{
-		ID:        int(pbResponse.Id),
-		OrderID:   int(pbResponse.OrderId),
-		Alamat:    pbResponse.Alamat,
-		Provinsi:  pbResponse.Provinsi,
-		Negara:    pbResponse.Negara,
-		Kota:      pbResponse.Kota,
-		CreatedAt: pbResponse.CreatedAt,
-		UpdatedAt: pbResponse.UpdatedAt,
-		DeletedAt: &deletedAt,
+		ID:             int(pbResponse.Id),
+		OrderID:        int(pbResponse.OrderId),
+		Alamat:         pbResponse.Alamat,
+		Provinsi:       pbResponse.Provinsi,
+		Negara:         pbResponse.Negara,
+		Kota:           pbResponse.Kota,
+		ShippingMethod: pbResponse.ShippingMethod,
+		ShippingCost:   int(pbResponse.ShippingCost),
+		CreatedAt:      pbResponse.CreatedAt,
+		UpdatedAt:      pbResponse.UpdatedAt,
+		DeletedAt:      &deletedAt,
 	}
 }
 

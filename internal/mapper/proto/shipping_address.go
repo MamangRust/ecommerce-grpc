@@ -72,14 +72,16 @@ func (s *shippingAddressProtoMapper) ToProtoResponsePaginationShippingAddress(pa
 
 func (s *shippingAddressProtoMapper) mapResponseShippingAddress(address *response.ShippingAddressResponse) *pb.ShippingResponse {
 	return &pb.ShippingResponse{
-		Id:        int32(address.ID),
-		OrderId:   int32(address.OrderID),
-		Alamat:    address.Alamat,
-		Provinsi:  address.Provinsi,
-		Negara:    address.Negara,
-		Kota:      address.Kota,
-		CreatedAt: address.CreatedAt,
-		UpdatedAt: address.UpdatedAt,
+		Id:             int32(address.ID),
+		OrderId:        int32(address.OrderID),
+		Alamat:         address.Alamat,
+		Provinsi:       address.Provinsi,
+		Negara:         address.Negara,
+		Kota:           address.Kota,
+		ShippingMethod: address.ShippingMethod,
+		ShippingCost:   int32(address.ShippingCost),
+		CreatedAt:      address.CreatedAt,
+		UpdatedAt:      address.UpdatedAt,
 	}
 }
 
@@ -101,15 +103,17 @@ func (s *shippingAddressProtoMapper) mapResponseShippingAddressDeleteAt(address 
 	}
 
 	return &pb.ShippingResponseDeleteAt{
-		Id:        int32(address.ID),
-		OrderId:   int32(address.OrderID),
-		Alamat:    address.Alamat,
-		Provinsi:  address.Provinsi,
-		Negara:    address.Negara,
-		Kota:      address.Kota,
-		CreatedAt: address.CreatedAt,
-		UpdatedAt: address.UpdatedAt,
-		DeletedAt: deletedAt,
+		Id:             int32(address.ID),
+		OrderId:        int32(address.OrderID),
+		Alamat:         address.Alamat,
+		Provinsi:       address.Provinsi,
+		Negara:         address.Negara,
+		Kota:           address.Kota,
+		ShippingMethod: address.ShippingMethod,
+		ShippingCost:   int32(address.ShippingCost),
+		CreatedAt:      address.CreatedAt,
+		UpdatedAt:      address.UpdatedAt,
+		DeletedAt:      deletedAt,
 	}
 }
 

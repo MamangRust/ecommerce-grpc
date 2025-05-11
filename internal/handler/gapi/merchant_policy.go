@@ -3,14 +3,13 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
+	"ecommerce/internal/domain/response"
 	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
-	"ecommerce/pkg/errors_custom"
+	merchantpolicy_errors "ecommerce/pkg/errors/merchant_policy_errors"
 	"math"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -54,14 +53,7 @@ func (s *merchantPolicyHandleGrpc) FindAll(ctx context.Context, request *pb.Find
 	merchant, totalRecords, err := s.merchantPolicyService.FindAll(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -81,27 +73,13 @@ func (s *merchantPolicyHandleGrpc) FindById(ctx context.Context, request *pb.Fin
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Error(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "invalid_request",
-				Message: "Valid merchant ID is required",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, merchantpolicy_errors.ErrGrpcInvalidMerchantPolicyID
 	}
 
-	merchant, err := s.merchantPolicyService.FindById(int(request.GetId()))
+	merchant, err := s.merchantPolicyService.FindById(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseMerchantPolicy("success", "Successfully fetched merchant", merchant)
@@ -131,14 +109,7 @@ func (s *merchantPolicyHandleGrpc) FindByActive(ctx context.Context, request *pb
 	merchant, totalRecords, err := s.merchantPolicyService.FindByActive(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -176,14 +147,7 @@ func (s *merchantPolicyHandleGrpc) FindByTrashed(ctx context.Context, request *p
 	users, totalRecords, err := s.merchantPolicyService.FindByTrashed(&reqService)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -209,26 +173,12 @@ func (s *merchantPolicyHandleGrpc) Create(ctx context.Context, request *pb.Creat
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Unable to create new merchant policy. Please check your input.",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, merchantpolicy_errors.ErrGrpcValidateCreateMerchantPolicy
 	}
 
 	merchant, err := s.merchantPolicyService.CreateMerchant(req)
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseMerchantPolicy("success", "Successfully created merchant policy", merchant)
@@ -239,14 +189,7 @@ func (s *merchantPolicyHandleGrpc) Update(ctx context.Context, request *pb.Updat
 	id := int(request.GetMerchantPolicyId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Merchant policy ID cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, merchantpolicy_errors.ErrGrpcInvalidMerchantPolicyID
 	}
 
 	req := &requests.UpdateMerchantPolicyRequest{
@@ -257,26 +200,12 @@ func (s *merchantPolicyHandleGrpc) Update(ctx context.Context, request *pb.Updat
 	}
 
 	if err := req.Validate(); err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Unable to process merchant policy update. Please review your data.",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, merchantpolicy_errors.ErrGrpcValidateUpdateMerchantPolicy
 	}
 
 	merchant, err := s.merchantPolicyService.UpdateMerchant(req)
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseMerchantPolicy("success", "Successfully updated merchant policy", merchant)
@@ -287,27 +216,13 @@ func (s *merchantPolicyHandleGrpc) TrashedMerchant(ctx context.Context, request 
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Merchant ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, merchantpolicy_errors.ErrGrpcInvalidMerchantPolicyID
 	}
 
 	merchant, err := s.merchantPolicyService.TrashedMerchant(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseMerchantPolicyDeleteAt("success", "Successfully trashed merchant", merchant)
@@ -319,27 +234,13 @@ func (s *merchantPolicyHandleGrpc) RestoreMerchant(ctx context.Context, request 
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Merchant ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, merchantpolicy_errors.ErrGrpcInvalidMerchantPolicyID
 	}
 
 	merchant, err := s.merchantPolicyService.RestoreMerchant(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mapping.ToProtoResponseMerchantPolicyDeleteAt("success", "Successfully restored merchant", merchant)
@@ -351,27 +252,13 @@ func (s *merchantPolicyHandleGrpc) DeleteMerchantPermanent(ctx context.Context, 
 	id := int(request.GetId())
 
 	if id == 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  "validation_error",
-				Message: "Merchant ID parameter cannot be empty and must be a positive number",
-				Code:    int32(codes.InvalidArgument),
-			}),
-		)
+		return nil, merchantpolicy_errors.ErrGrpcInvalidMerchantPolicyID
 	}
 
 	_, err := s.merchantPolicyService.DeleteMerchantPermanent(id)
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mappingMerchant.ToProtoResponseMerchantDelete("success", "Successfully deleted merchant permanently")
@@ -383,14 +270,7 @@ func (s *merchantPolicyHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *em
 	_, err := s.merchantPolicyService.RestoreAllMerchant()
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mappingMerchant.ToProtoResponseMerchantAll("success", "Successfully restore all merchant")
@@ -402,14 +282,7 @@ func (s *merchantPolicyHandleGrpc) DeleteAllMerchantPermanent(ctx context.Contex
 	_, err := s.merchantPolicyService.DeleteAllMerchantPermanent()
 
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Code(err.Code),
-			errors_custom.GrpcErrorToJson(&pb.ErrorResponse{
-				Status:  err.Status,
-				Message: err.Message,
-				Code:    int32(err.Code),
-			}),
-		)
+		return nil, response.ToGrpcErrorFromErrorResponse(err)
 	}
 
 	so := s.mappingMerchant.ToProtoResponseMerchantAll("success", "Successfully delete merchant permanen")

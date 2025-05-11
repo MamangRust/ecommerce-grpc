@@ -5,8 +5,8 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	"ecommerce/pkg/errors/banner_errors"
 	"ecommerce/pkg/logger"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -56,11 +56,7 @@ func (s *bannerService) FindAll(req *requests.FindAllBanner) ([]*response.Banner
 			zap.Int("pageSize", req.PageSize),
 			zap.String("search", req.Search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve Banners list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, banner_errors.ErrFailedFindAllBanners
 	}
 
 	s.logger.Debug("Successfully fetched Banners",
@@ -98,11 +94,7 @@ func (s *bannerService) FindByActive(req *requests.FindAllBanner) ([]*response.B
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active Banner",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, banner_errors.ErrFailedFindActiveBanners
 	}
 
 	s.logger.Debug("Successfully fetched active Banner",
@@ -140,11 +132,7 @@ func (s *bannerService) FindByTrashed(req *requests.FindAllBanner) ([]*response.
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed Banner",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, banner_errors.ErrFailedFindTrashedBanners
 	}
 
 	s.logger.Debug("Successfully fetched trashed Banner",
@@ -165,11 +153,7 @@ func (s *bannerService) FindById(BannerID int) (*response.BannerResponse, *respo
 			zap.Error(err),
 			zap.Int("Banner_id", BannerID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve Banner details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, banner_errors.ErrBannerNotFoundRes
 	}
 
 	return s.mapping.ToBannerResponse(Banner), nil
@@ -185,11 +169,7 @@ func (s *bannerService) CreateBanner(req *requests.CreateBannerRequest) (*respon
 			zap.Error(err),
 			zap.Any("request", req))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create new Banner record",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, banner_errors.ErrFailedCreateBanner
 	}
 
 	return s.mapping.ToBannerResponse(Banner), nil
@@ -205,11 +185,7 @@ func (s *bannerService) UpdateBanner(req *requests.UpdateBannerRequest) (*respon
 			zap.Error(err),
 			zap.Any("request", req))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update Banner record",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, banner_errors.ErrFailedUpdateBanner
 	}
 
 	return s.mapping.ToBannerResponse(Banner), nil
@@ -225,11 +201,7 @@ func (s *bannerService) TrashedBanner(BannerID int) (*response.BannerResponseDel
 			zap.Error(err),
 			zap.Int("Banner_id", BannerID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to move Banner to trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, banner_errors.ErrFailedTrashedBanner
 	}
 
 	return s.mapping.ToBannerResponseDeleteAt(Banner), nil
@@ -245,11 +217,7 @@ func (s *bannerService) RestoreBanner(BannerID int) (*response.BannerResponseDel
 			zap.Error(err),
 			zap.Int("Banner_id", BannerID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore Banner from trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, banner_errors.ErrFailedRestoreBanner
 	}
 
 	return s.mapping.ToBannerResponseDeleteAt(Banner), nil
@@ -264,11 +232,7 @@ func (s *bannerService) DeleteBannerPermanent(BannerID int) (bool, *response.Err
 		s.logger.Error("Failed to permanently delete Banner",
 			zap.Error(err),
 			zap.Int("Banner_id", BannerID))
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete Banner",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, banner_errors.ErrFailedDeleteBanner
 	}
 
 	return success, nil
@@ -283,11 +247,7 @@ func (s *bannerService) RestoreAllBanner() (bool, *response.ErrorResponse) {
 		s.logger.Error("Failed to restore all trashed Banners",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all trashed Banners",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, banner_errors.ErrFailedRestoreAllBanners
 	}
 
 	return success, nil
@@ -302,11 +262,7 @@ func (s *bannerService) DeleteAllBannerPermanent() (bool, *response.ErrorRespons
 		s.logger.Error("Failed to permanently delete all trashed Banners",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all trashed Banners",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, banner_errors.ErrFailedDeleteAllBanners
 	}
 
 	return success, nil

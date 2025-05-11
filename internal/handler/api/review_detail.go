@@ -2,9 +2,9 @@ package api
 
 import (
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
 	response_api "ecommerce/internal/mapper/response/api"
 	"ecommerce/internal/pb"
+	reviewdetail_errors "ecommerce/pkg/errors/review_detail"
 	"ecommerce/pkg/logger"
 	"ecommerce/pkg/upload_image"
 	"net/http"
@@ -97,11 +97,7 @@ func (h *reviewDetailHandleApi) FindAllReviewDetail(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch merchants", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the merchants list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedFindAllReviewDetails(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationReviewDetail(res)
@@ -125,11 +121,7 @@ func (h *reviewDetailHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "The merchant ID must be a valid number",
-			Code:    http.StatusBadRequest,
-		})
+		return reviewdetail_errors.ErrApiInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -142,11 +134,7 @@ func (h *reviewDetailHandleApi) FindById(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch merchant details", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the merchant details. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiReviewDetailNotFound(c)
 	}
 
 	so := h.mapping.ToApiResponseReviewDetail(res)
@@ -191,11 +179,7 @@ func (h *reviewDetailHandleApi) FindByActive(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch active merchants", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the active merchants list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedFindActiveReviewDetails(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationReviewDetailDeleteAt(res)
@@ -238,11 +222,7 @@ func (h *reviewDetailHandleApi) FindByTrashed(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch archived merchants", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "server_error",
-			Message: "We couldn't retrieve the archived merchants list. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedFindTrashedReviewDetails(c)
 	}
 
 	so := h.mapping.ToApiResponsePaginationReviewDetailDeleteAt(res)
@@ -267,11 +247,7 @@ func (h *reviewDetailHandleApi) FindByTrashed(c echo.Context) error {
 func (h *reviewDetailHandleApi) Create(c echo.Context) error {
 	formData, err := h.parseReviewDetailForm(c)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "invalid body",
-			Code:    http.StatusBadRequest,
-		})
+		return reviewdetail_errors.ErrApiInvalidBody(c)
 	}
 
 	ctx := c.Request().Context()
@@ -286,11 +262,7 @@ func (h *reviewDetailHandleApi) Create(c echo.Context) error {
 	res, err := h.client.Create(ctx, req)
 	if err != nil {
 		h.logger.Error("Review detail creation failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "creation_failed",
-			Message: "Failed to create review detail.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedCreateReviewDetail(c)
 	}
 
 	return c.JSON(http.StatusOK, h.mapping.ToApiResponseReviewDetail(res))
@@ -317,20 +289,12 @@ func (h *reviewDetailHandleApi) Update(c echo.Context) error {
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
 		h.logger.Debug("Invalid id parameter", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid id parameter",
-			Code:    http.StatusBadRequest,
-		})
+		return reviewdetail_errors.ErrApiInvalidId(c)
 	}
 
 	formData, err := h.parseReviewDetailForm(c)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "invalid body",
-			Code:    http.StatusBadRequest,
-		})
+		return reviewdetail_errors.ErrApiInvalidBody(c)
 	}
 
 	ctx := c.Request().Context()
@@ -345,11 +309,7 @@ func (h *reviewDetailHandleApi) Update(c echo.Context) error {
 	res, err := h.client.Update(ctx, req)
 	if err != nil {
 		h.logger.Error("Review detail update failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "update_failed",
-			Message: "Failed to update review detail.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedUpdateReviewDetail(c)
 	}
 
 	return c.JSON(http.StatusOK, h.mapping.ToApiResponseReviewDetail(res))
@@ -372,11 +332,7 @@ func (h *reviewDetailHandleApi) TrashedMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid merchant ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return reviewdetail_errors.ErrApiInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -389,11 +345,7 @@ func (h *reviewDetailHandleApi) TrashedMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to archive merchant", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "archive_failed",
-			Message: "We couldn't archive the merchant account. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedTrashedReviewDetail(c)
 	}
 
 	so := h.mapping.ToApiResponseReviewDetailDeleteAt(res)
@@ -418,11 +370,7 @@ func (h *reviewDetailHandleApi) RestoreMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid merchant ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return reviewdetail_errors.ErrApiInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -435,11 +383,7 @@ func (h *reviewDetailHandleApi) RestoreMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to restore merchant", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restore_failed",
-			Message: "We couldn't restore the merchant. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedRestoreReviewDetail(c)
 	}
 
 	so := h.mapping.ToApiResponseReviewDetailDeleteAt(res)
@@ -464,11 +408,7 @@ func (h *reviewDetailHandleApi) DeleteMerchantPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_input",
-			Message: "Please provide a valid merchant ID.",
-			Code:    http.StatusBadRequest,
-		})
+		return reviewdetail_errors.ErrApiInvalidId(c)
 	}
 
 	ctx := c.Request().Context()
@@ -481,11 +421,7 @@ func (h *reviewDetailHandleApi) DeleteMerchantPermanent(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to delete merchant", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete the merchant. Please try again.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedDeleteReviewDetailPermanent(c)
 	}
 
 	so := h.mappingReview.ToApiResponseReviewDelete(res)
@@ -512,11 +448,7 @@ func (h *reviewDetailHandleApi) RestoreAllMerchant(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Bulk merchant restoration failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "restoration_failed",
-			Message: "We couldn't restore all merchant. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedRestoreAllReviewDetail(c)
 	}
 
 	so := h.mappingReview.ToApiResponseReviewAll(res)
@@ -545,11 +477,7 @@ func (h *reviewDetailHandleApi) DeleteAllMerchantPermanent(c echo.Context) error
 
 	if err != nil {
 		h.logger.Error("Bulk merchant deletion failed", zap.Error(err))
-		return c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "deletion_failed",
-			Message: "We couldn't permanently delete all merchant. Please try again later.",
-			Code:    http.StatusInternalServerError,
-		})
+		return reviewdetail_errors.ErrApiFailedDeleteAllReviewDetailPermanent(c)
 	}
 
 	so := h.mappingReview.ToApiResponseReviewAll(res)
@@ -565,38 +493,22 @@ func (h *reviewDetailHandleApi) parseReviewDetailForm(c echo.Context) (requests.
 
 	formData.ReviewID, err = strconv.Atoi(c.FormValue("review_id"))
 	if err != nil || formData.ReviewID <= 0 {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "invalid_review_id",
-			Message: "Please provide a valid review ID",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, reviewdetail_errors.ErrApiInvalidReviewId(c)
 	}
 
 	formData.Type = strings.TrimSpace(c.FormValue("type"))
 	if formData.Type == "" {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Type is required",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, reviewdetail_errors.ErrApiReviewDetailTypeRequired(c)
 	}
 
 	formData.Caption = strings.TrimSpace(c.FormValue("caption"))
 	if formData.Caption == "" {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "validation_error",
-			Message: "Caption is required",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, reviewdetail_errors.ErrApiReviewDetailCaptionRequired(c)
 	}
 
 	file, err := c.FormFile("url")
 	if err != nil {
-		return formData, c.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "file_required",
-			Message: "A file must be uploaded for review detail",
-			Code:    http.StatusBadRequest,
-		})
+		return formData, reviewdetail_errors.ErrApiReviewDetailFileRequired(c)
 	}
 
 	uploadPath, err := h.upload_image.ProcessImageUpload(c, file)

@@ -2,11 +2,13 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"ecommerce/internal/domain/record"
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	"ecommerce/pkg/errors/user_errors"
+	"errors"
 )
 
 type userRepository struct {
@@ -23,23 +25,26 @@ func NewUserRepository(db *db.Queries, ctx context.Context, mapping recordmapper
 	}
 }
 
-func (r *userRepository) FindAllUsers(req *requests.FindAllUsers) ([]*record.UserRecord, *int, error) {
-	offset := (req.Page - 1) * req.PageSize
+func (r *userRepository) FindAllUsers(request *requests.FindAllUsers) ([]*record.UserRecord, *int, error) {
+	page := request.Page
+	pageSize := request.PageSize
+	search := request.Search
 
-	reqDb := db.GetUsersParams{
-		Column1: req.Search,
-		Limit:   int32(req.PageSize),
+	offset := (page - 1) * pageSize
+
+	req := db.GetUsersParams{
+		Column1: search,
+		Limit:   int32(pageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetUsers(r.ctx, reqDb)
+	res, err := r.db.GetUsers(r.ctx, req)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find all users: %w", err)
+		return nil, nil, user_errors.ErrFindAllUsers
 	}
 
 	var totalCount int
-
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
@@ -53,29 +58,36 @@ func (r *userRepository) FindById(user_id int) (*record.UserRecord, error) {
 	res, err := r.db.GetUserByID(r.ctx, int32(user_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find id users: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, user_errors.ErrUserNotFound
+		}
+
+		return nil, user_errors.ErrUserNotFound
 	}
 
 	return r.mapping.ToUserRecord(res), nil
 }
 
-func (r *userRepository) FindByActive(req *requests.FindAllUsers) ([]*record.UserRecord, *int, error) {
-	offset := (req.Page - 1) * req.PageSize
+func (r *userRepository) FindByActive(request *requests.FindAllUsers) ([]*record.UserRecord, *int, error) {
+	page := request.Page
+	pageSize := request.PageSize
+	search := request.Search
 
-	reqDb := db.GetUsersActiveParams{
-		Column1: req.Search,
-		Limit:   int32(req.PageSize),
+	offset := (page - 1) * pageSize
+
+	req := db.GetUsersActiveParams{
+		Column1: search,
+		Limit:   int32(pageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetUsersActive(r.ctx, reqDb)
+	res, err := r.db.GetUsersActive(r.ctx, req)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find active users: %w", err)
+		return nil, nil, user_errors.ErrFindActiveUsers
 	}
 
 	var totalCount int
-
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
@@ -85,23 +97,26 @@ func (r *userRepository) FindByActive(req *requests.FindAllUsers) ([]*record.Use
 	return r.mapping.ToUsersRecordActivePagination(res), &totalCount, nil
 }
 
-func (r *userRepository) FindByTrashed(req *requests.FindAllUsers) ([]*record.UserRecord, *int, error) {
-	offset := (req.Page - 1) * req.PageSize
+func (r *userRepository) FindByTrashed(request *requests.FindAllUsers) ([]*record.UserRecord, *int, error) {
+	page := request.Page
+	pageSize := request.PageSize
+	search := request.Search
 
-	reqDb := db.GetUserTrashedParams{
-		Column1: req.Search,
-		Limit:   int32(req.PageSize),
+	offset := (page - 1) * pageSize
+
+	req := db.GetUserTrashedParams{
+		Column1: search,
+		Limit:   int32(pageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetUserTrashed(r.ctx, reqDb)
+	res, err := r.db.GetUserTrashed(r.ctx, req)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find users: %w", err)
+		return nil, nil, user_errors.ErrFindTrashedUsers
 	}
 
 	var totalCount int
-
 	if len(res) > 0 {
 		totalCount = int(res[0].TotalCount)
 	} else {
@@ -115,7 +130,11 @@ func (r *userRepository) FindByEmail(email string) (*record.UserRecord, error) {
 	res, err := r.db.GetUserByEmail(r.ctx, email)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find user by email: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, user_errors.ErrUserNotFound
+		}
+
+		return nil, user_errors.ErrUserNotFound
 	}
 
 	return r.mapping.ToUserRecord(res), nil
@@ -132,7 +151,7 @@ func (r *userRepository) CreateUser(request *requests.CreateUserRequest) (*recor
 	user, err := r.db.CreateUser(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed create user: %w", err)
+		return nil, user_errors.ErrCreateUser
 	}
 
 	return r.mapping.ToUserRecord(user), nil
@@ -150,7 +169,7 @@ func (r *userRepository) UpdateUser(request *requests.UpdateUserRequest) (*recor
 	res, err := r.db.UpdateUser(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to update user: %w", err)
+		return nil, user_errors.ErrUpdateUser
 	}
 
 	return r.mapping.ToUserRecord(res), nil
@@ -160,7 +179,7 @@ func (r *userRepository) TrashedUser(user_id int) (*record.UserRecord, error) {
 	res, err := r.db.TrashUser(r.ctx, int32(user_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash user: %w", err)
+		return nil, user_errors.ErrTrashedUser
 	}
 
 	return r.mapping.ToUserRecord(res), nil
@@ -170,7 +189,7 @@ func (r *userRepository) RestoreUser(user_id int) (*record.UserRecord, error) {
 	res, err := r.db.RestoreUser(r.ctx, int32(user_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore topup: %w", err)
+		return nil, user_errors.ErrRestoreUser
 	}
 
 	return r.mapping.ToUserRecord(res), nil
@@ -180,7 +199,7 @@ func (r *userRepository) DeleteUserPermanent(user_id int) (bool, error) {
 	err := r.db.DeleteUserPermanently(r.ctx, int32(user_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete user: %w", err)
+		return false, user_errors.ErrDeleteUserPermanent
 	}
 
 	return true, nil
@@ -190,7 +209,7 @@ func (r *userRepository) RestoreAllUser() (bool, error) {
 	err := r.db.RestoreAllUsers(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all users: %w", err)
+		return false, user_errors.ErrRestoreAllUsers
 	}
 	return true, nil
 }
@@ -199,7 +218,7 @@ func (r *userRepository) DeleteAllUserPermanent() (bool, error) {
 	err := r.db.DeleteAllPermanentUsers(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all users permanently: %w", err)
+		return false, user_errors.ErrDeleteAllUsers
 	}
 	return true, nil
 }

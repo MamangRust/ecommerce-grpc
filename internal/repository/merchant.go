@@ -7,7 +7,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	merchant_errors "ecommerce/pkg/errors/merchant"
 )
 
 type merchantRepository struct {
@@ -36,7 +36,7 @@ func (r *merchantRepository) FindAllMerchants(req *requests.FindAllMerchant) ([]
 	res, err := r.db.GetMerchants(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch merchants: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, merchant_errors.ErrFindAllMerchants
 	}
 
 	var totalCount int
@@ -62,7 +62,7 @@ func (r *merchantRepository) FindByActive(req *requests.FindAllMerchant) ([]*rec
 	res, err := r.db.GetMerchantsActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch merchants active: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, merchant_errors.ErrFindByActiveMerchant
 	}
 
 	var totalCount int
@@ -88,7 +88,7 @@ func (r *merchantRepository) FindByTrashed(req *requests.FindAllMerchant) ([]*re
 	res, err := r.db.GetMerchantsTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch merchants trashed: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, merchant_errors.ErrFindByTrashedMerchant
 	}
 
 	var totalCount int
@@ -106,7 +106,7 @@ func (r *merchantRepository) FindById(user_id int) (*record.MerchantRecord, erro
 	res, err := r.db.GetMerchantByID(r.ctx, int32(user_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find merchant: %w", err)
+		return nil, merchant_errors.ErrFindByIdMerchant
 	}
 
 	return r.mapping.ToMerchantRecord(res), nil
@@ -126,7 +126,7 @@ func (r *merchantRepository) CreateMerchant(request *requests.CreateMerchantRequ
 	merchant, err := r.db.CreateMerchant(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create merchant: %w", err)
+		return nil, merchant_errors.ErrCreateMerchant
 	}
 
 	return r.mapping.ToMerchantRecord(merchant), nil
@@ -146,7 +146,7 @@ func (r *merchantRepository) UpdateMerchant(request *requests.UpdateMerchantRequ
 	res, err := r.db.UpdateMerchant(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to update Merchant: %w", err)
+		return nil, merchant_errors.ErrUpdateMerchant
 	}
 
 	return r.mapping.ToMerchantRecord(res), nil
@@ -156,7 +156,7 @@ func (r *merchantRepository) TrashedMerchant(merchant_id int) (*record.MerchantR
 	res, err := r.db.TrashMerchant(r.ctx, int32(merchant_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash Merchant: %w", err)
+		return nil, merchant_errors.ErrTrashedMerchant
 	}
 
 	return r.mapping.ToMerchantRecord(res), nil
@@ -166,7 +166,7 @@ func (r *merchantRepository) RestoreMerchant(merchant_id int) (*record.MerchantR
 	res, err := r.db.RestoreMerchant(r.ctx, int32(merchant_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore Merchants: %w", err)
+		return nil, merchant_errors.ErrRestoreMerchant
 	}
 
 	return r.mapping.ToMerchantRecord(res), nil
@@ -176,7 +176,7 @@ func (r *merchantRepository) DeleteMerchantPermanent(Merchant_id int) (bool, err
 	err := r.db.DeleteMerchantPermanently(r.ctx, int32(Merchant_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete Merchant: %w", err)
+		return false, merchant_errors.ErrDeleteMerchantPermanent
 	}
 
 	return true, nil
@@ -186,7 +186,7 @@ func (r *merchantRepository) RestoreAllMerchant() (bool, error) {
 	err := r.db.RestoreAllMerchants(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all Merchants: %w", err)
+		return false, merchant_errors.ErrRestoreAllMerchant
 	}
 	return true, nil
 }
@@ -195,7 +195,7 @@ func (r *merchantRepository) DeleteAllMerchantPermanent() (bool, error) {
 	err := r.db.DeleteAllPermanentMerchants(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all Merchants permanently: %w", err)
+		return false, merchant_errors.ErrDeleteAllMerchantPermanent
 	}
 	return true, nil
 }

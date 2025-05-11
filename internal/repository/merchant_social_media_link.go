@@ -4,7 +4,7 @@ import (
 	"context"
 	"ecommerce/internal/domain/requests"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	merchantsociallink_errors "ecommerce/pkg/errors/merchant_social_link_errors"
 )
 
 type merchantSocialMediaLinkRepository struct {
@@ -28,7 +28,7 @@ func (r *merchantSocialMediaLinkRepository) CreateSocialLink(req *requests.Creat
 
 	_, err := r.db.CreateMerchantSocialMediaLink(r.ctx, params)
 	if err != nil {
-		return false, fmt.Errorf("failed to create social media link: %w", err)
+		return false, merchantsociallink_errors.ErrCreateMerchantSocialLink
 	}
 
 	return true, nil
@@ -43,7 +43,7 @@ func (r *merchantSocialMediaLinkRepository) UpdateSocialLink(req *requests.Updat
 
 	_, err := r.db.UpdateMerchantSocialMediaLink(r.ctx, params)
 	if err != nil {
-		return false, fmt.Errorf("failed to update social media link: %w", err)
+		return false, merchantsociallink_errors.ErrUpdateMerchantSocialLink
 	}
 
 	return true, nil
@@ -52,7 +52,7 @@ func (r *merchantSocialMediaLinkRepository) UpdateSocialLink(req *requests.Updat
 func (r *merchantSocialMediaLinkRepository) TrashSocialLink(socialID int) (bool, error) {
 	_, err := r.db.TrashMerchantSocialMediaLink(r.ctx, int32(socialID))
 	if err != nil {
-		return false, fmt.Errorf("failed to trash social media link: %w", err)
+		return false, merchantsociallink_errors.ErrTrashMerchantSocialLink
 	}
 
 	return true, nil
@@ -61,7 +61,7 @@ func (r *merchantSocialMediaLinkRepository) TrashSocialLink(socialID int) (bool,
 func (r *merchantSocialMediaLinkRepository) RestoreSocialLink(socialID int) (bool, error) {
 	_, err := r.db.RestoreMerchantSocialMediaLink(r.ctx, int32(socialID))
 	if err != nil {
-		return false, fmt.Errorf("failed to restore social media link: %w", err)
+		return false, merchantsociallink_errors.ErrRestoreMerchantSocialLink
 	}
 
 	return true, nil
@@ -70,7 +70,7 @@ func (r *merchantSocialMediaLinkRepository) RestoreSocialLink(socialID int) (boo
 func (r *merchantSocialMediaLinkRepository) DeletePermanentSocialLink(socialID int) (bool, error) {
 	err := r.db.DeleteMerchantSocialMediaLinkPermanently(r.ctx, int32(socialID))
 	if err != nil {
-		return false, fmt.Errorf("failed to permanently delete social media link: %w", err)
+		return false, merchantsociallink_errors.ErrDeletePermanentMerchantSocialLink
 	}
 
 	return true, nil
@@ -79,7 +79,7 @@ func (r *merchantSocialMediaLinkRepository) DeletePermanentSocialLink(socialID i
 func (r *merchantSocialMediaLinkRepository) RestoreAllSocialLink() (bool, error) {
 	err := r.db.RestoreAllMerchantSocialMediaLinks(r.ctx)
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all social media links: %w", err)
+		return false, merchantsociallink_errors.ErrRestoreAllMerchantSocialLinks
 	}
 
 	return true, nil
@@ -88,7 +88,7 @@ func (r *merchantSocialMediaLinkRepository) RestoreAllSocialLink() (bool, error)
 func (r *merchantSocialMediaLinkRepository) DeleteAllPermanentSocialLink() (bool, error) {
 	err := r.db.DeleteAllMerchantSocialMediaLinksPermanently(r.ctx)
 	if err != nil {
-		return false, fmt.Errorf("failed to permanently delete all social media links: %w", err)
+		return false, merchantsociallink_errors.ErrDeleteAllPermanentMerchantSocialLinks
 	}
 
 	return true, nil

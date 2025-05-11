@@ -18,12 +18,23 @@ type YearAmountTransactionMerchant struct {
 	Year       int `json:"year" validate:"required"`
 }
 
-type MonthlyYearTransactionMethodMerchant struct {
+type MonthMethodTransaction struct {
+	Year  int `json:"year" validate:"required"`
+	Month int `json:"month" validate:"required"`
+}
+
+type MonthMethodTransactionMerchant struct {
+	MerchantID int `json:"merchant_id" validate:"required"`
+	Year       int `json:"year" validate:"required"`
+	Month      int `json:"month" validate:"required"`
+}
+
+type YearMethodTransactionMerchant struct {
 	MerchantID int `json:"merchant_id" validate:"required"`
 	Year       int `json:"year" validate:"required"`
 }
 
-type FindAllTransactions struct {
+type FindAllTransaction struct {
 	Search   string `json:"search" validate:"required"`
 	Page     int    `json:"page" validate:"min=1"`
 	PageSize int    `json:"page_size" validate:"min=1,max=100"`

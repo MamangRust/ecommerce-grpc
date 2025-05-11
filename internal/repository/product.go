@@ -7,7 +7,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	"ecommerce/pkg/errors/product_errors"
 )
 
 type productRepository struct {
@@ -36,7 +36,7 @@ func (r *productRepository) FindAllProducts(req *requests.FindAllProduct) ([]*re
 	res, err := r.db.GetProducts(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch products: invalid pagination (page %d, size %d) or search query '%s'", req.Page, req.PageSize, req.Search)
+		return nil, nil, product_errors.ErrFindAllProducts
 	}
 
 	var totalCount int
@@ -62,7 +62,7 @@ func (r *productRepository) FindByActive(req *requests.FindAllProduct) ([]*recor
 	res, err := r.db.GetProductsActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find active products: %w", err)
+		return nil, nil, product_errors.ErrFindByActive
 	}
 
 	var totalCount int
@@ -88,7 +88,7 @@ func (r *productRepository) FindByTrashed(req *requests.FindAllProduct) ([]*reco
 	res, err := r.db.GetProductsTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find trashed products: %w", err)
+		return nil, nil, product_errors.ErrFindByTrashed
 	}
 
 	var totalCount int
@@ -118,7 +118,7 @@ func (r *productRepository) FindByMerchant(req *requests.FindAllProductByMerchan
 	res, err := r.db.GetProductsByMerchant(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find merchant products: %w", err)
+		return nil, nil, product_errors.ErrFindByMerchant
 	}
 
 	var totalCount int
@@ -147,7 +147,7 @@ func (r *productRepository) FindByCategory(req *requests.FindAllProductByCategor
 	res, err := r.db.GetProductsByCategoryName(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find category products: %w", err)
+		return nil, nil, product_errors.ErrFindByCategory
 	}
 
 	var totalCount int
@@ -165,7 +165,7 @@ func (r *productRepository) FindById(product_id int) (*record.ProductRecord, err
 	res, err := r.db.GetProductByID(r.ctx, int32(product_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find product: %w", err)
+		return nil, product_errors.ErrFindById
 	}
 
 	return r.mapping.ToProductRecord(res), nil
@@ -175,7 +175,7 @@ func (r *productRepository) FindByIdTrashed(product_id int) (*record.ProductReco
 	res, err := r.db.GetProductByIdTrashed(r.ctx, int32(product_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find product trashed: %w", err)
+		return nil, product_errors.ErrFindByIdTrashed
 	}
 
 	return r.mapping.ToProductRecord(res), nil
@@ -201,7 +201,7 @@ func (r *productRepository) CreateProduct(request *requests.CreateProductRequest
 	product, err := r.db.CreateProduct(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create product: %w", err)
+		return nil, product_errors.ErrCreateProduct
 	}
 
 	return r.mapping.ToProductRecord(product), nil
@@ -223,7 +223,7 @@ func (r *productRepository) UpdateProduct(request *requests.UpdateProductRequest
 	res, err := r.db.UpdateProduct(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to update product: %w", err)
+		return nil, product_errors.ErrUpdateProduct
 	}
 
 	return r.mapping.ToProductRecord(res), nil
@@ -236,7 +236,7 @@ func (r *productRepository) UpdateProductCountStock(product_id int, stock int) (
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to update product: %w", err)
+		return nil, product_errors.ErrUpdateProductCountStock
 	}
 
 	return r.mapping.ToProductRecord(res), nil
@@ -246,7 +246,7 @@ func (r *productRepository) TrashedProduct(product_id int) (*record.ProductRecor
 	res, err := r.db.TrashProduct(r.ctx, int32(product_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash product: %w", err)
+		return nil, product_errors.ErrTrashedProduct
 	}
 
 	return r.mapping.ToProductRecord(res), nil
@@ -256,7 +256,7 @@ func (r *productRepository) RestoreProduct(product_id int) (*record.ProductRecor
 	res, err := r.db.RestoreProduct(r.ctx, int32(product_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore product: %w", err)
+		return nil, product_errors.ErrRestoreProduct
 	}
 
 	return r.mapping.ToProductRecord(res), nil
@@ -266,7 +266,7 @@ func (r *productRepository) DeleteProductPermanent(product_id int) (bool, error)
 	err := r.db.DeleteProductPermanently(r.ctx, int32(product_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete product: %w", err)
+		return false, product_errors.ErrDeleteProductPermanent
 	}
 
 	return true, nil
@@ -276,7 +276,7 @@ func (r *productRepository) RestoreAllProducts() (bool, error) {
 	err := r.db.RestoreAllProducts(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all products: %w", err)
+		return false, product_errors.ErrRestoreAllProducts
 	}
 
 	return true, nil
@@ -286,7 +286,7 @@ func (r *productRepository) DeleteAllProductPermanent() (bool, error) {
 	err := r.db.DeleteAllPermanentProducts(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all products permanently: %w", err)
+		return false, product_errors.ErrDeleteAllProductPermanent
 	}
 
 	return true, nil

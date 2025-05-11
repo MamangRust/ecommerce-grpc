@@ -1244,8 +1244,38 @@ type Querier interface {
 	//   - Includes only non-deleted orders and order items
 	//   - Output formatted for charting or reporting tools
 	GetMonthlyTotalRevenueByMerchant(ctx context.Context, arg GetMonthlyTotalRevenueByMerchantParams) ([]*GetMonthlyTotalRevenueByMerchantRow, error)
-	// GetMonthlyTransactionMethods: Analyzes payment method usage by month
-	// Purpose: Track monthly trends in payment method preferences
+	// GetMonthlyTransactionMethodsByMerchantFailed: Analyzes failed transactions by merchant and payment method monthly
+	// Parameters:
+	//   $1: Reference date (timestamp) - determines the 12-month analysis period
+	// Returns:
+	//   month: 3-letter month abbreviation (e.g. 'Jan')
+	//   merchant_id: The merchant identifier
+	//   merchant_name: The merchant's name
+	//   payment_method: The payment method used
+	//   total_transactions: Count of failed transactions
+	//   total_amount: Total amount that failed processing
+	GetMonthlyTransactionMethodsByMerchantFailed(ctx context.Context, arg GetMonthlyTransactionMethodsByMerchantFailedParams) ([]*GetMonthlyTransactionMethodsByMerchantFailedRow, error)
+	// GetMonthlyTransactionMethodsByMerchantSuccess: Analyzes successful transactions by merchant and payment method monthly
+	// Parameters:
+	//   $1: Reference date (timestamp) - determines the 12-month analysis period
+	// Returns:
+	//   month: 3-letter month abbreviation (e.g. 'Jan')
+	//   merchant_id: The merchant identifier
+	//   merchant_name: The merchant's name
+	//   payment_method: The payment method used
+	//   total_transactions: Count of successful transactions
+	//   total_amount: Total amount processed by this method
+	GetMonthlyTransactionMethodsByMerchantSuccess(ctx context.Context, arg GetMonthlyTransactionMethodsByMerchantSuccessParams) ([]*GetMonthlyTransactionMethodsByMerchantSuccessRow, error)
+	// GetMonthlyTransactionMethodsFailed: Analyzes failed payment method usage by month
+	// Parameters:
+	//   $1: Reference date (timestamp) - determines the 12-month analysis period
+	// Returns:
+	//   month: 3-letter month abbreviation (e.g. 'Jan')
+	//   payment_method: The payment method used
+	//   total_transactions: Count of failed transactions
+	//   total_amount: Total amount that failed processing
+	GetMonthlyTransactionMethodsFailed(ctx context.Context, arg GetMonthlyTransactionMethodsFailedParams) ([]*GetMonthlyTransactionMethodsFailedRow, error)
+	// GetMonthlyTransactionMethodsSuccess: Analyzes successful payment method usage by month
 	// Parameters:
 	//   $1: Reference date (timestamp) - determines the 12-month analysis period
 	// Returns:
@@ -1253,32 +1283,7 @@ type Querier interface {
 	//   payment_method: The payment method used
 	//   total_transactions: Count of successful transactions
 	//   total_amount: Total amount processed by this method
-	// Business Logic:
-	//   - Analyzes a rolling 12-month period from reference date
-	//   - Only includes successful (payment_status = 'success') transactions
-	//   - Excludes deleted transactions
-	//   - Groups by month and payment method
-	//   - Returns formatted month names for reporting
-	//   - Orders chronologically by month then by payment method
-	GetMonthlyTransactionMethods(ctx context.Context, dollar_1 time.Time) ([]*GetMonthlyTransactionMethodsRow, error)
-	// GetMonthlyTransactionMethodsByMerchant: Analyzes payment method usage by month by merchant id
-	// Purpose: Track monthly trends in payment method preferences
-	// Parameters:
-	//   $1: Reference date (timestamp) - determines the 12-month analysis period
-	//   $2: Merchant ID
-	// Returns:
-	//   month: 3-letter month abbreviation (e.g. 'Jan')
-	//   payment_method: The payment method used
-	//   total_transactions: Count of successful transactions
-	//   total_amount: Total amount processed by this method
-	// Business Logic:
-	//   - Analyzes a rolling 12-month period from reference date
-	//   - Only includes successful (payment_status = 'success') transactions
-	//   - Excludes deleted transactions
-	//   - Groups by month and payment method
-	//   - Returns formatted month names for reporting
-	//   - Orders chronologically by month then by payment method
-	GetMonthlyTransactionMethodsByMerchant(ctx context.Context, arg GetMonthlyTransactionMethodsByMerchantParams) ([]*GetMonthlyTransactionMethodsByMerchantRow, error)
+	GetMonthlyTransactionMethodsSuccess(ctx context.Context, arg GetMonthlyTransactionMethodsSuccessParams) ([]*GetMonthlyTransactionMethodsSuccessRow, error)
 	// GetOrderByID: Retrieves an active order by ID
 	// Purpose: Fetch order details for display/processing
 	// Parameters:
@@ -2198,8 +2203,38 @@ type Querier interface {
 	//   - Includes zero-value years for complete data visualization
 	//   - Filters only active/non-deleted orders and order items
 	GetYearlyTotalRevenueByMerchant(ctx context.Context, arg GetYearlyTotalRevenueByMerchantParams) ([]*GetYearlyTotalRevenueByMerchantRow, error)
-	// GetYearlyTransactionMethods: Analyzes payment method usage by year
-	// Purpose: Track annual trends in payment method preferences
+	// GetYearlyTransactionMethodsByMerchantFailed: Analyzes failed transactions by merchant and payment method yearly
+	// Parameters:
+	//   $1: Reference date (timestamp) - determines the 5-year analysis window
+	// Returns:
+	//   year: 4-digit year as text
+	//   merchant_id: The merchant identifier
+	//   merchant_name: The merchant's name
+	//   payment_method: The payment method used
+	//   total_transactions: Count of failed transactions
+	//   total_amount: Total amount that failed processing
+	GetYearlyTransactionMethodsByMerchantFailed(ctx context.Context, arg GetYearlyTransactionMethodsByMerchantFailedParams) ([]*GetYearlyTransactionMethodsByMerchantFailedRow, error)
+	// GetYearlyTransactionMethodsByMerchantSuccess: Analyzes successful transactions by merchant and payment method yearly
+	// Parameters:
+	//   $1: Reference date (timestamp) - determines the 5-year analysis window
+	// Returns:
+	//   year: 4-digit year as text
+	//   merchant_id: The merchant identifier
+	//   merchant_name: The merchant's name
+	//   payment_method: The payment method used
+	//   total_transactions: Count of successful transactions
+	//   total_amount: Total amount processed by this method
+	GetYearlyTransactionMethodsByMerchantSuccess(ctx context.Context, arg GetYearlyTransactionMethodsByMerchantSuccessParams) ([]*GetYearlyTransactionMethodsByMerchantSuccessRow, error)
+	// GetYearlyTransactionMethodsFailed: Analyzes failed payment method usage by year
+	// Parameters:
+	//   $1: Reference date (timestamp) - determines the 5-year analysis window
+	// Returns:
+	//   year: 4-digit year as text
+	//   payment_method: The payment method used
+	//   total_transactions: Count of failed transactions
+	//   total_amount: Total amount that failed processing
+	GetYearlyTransactionMethodsFailed(ctx context.Context, dollar_1 time.Time) ([]*GetYearlyTransactionMethodsFailedRow, error)
+	// GetYearlyTransactionMethodsSuccess: Analyzes successful payment method usage by year
 	// Parameters:
 	//   $1: Reference date (timestamp) - determines the 5-year analysis window
 	// Returns:
@@ -2207,31 +2242,7 @@ type Querier interface {
 	//   payment_method: The payment method used
 	//   total_transactions: Count of successful transactions
 	//   total_amount: Total amount processed by this method
-	// Business Logic:
-	//   - Covers current year plus previous 4 years (5-year total window)
-	//   - Only includes successful (payment_status = 'success') transactions
-	//   - Excludes deleted transactions
-	//   - Groups by year and payment method
-	//   - Orders chronologically by year then by payment method
-	//   - Useful for identifying long-term payment trends
-	GetYearlyTransactionMethods(ctx context.Context, dollar_1 time.Time) ([]*GetYearlyTransactionMethodsRow, error)
-	// GetYearlyTransactionMethodsByMerchant: Analyzes payment method usage by year by merchant_id
-	// Purpose: Track annual trends in payment method preferences
-	// Parameters:
-	//   $1: Reference date (timestamp) - determines the 5-year analysis window
-	// Returns:
-	//   year: 4-digit year as text
-	//   payment_method: The payment method used
-	//   total_transactions: Count of successful transactions
-	//   total_amount: Total amount processed by this method
-	// Business Logic:
-	//   - Covers current year plus previous 4 years (5-year total window)
-	//   - Only includes successful (payment_status = 'success') transactions
-	//   - Excludes deleted transactions
-	//   - Groups by year and payment method
-	//   - Orders chronologically by year then by payment method
-	//   - Useful for identifying long-term payment trends
-	GetYearlyTransactionMethodsByMerchant(ctx context.Context, arg GetYearlyTransactionMethodsByMerchantParams) ([]*GetYearlyTransactionMethodsByMerchantRow, error)
+	GetYearlyTransactionMethodsSuccess(ctx context.Context, dollar_1 time.Time) ([]*GetYearlyTransactionMethodsSuccessRow, error)
 	// RemoveRoleFromUser: Permanently removes a role from a user
 	// Purpose: Hard delete of a user-role mapping (bypasses trash)
 	// Parameters:

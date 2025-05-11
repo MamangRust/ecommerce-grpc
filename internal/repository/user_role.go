@@ -6,7 +6,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	userrole_errors "ecommerce/pkg/errors/user_role_errors"
 )
 
 type userRoleRepository struct {
@@ -30,7 +30,7 @@ func (r *userRoleRepository) AssignRoleToUser(req *requests.CreateUserRoleReques
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to assign role to user: %w", err)
+		return nil, userrole_errors.ErrAssignRoleToUser
 	}
 
 	return r.mapping.ToUserRoleRecord(res), nil
@@ -43,7 +43,7 @@ func (r *userRoleRepository) RemoveRoleFromUser(req *requests.RemoveUserRoleRequ
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to remove role from user: %w", err)
+		return userrole_errors.ErrRemoveRole
 	}
 
 	return nil

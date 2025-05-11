@@ -1,15 +1,17 @@
 package service
 
 import (
-	"database/sql"
 	"ecommerce/internal/domain/requests"
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	merchant_errors "ecommerce/pkg/errors/merchant"
+	"ecommerce/pkg/errors/order_errors"
+	orderitem_errors "ecommerce/pkg/errors/order_item_errors"
+	"ecommerce/pkg/errors/product_errors"
+	shippingaddress_errors "ecommerce/pkg/errors/shipping_address_errors"
+	"ecommerce/pkg/errors/user_errors"
 	"ecommerce/pkg/logger"
-	"errors"
-	"fmt"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -73,11 +75,7 @@ func (s *orderService) FindAll(req *requests.FindAllOrder) ([]*response.OrderRes
 			zap.String("search", search),
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve order list",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, order_errors.ErrFailedFindAllOrders
 	}
 
 	orderResponse := s.mapping.ToOrdersResponse(orders)
@@ -100,18 +98,7 @@ func (s *orderService) FindById(order_id int) (*response.OrderResponse, *respons
 			zap.Error(err),
 			zap.Int("order_id", order_id))
 
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &response.ErrorResponse{
-				Status:  "not_found",
-				Message: fmt.Sprintf("Order with ID %d not found", order_id),
-				Code:    http.StatusNotFound,
-			}
-		}
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve order details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindOrderById
 	}
 
 	return s.mapping.ToOrderResponse(order), nil
@@ -144,11 +131,7 @@ func (s *orderService) FindByActive(req *requests.FindAllOrder) ([]*response.Ord
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve active orders",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, order_errors.ErrFailedFindOrdersByActive
 	}
 
 	orderResponse := s.mapping.ToOrdersResponseDeleteAt(orders)
@@ -187,11 +170,7 @@ func (s *orderService) FindByTrashed(req *requests.FindAllOrder) ([]*response.Or
 			zap.String("search", search),
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve trashed orders",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, order_errors.ErrFailedFindOrdersByTrashed
 	}
 
 	orderResponse := s.mapping.ToOrdersResponseDeleteAt(orders)
@@ -216,11 +195,7 @@ func (s *orderService) FindMonthlyTotalRevenue(req *requests.MonthTotalRevenue) 
 			zap.Int("month", month),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve monthly total revenue data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindMonthlyTotalRevenue
 	}
 
 	return s.mapping.ToOrderMonthlyTotalRevenues(res), nil
@@ -233,11 +208,7 @@ func (s *orderService) FindYearlyTotalRevenue(year int) ([]*response.OrderYearly
 		s.logger.Error("failed to get yearly total revenue",
 			zap.Int("year", year),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve yearly total revenue data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindYearlyTotalRevenue
 	}
 
 	return s.mapping.ToOrderYearlyTotalRevenues(res), nil
@@ -254,11 +225,7 @@ func (s *orderService) FindMonthlyTotalRevenueById(req *requests.MonthTotalReven
 			zap.Int("year", year),
 			zap.Int("month", month),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve monthly total revenue data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindMonthlyTotalRevenueById
 	}
 
 	return s.mapping.ToOrderMonthlyTotalRevenues(res), nil
@@ -275,11 +242,7 @@ func (s *orderService) FindYearlyTotalRevenueById(req *requests.YearTotalRevenue
 			zap.Int("year", year),
 			zap.Int("order_id", orderId),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve yearly total revenue data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindYearlyTotalRevenueById
 	}
 
 	return s.mapping.ToOrderYearlyTotalRevenues(res), nil
@@ -296,11 +259,7 @@ func (s *orderService) FindMonthlyTotalRevenueByMerchant(req *requests.MonthTota
 			zap.Int("year", year),
 			zap.Int("month", month),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve monthly total revenue data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindMonthlyTotalRevenueByMerchant
 	}
 
 	return s.mapping.ToOrderMonthlyTotalRevenues(res), nil
@@ -318,11 +277,7 @@ func (s *orderService) FindYearlyTotalRevenueByMerchant(req *requests.YearTotalR
 			zap.Int("merchant_id", merchantId),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve yearly total revenue data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindYearlyTotalRevenueByMerchant
 	}
 
 	return s.mapping.ToOrderYearlyTotalRevenues(res), nil
@@ -335,11 +290,7 @@ func (s *orderService) FindMonthlyOrder(year int) ([]*response.OrderMonthlyRespo
 		s.logger.Error("failed to get monthly orders",
 			zap.Int("year", year),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve monthly orders data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindMonthlyOrder
 	}
 
 	return s.mapping.ToOrderMonthlyPrices(res), nil
@@ -352,11 +303,7 @@ func (s *orderService) FindYearlyOrder(year int) ([]*response.OrderYearlyRespons
 		s.logger.Error("failed to get yearly orders",
 			zap.Int("year", year),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: "Failed to retrieve yearly orders data",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindYearlyOrder
 	}
 
 	return s.mapping.ToOrderYearlyPrices(res), nil
@@ -373,11 +320,7 @@ func (s *orderService) FindMonthlyOrderByMerchant(req *requests.MonthOrderMercha
 			zap.Int("year", year),
 			zap.Int("merchant_id", merchant_id),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: fmt.Sprintf("Failed to retrieve monthly orders for merchant %d", merchant_id),
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindMonthlyOrderByMerchant
 	}
 
 	return s.mapping.ToOrderMonthlyPrices(res), nil
@@ -394,11 +337,7 @@ func (s *orderService) FindYearlyOrderByMerchant(req *requests.YearOrderMerchant
 			zap.Int("year", year),
 			zap.Int("merchant_id", merchant_id),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "server_error",
-			Message: fmt.Sprintf("Failed to retrieve yearly orders for merchant %d", merchant_id),
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindYearlyOrderByMerchant
 	}
 
 	return s.mapping.ToOrderYearlyPrices(res), nil
@@ -413,11 +352,7 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 		s.logger.Error("Merchant not found for order creation",
 			zap.Int("merchantID", req.MerchantID),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "not_found",
-			Message: fmt.Sprintf("Merchant with ID %d not found", req.MerchantID),
-			Code:    http.StatusNotFound,
-		}
+		return nil, merchant_errors.ErrFailedFindMerchantById
 	}
 
 	_, err = s.userRepository.FindById(req.UserID)
@@ -427,11 +362,7 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 			zap.Int("user_id", req.UserID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "not_found",
-			Message: fmt.Sprintf("User with ID %d not found", req.UserID),
-			Code:    http.StatusNotFound,
-		}
+		return nil, user_errors.ErrUserNotFoundRes
 	}
 
 	order, err := s.orderRepository.CreateOrder(&requests.CreateOrderRecordRequest{
@@ -442,11 +373,7 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 	if err != nil {
 		s.logger.Error("Failed to create order", zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create order record",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedCreateOrder
 	}
 
 	for _, item := range req.Items {
@@ -456,11 +383,7 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 			s.logger.Error("Product not found for order item",
 				zap.Int("productID", item.ProductID),
 				zap.Error(err))
-			return nil, &response.ErrorResponse{
-				Status:  "not_found",
-				Message: fmt.Sprintf("Product with ID %d not found", item.ProductID),
-				Code:    http.StatusNotFound,
-			}
+			return nil, product_errors.ErrFailedFindProductById
 		}
 
 		if product.CountInStock < item.Quantity {
@@ -469,12 +392,7 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 				zap.Int("requested", item.Quantity),
 				zap.Int("available", product.CountInStock))
 
-			return nil, &response.ErrorResponse{
-				Status: "invalid_request",
-				Message: fmt.Sprintf("Insufficient stock for product %d (requested %d, available %d)",
-					item.ProductID, item.Quantity, product.CountInStock),
-				Code: http.StatusBadRequest,
-			}
+			return nil, order_errors.ErrInsufficientProductStock
 		}
 
 		_, err = s.orderItemRepository.CreateOrderItem(&requests.CreateOrderItemRecordRequest{
@@ -487,11 +405,7 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 		if err != nil {
 			s.logger.Error("Failed to create order item",
 				zap.Error(err))
-			return nil, &response.ErrorResponse{
-				Status:  "error",
-				Message: "Failed to create order item",
-				Code:    http.StatusInternalServerError,
-			}
+			return nil, orderitem_errors.ErrFailedCreateOrderItem
 		}
 
 		product.CountInStock -= item.Quantity
@@ -500,16 +414,12 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 		if err != nil {
 			s.logger.Error("Failed to update product stock",
 				zap.Error(err))
-			return nil, &response.ErrorResponse{
-				Status:  "error",
-				Message: "Failed to update product stock",
-				Code:    http.StatusInternalServerError,
-			}
+			return nil, product_errors.ErrFailedCountStock
 		}
 	}
 
 	_, err = s.shippingRepository.CreateShippingAddress(&requests.CreateShippingAddressRequest{
-		OrderID:        order.ID,
+		OrderID:        &order.ID,
 		Alamat:         req.ShippingAddress.Alamat,
 		Provinsi:       req.ShippingAddress.Provinsi,
 		Kota:           req.ShippingAddress.Kota,
@@ -521,11 +431,7 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 
 	if err != nil {
 		s.logger.Error("Failed to create shipping address", zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create shipping address",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, shippingaddress_errors.ErrFailedCreateShippingAddress
 	}
 
 	totalPrice, err := s.orderItemRepository.CalculateTotalPrice(order.ID)
@@ -533,11 +439,7 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 	if err != nil {
 		s.logger.Error("Failed to calculate total price", zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to calculate order total",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, orderitem_errors.ErrFailedCalculateTotal
 	}
 
 	_, err = s.orderRepository.UpdateOrder(&requests.UpdateOrderRecordRequest{
@@ -550,11 +452,7 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 		s.logger.Error("Failed to update order total price",
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update order total price",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedUpdateOrder
 	}
 
 	return s.mapping.ToOrderResponse(order), nil
@@ -570,11 +468,7 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 			zap.Int("orderID", *req.OrderID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "not_found",
-			Message: fmt.Sprintf("Order with ID %d not found", req.OrderID),
-			Code:    http.StatusNotFound,
-		}
+		return nil, order_errors.ErrFailedFindOrderById
 	}
 
 	_, err = s.userRepository.FindById(req.UserID)
@@ -583,11 +477,7 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 			zap.Int("orderID", *req.OrderID),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "not_found",
-			Message: fmt.Sprintf("Order with ID %d not found", *req.OrderID),
-			Code:    http.StatusNotFound,
-		}
+		return nil, user_errors.ErrUserNotFoundRes
 	}
 
 	for _, item := range req.Items {
@@ -597,11 +487,7 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 			s.logger.Error("Product not found for order item",
 				zap.Int("productID", item.ProductID),
 				zap.Error(err))
-			return nil, &response.ErrorResponse{
-				Status:  "not_found",
-				Message: fmt.Sprintf("Product with ID %d not found", item.ProductID),
-				Code:    http.StatusNotFound,
-			}
+			return nil, product_errors.ErrFailedFindProductById
 		}
 
 		if item.OrderItemID > 0 {
@@ -615,11 +501,7 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 			if err != nil {
 				s.logger.Error("Failed to update order item",
 					zap.Error(err))
-				return nil, &response.ErrorResponse{
-					Status:  "error",
-					Message: "Failed to update order item",
-					Code:    http.StatusInternalServerError,
-				}
+				return nil, orderitem_errors.ErrFailedUpdateOrderItem
 			}
 		} else {
 			if product.CountInStock < item.Quantity {
@@ -627,12 +509,7 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 					zap.Int("productID", item.ProductID),
 					zap.Int("requested", item.Quantity),
 					zap.Int("available", product.CountInStock))
-				return nil, &response.ErrorResponse{
-					Status: "invalid_request",
-					Message: fmt.Sprintf("Insufficient stock for product %d (requested %d, available %d)",
-						item.ProductID, item.Quantity, product.CountInStock),
-					Code: http.StatusBadRequest,
-				}
+				return nil, order_errors.ErrInsufficientProductStock
 			}
 
 			_, err := s.orderItemRepository.CreateOrderItem(&requests.CreateOrderItemRecordRequest{
@@ -645,11 +522,7 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 			if err != nil {
 				s.logger.Error("Failed to add new order item",
 					zap.Error(err))
-				return nil, &response.ErrorResponse{
-					Status:  "error",
-					Message: "Failed to add new order item",
-					Code:    http.StatusInternalServerError,
-				}
+				return nil, orderitem_errors.ErrFailedCreateOrderItem
 			}
 
 			product.CountInStock -= item.Quantity
@@ -658,18 +531,14 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 			if err != nil {
 				s.logger.Error("Failed to update product stock",
 					zap.Error(err))
-				return nil, &response.ErrorResponse{
-					Status:  "error",
-					Message: "Failed to update product stock",
-					Code:    http.StatusInternalServerError,
-				}
+				return nil, product_errors.ErrFailedCountStock
 			}
 		}
 	}
 
 	_, err = s.shippingRepository.UpdateShippingAddress(&requests.UpdateShippingAddressRequest{
 		ShippingID:     req.ShippingAddress.ShippingID,
-		OrderID:        *req.OrderID,
+		OrderID:        &existingOrder.ID,
 		Alamat:         req.ShippingAddress.Alamat,
 		Provinsi:       req.ShippingAddress.Provinsi,
 		Kota:           req.ShippingAddress.Kota,
@@ -682,11 +551,7 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 	if err != nil {
 		s.logger.Error("Failed to update shipping address", zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update shipping address",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, shippingaddress_errors.ErrFailedUpdateShippingAddress
 	}
 
 	totalPrice, err := s.orderItemRepository.CalculateTotalPrice(*req.OrderID)
@@ -695,11 +560,7 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 		s.logger.Error("Failed to calculate updated order total",
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to calculate order total",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, orderitem_errors.ErrFailedCalculateTotal
 	}
 
 	_, err = s.orderRepository.UpdateOrder(&requests.UpdateOrderRecordRequest{
@@ -711,11 +572,7 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 	if err != nil {
 		s.logger.Error("Failed to update order total price",
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update order total price",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedUpdateOrder
 	}
 
 	return s.mapping.ToOrderResponse(existingOrder), nil
@@ -728,29 +585,14 @@ func (s *orderService) TrashedOrder(order_id int) (*response.OrderResponseDelete
 	order, err := s.orderRepository.FindById(order_id)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &response.ErrorResponse{
-				Status:  "not_found",
-				Message: fmt.Sprintf("Order with ID %d not found", order_id),
-				Code:    http.StatusNotFound,
-			}
-		}
 		s.logger.Error("Failed to fetch order",
 			zap.Int("order_id", order_id),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to verify order existence",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedFindOrderById
 	}
 
 	if order.DeletedAt != nil {
-		return nil, &response.ErrorResponse{
-			Status:  "already_trashed",
-			Message: fmt.Sprintf("Order with ID %d is already trashed", order_id),
-			Code:    http.StatusBadRequest,
-		}
+		return nil, order_errors.ErrFailedNotDeleteAtOrder
 	}
 
 	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(order_id)
@@ -759,37 +601,23 @@ func (s *orderService) TrashedOrder(order_id int) (*response.OrderResponseDelete
 		s.logger.Error("Failed to retrieve order items for trashing",
 			zap.Int("order_id", order_id),
 			zap.Error(err))
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve order items",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedNotDeleteAtOrder
 	}
 
 	for _, item := range orderItems {
 		if item.DeletedAt != nil {
 			s.logger.Debug("Order item already trashed, skipping",
 				zap.Int("order_item_id", item.ID))
-			continue
+			return nil, orderitem_errors.ErrFailedNotDeleteAtOrderItem
 		}
 
 		trashedItem, err := s.orderItemRepository.TrashedOrderItem(item.ID)
 
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				s.logger.Debug("Order item not found - may have been deleted",
-					zap.Int("order_item_id", item.ID))
-				continue
-			}
-
 			s.logger.Error("Failed to move order item to trash",
 				zap.Int("order_item_id", item.ID),
 				zap.Error(err))
-			return nil, &response.ErrorResponse{
-				Status:  "error",
-				Message: fmt.Sprintf("Failed to move order item %d to trash", item.ID),
-				Code:    http.StatusInternalServerError,
-			}
+			return nil, orderitem_errors.ErrFailedTrashedOrderItem
 		}
 
 		s.logger.Debug("Order item trashed successfully",
@@ -804,18 +632,7 @@ func (s *orderService) TrashedOrder(order_id int) (*response.OrderResponseDelete
 			zap.Int("order_id", order_id),
 			zap.Error(err))
 
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &response.ErrorResponse{
-				Status:  "not_found",
-				Message: fmt.Sprintf("Order with ID %d not found", order_id),
-				Code:    http.StatusNotFound,
-			}
-		}
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to move order to trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedCreateOrder
 	}
 
 	s.logger.Debug("Order moved to trash successfully",
@@ -835,11 +652,7 @@ func (s *orderService) RestoreOrder(order_id int) (*response.OrderResponseDelete
 			zap.Int("order_id", order_id),
 			zap.Error(err))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve order items",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, orderitem_errors.ErrFailedFindOrderItemByOrder
 	}
 
 	for _, item := range orderItems {
@@ -850,11 +663,7 @@ func (s *orderService) RestoreOrder(order_id int) (*response.OrderResponseDelete
 				zap.Int("order_item_id", item.ID),
 				zap.Error(err))
 
-			return nil, &response.ErrorResponse{
-				Status:  "error",
-				Message: fmt.Sprintf("Failed to restore order item %d", item.ID),
-				Code:    http.StatusInternalServerError,
-			}
+			return nil, orderitem_errors.ErrFailedRestoreOrderItem
 		}
 	}
 
@@ -865,18 +674,7 @@ func (s *orderService) RestoreOrder(order_id int) (*response.OrderResponseDelete
 			zap.Int("order_id", order_id),
 			zap.Error(err))
 
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &response.ErrorResponse{
-				Status:  "not_found",
-				Message: fmt.Sprintf("Order with ID %d not found in trash", order_id),
-				Code:    http.StatusNotFound,
-			}
-		}
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore order from trash",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, order_errors.ErrFailedRestoreOrder
 	}
 
 	return s.mapping.ToOrderResponseDeleteAt(order), nil
@@ -892,11 +690,7 @@ func (s *orderService) DeleteOrderPermanent(order_id int) (bool, *response.Error
 			zap.Int("order_id", order_id),
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve order items",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, orderitem_errors.ErrFailedFindOrderItemByOrder
 	}
 
 	for _, item := range orderItems {
@@ -907,11 +701,7 @@ func (s *orderService) DeleteOrderPermanent(order_id int) (bool, *response.Error
 			s.logger.Error("Failed to permanently delete order item",
 				zap.Int("order_item_id", item.ID),
 				zap.Error(err))
-			return false, &response.ErrorResponse{
-				Status:  "error",
-				Message: fmt.Sprintf("Failed to permanently delete order item %d", item.ID),
-				Code:    http.StatusInternalServerError,
-			}
+			return false, orderitem_errors.ErrFailedDeleteOrderItem
 		}
 	}
 
@@ -922,19 +712,7 @@ func (s *orderService) DeleteOrderPermanent(order_id int) (bool, *response.Error
 			zap.Int("order_id", order_id),
 			zap.Error(err))
 
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, &response.ErrorResponse{
-				Status:  "not_found",
-				Message: fmt.Sprintf("Order with ID %d not found", order_id),
-				Code:    http.StatusNotFound,
-			}
-		}
-
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete order",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, order_errors.ErrFailedDeleteOrderPermanent
 	}
 
 	return success, nil
@@ -948,22 +726,14 @@ func (s *orderService) RestoreAllOrder() (bool, *response.ErrorResponse) {
 	if err != nil || !successItems {
 		s.logger.Error("Failed to restore all order items",
 			zap.Error(err))
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all order items",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, orderitem_errors.ErrFailedRestoreAllOrderItem
 	}
 
 	success, err := s.orderRepository.RestoreAllOrder()
 	if err != nil || !success {
 		s.logger.Error("Failed to restore all orders",
 			zap.Error(err))
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to restore all orders",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, order_errors.ErrFailedRestoreAllOrder
 	}
 
 	return success, nil
@@ -977,11 +747,7 @@ func (s *orderService) DeleteAllOrderPermanent() (bool, *response.ErrorResponse)
 	if err != nil || !successItems {
 		s.logger.Error("Failed to permanently delete all order items",
 			zap.Error(err))
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all order items",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, orderitem_errors.ErrFailedDeleteAllOrderItem
 	}
 
 	success, err := s.orderRepository.DeleteAllOrderPermanent()
@@ -989,11 +755,7 @@ func (s *orderService) DeleteAllOrderPermanent() (bool, *response.ErrorResponse)
 	if err != nil || !success {
 		s.logger.Error("Failed to permanently delete all orders",
 			zap.Error(err))
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all orders",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, order_errors.ErrFailedDeleteAllOrderPermanent
 	}
 
 	return success, nil

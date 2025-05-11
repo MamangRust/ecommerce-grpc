@@ -6,7 +6,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	"ecommerce/pkg/errors/slider_errors"
 )
 
 type sliderRepository struct {
@@ -39,7 +39,7 @@ func (r *sliderRepository) FindAllSlider(req *requests.FindAllSlider) ([]*record
 	res, err := r.db.GetSliders(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find all shipping address: %w", err)
+		return nil, nil, slider_errors.ErrFindAllSliders
 	}
 
 	var totalCount int
@@ -65,7 +65,7 @@ func (r *sliderRepository) FindByActive(req *requests.FindAllSlider) ([]*record.
 	res, err := r.db.GetSlidersActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find active shipping address: %w", err)
+		return nil, nil, slider_errors.ErrFindActiveSliders
 	}
 
 	var totalCount int
@@ -91,7 +91,7 @@ func (r *sliderRepository) FindByTrashed(req *requests.FindAllSlider) ([]*record
 	res, err := r.db.GetSlidersTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find trashed shipping address: %w", err)
+		return nil, nil, slider_errors.ErrFindTrashedSliders
 	}
 
 	var totalCount int
@@ -114,7 +114,7 @@ func (r *sliderRepository) CreateSlider(request *requests.CreateSliderRequest) (
 	slider, err := r.db.CreateSlider(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create slider: %w", err)
+		return nil, slider_errors.ErrCreateSlider
 	}
 
 	return r.mapping.ToSliderRecord(slider), nil
@@ -130,7 +130,7 @@ func (r *sliderRepository) UpdateSlider(request *requests.UpdateSliderRequest) (
 	res, err := r.db.UpdateSlider(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to update slider: %w", err)
+		return nil, slider_errors.ErrUpdateSlider
 	}
 
 	return r.mapping.ToSliderRecord(res), nil
@@ -140,7 +140,7 @@ func (r *sliderRepository) TrashSlider(slider_id int) (*record.SliderRecord, err
 	res, err := r.db.TrashSlider(r.ctx, int32(slider_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash shipping address: %w", err)
+		return nil, slider_errors.ErrTrashSlider
 	}
 
 	return r.mapping.ToSliderRecord(res), nil
@@ -150,7 +150,7 @@ func (r *sliderRepository) RestoreSlider(slider_id int) (*record.SliderRecord, e
 	res, err := r.db.RestoreSlider(r.ctx, int32(slider_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to shipping address: %w", err)
+		return nil, slider_errors.ErrRestoreSlider
 	}
 
 	return r.mapping.ToSliderRecord(res), nil
@@ -160,7 +160,7 @@ func (r *sliderRepository) DeleteSliderPermanently(slider_id int) (bool, error) 
 	err := r.db.DeleteSliderPermanently(r.ctx, int32(slider_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete shipping address: %w", err)
+		return false, slider_errors.ErrDeletePermanentSlider
 	}
 
 	return true, nil
@@ -170,7 +170,7 @@ func (r *sliderRepository) RestoreAllSlider() (bool, error) {
 	err := r.db.RestoreAllSliders(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all shipping address: %w", err)
+		return false, slider_errors.ErrRestoreAllSlider
 	}
 	return true, nil
 }
@@ -179,7 +179,7 @@ func (r *sliderRepository) DeleteAllPermanentSlider() (bool, error) {
 	err := r.db.DeleteAllPermanentSliders(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all shipping address permanently: %w", err)
+		return false, slider_errors.ErrDeleteAllPermanentSlider
 	}
 	return true, nil
 }

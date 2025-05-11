@@ -2,13 +2,12 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"ecommerce/internal/domain/record"
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"errors"
-	"fmt"
+	"ecommerce/pkg/errors/cart_errors"
+	"log"
 )
 
 type cartRepository struct {
@@ -42,10 +41,8 @@ func (r *cartRepository) FindCarts(req *requests.FindAllCarts) ([]*record.CartRe
 	res, err := r.db.GetCarts(r.ctx, reqDb)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, fmt.Errorf("no cart found for user %d", req.UserID)
-		}
-		return nil, nil, fmt.Errorf("failed to find cart: %w", err)
+		log.Fatal(err)
+		return nil, nil, cart_errors.ErrFindAllCarts
 	}
 
 	var totalCount int
@@ -71,10 +68,7 @@ func (r *cartRepository) CreateCart(req *requests.CartCreateRecord) (*record.Car
 	})
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("cannot create cart: related user or product not found [user:%d product:%d]", req.UserID, req.ProductID)
-		}
-		return nil, fmt.Errorf("failed to create cart: %w", err)
+		return nil, cart_errors.ErrCreateCart
 	}
 
 	return r.mapping.ToCartRecord(res), nil
@@ -84,10 +78,7 @@ func (r *cartRepository) DeletePermanent(cart_id int) (bool, error) {
 	err := r.db.DeleteCart(r.ctx, int32(cart_id))
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, fmt.Errorf("no cart found with ID %d to delete", cart_id)
-		}
-		return false, fmt.Errorf("failed to delete cart: %w", err)
+		return false, cart_errors.ErrDeleteCartPermanent
 	}
 
 	return true, nil
@@ -103,10 +94,7 @@ func (r *cartRepository) DeleteAllPermanently(req *requests.DeleteCartRequest) (
 	err := r.db.DeleteAllCart(r.ctx, cartIDs)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, fmt.Errorf("no cart found to delete with provided IDs: %v", cartIDs)
-		}
-		return false, fmt.Errorf("failed to delete carts: %w", err)
+		return false, cart_errors.ErrDeleteAllCarts
 	}
 
 	return true, nil

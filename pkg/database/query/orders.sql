@@ -511,7 +511,6 @@ WITH last_five_years AS (
         COUNT(o.order_id) AS order_count,
         SUM(o.total_price)::NUMERIC AS total_revenue,
         SUM(oi.quantity) AS total_items_sold,
-        COUNT(DISTINCT o.cashier_id) AS active_cashiers,
         COUNT(DISTINCT oi.product_id) AS unique_products_sold
     FROM
         orders o
@@ -529,7 +528,6 @@ SELECT
     order_count,
     total_revenue,
     total_items_sold,
-    active_cashiers,
     unique_products_sold
 FROM
     last_five_years
@@ -614,7 +612,6 @@ WITH last_five_years AS (
         COUNT(o.order_id) AS order_count,
         SUM(o.total_price)::NUMERIC AS total_revenue,
         SUM(oi.quantity) AS total_items_sold,
-        COUNT(DISTINCT o.cashier_id) AS active_cashiers,
         COUNT(DISTINCT oi.product_id) AS unique_products_sold
     FROM
         orders o
@@ -633,7 +630,6 @@ SELECT
     order_count,
     total_revenue,
     total_items_sold,
-    active_cashiers,
     unique_products_sold
 FROM
     last_five_years

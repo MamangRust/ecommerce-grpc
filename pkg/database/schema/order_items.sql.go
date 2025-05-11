@@ -39,7 +39,7 @@ func (q *Queries) CalculateTotalPrice(ctx context.Context, orderID int32) (int32
 const createOrderItem = `-- name: CreateOrderItem :one
 INSERT INTO order_items (order_id, product_id, quantity, price)
 VALUES ($1, $2, $3, $4)
-RETURNING order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at
+RETURNING order_item_id, order_id, product_id, quantity, price, created_at, updated_at, deleted_at
 `
 
 type CreateOrderItemParams struct {
@@ -76,7 +76,6 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.OrderItemID,
 		&i.OrderID,
 		&i.ProductID,
-		&i.Name,
 		&i.Quantity,
 		&i.Price,
 		&i.CreatedAt,
@@ -124,7 +123,7 @@ func (q *Queries) DeleteOrderItemPermanently(ctx context.Context, orderID int32)
 
 const getOrderItems = `-- name: GetOrderItems :many
 SELECT
-    order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at,
+    order_item_id, order_id, product_id, quantity, price, created_at, updated_at, deleted_at,
     COUNT(*) OVER() AS total_count
 FROM order_items
 WHERE deleted_at IS NULL
@@ -143,7 +142,6 @@ type GetOrderItemsRow struct {
 	OrderItemID int32        `json:"order_item_id"`
 	OrderID     int32        `json:"order_id"`
 	ProductID   int32        `json:"product_id"`
-	Name        string       `json:"name"`
 	Quantity    int32        `json:"quantity"`
 	Price       int32        `json:"price"`
 	CreatedAt   sql.NullTime `json:"created_at"`
@@ -182,7 +180,6 @@ func (q *Queries) GetOrderItems(ctx context.Context, arg GetOrderItemsParams) ([
 			&i.OrderItemID,
 			&i.OrderID,
 			&i.ProductID,
-			&i.Name,
 			&i.Quantity,
 			&i.Price,
 			&i.CreatedAt,
@@ -205,7 +202,7 @@ func (q *Queries) GetOrderItems(ctx context.Context, arg GetOrderItemsParams) ([
 
 const getOrderItemsActive = `-- name: GetOrderItemsActive :many
 SELECT
-    order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at,
+    order_item_id, order_id, product_id, quantity, price, created_at, updated_at, deleted_at,
     COUNT(*) OVER() AS total_count
 FROM order_items
 WHERE deleted_at IS NULL
@@ -224,7 +221,6 @@ type GetOrderItemsActiveRow struct {
 	OrderItemID int32        `json:"order_item_id"`
 	OrderID     int32        `json:"order_id"`
 	ProductID   int32        `json:"product_id"`
-	Name        string       `json:"name"`
 	Quantity    int32        `json:"quantity"`
 	Price       int32        `json:"price"`
 	CreatedAt   sql.NullTime `json:"created_at"`
@@ -261,7 +257,6 @@ func (q *Queries) GetOrderItemsActive(ctx context.Context, arg GetOrderItemsActi
 			&i.OrderItemID,
 			&i.OrderID,
 			&i.ProductID,
-			&i.Name,
 			&i.Quantity,
 			&i.Price,
 			&i.CreatedAt,
@@ -283,7 +278,7 @@ func (q *Queries) GetOrderItemsActive(ctx context.Context, arg GetOrderItemsActi
 }
 
 const getOrderItemsByOrder = `-- name: GetOrderItemsByOrder :many
-SELECT order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at
+SELECT order_item_id, order_id, product_id, quantity, price, created_at, updated_at, deleted_at
 FROM order_items
 WHERE order_id = $1
   AND deleted_at IS NULL
@@ -314,7 +309,6 @@ func (q *Queries) GetOrderItemsByOrder(ctx context.Context, orderID int32) ([]*O
 			&i.OrderItemID,
 			&i.OrderID,
 			&i.ProductID,
-			&i.Name,
 			&i.Quantity,
 			&i.Price,
 			&i.CreatedAt,
@@ -336,7 +330,7 @@ func (q *Queries) GetOrderItemsByOrder(ctx context.Context, orderID int32) ([]*O
 
 const getOrderItemsTrashed = `-- name: GetOrderItemsTrashed :many
 SELECT
-    order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at,
+    order_item_id, order_id, product_id, quantity, price, created_at, updated_at, deleted_at,
     COUNT(*) OVER() AS total_count
 FROM order_items
 WHERE deleted_at IS NOT NULL
@@ -355,7 +349,6 @@ type GetOrderItemsTrashedRow struct {
 	OrderItemID int32        `json:"order_item_id"`
 	OrderID     int32        `json:"order_id"`
 	ProductID   int32        `json:"product_id"`
-	Name        string       `json:"name"`
 	Quantity    int32        `json:"quantity"`
 	Price       int32        `json:"price"`
 	CreatedAt   sql.NullTime `json:"created_at"`
@@ -394,7 +387,6 @@ func (q *Queries) GetOrderItemsTrashed(ctx context.Context, arg GetOrderItemsTra
 			&i.OrderItemID,
 			&i.OrderID,
 			&i.ProductID,
-			&i.Name,
 			&i.Quantity,
 			&i.Price,
 			&i.CreatedAt,
@@ -441,7 +433,7 @@ SET
 WHERE
     order_id = $1
     AND deleted_at IS NOT NULL
-  RETURNING order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at
+  RETURNING order_item_id, order_id, product_id, quantity, price, created_at, updated_at, deleted_at
 `
 
 // RestoreOrderItem: Restores a previously trashed order item
@@ -463,7 +455,6 @@ func (q *Queries) RestoreOrderItem(ctx context.Context, orderID int32) (*OrderIt
 		&i.OrderItemID,
 		&i.OrderID,
 		&i.ProductID,
-		&i.Name,
 		&i.Quantity,
 		&i.Price,
 		&i.CreatedAt,
@@ -480,7 +471,7 @@ SET
 WHERE
     order_id = $1
     AND deleted_at IS NULL
-    RETURNING order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at
+    RETURNING order_item_id, order_id, product_id, quantity, price, created_at, updated_at, deleted_at
 `
 
 // TrashOrderItem: Soft-deletes a specific order item
@@ -502,7 +493,6 @@ func (q *Queries) TrashOrderItem(ctx context.Context, orderID int32) (*OrderItem
 		&i.OrderItemID,
 		&i.OrderID,
 		&i.ProductID,
-		&i.Name,
 		&i.Quantity,
 		&i.Price,
 		&i.CreatedAt,
@@ -519,7 +509,7 @@ SET quantity = $2,
     updated_at = CURRENT_TIMESTAMP
 WHERE order_item_id = $1
   AND deleted_at IS NULL
-  RETURNING order_item_id, order_id, product_id, name, quantity, price, created_at, updated_at, deleted_at
+  RETURNING order_item_id, order_id, product_id, quantity, price, created_at, updated_at, deleted_at
 `
 
 type UpdateOrderItemParams struct {
@@ -550,7 +540,6 @@ func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams
 		&i.OrderItemID,
 		&i.OrderID,
 		&i.ProductID,
-		&i.Name,
 		&i.Quantity,
 		&i.Price,
 		&i.CreatedAt,

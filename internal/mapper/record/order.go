@@ -172,7 +172,6 @@ func (s *orderRecordMapper) ToOrderYearlyPrice(order *db.GetYearlyOrderRow) *rec
 		OrderCount:         int(order.OrderCount),
 		TotalRevenue:       int(order.TotalRevenue),
 		TotalItemsSold:     int(order.TotalItemsSold),
-		ActiveCashiers:     int(order.ActiveCashiers),
 		UniqueProductsSold: int(order.UniqueProductsSold),
 	}
 }
@@ -213,7 +212,6 @@ func (s *orderRecordMapper) ToOrderYearlyPriceByMerchant(order *db.GetYearlyOrde
 		OrderCount:         int(order.OrderCount),
 		TotalRevenue:       int(order.TotalRevenue),
 		TotalItemsSold:     int(order.TotalItemsSold),
-		ActiveCashiers:     int(order.ActiveCashiers),
 		UniqueProductsSold: int(order.UniqueProductsSold),
 	}
 }

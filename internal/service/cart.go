@@ -5,8 +5,10 @@ import (
 	"ecommerce/internal/domain/response"
 	response_service "ecommerce/internal/mapper/response/services"
 	"ecommerce/internal/repository"
+	"ecommerce/pkg/errors/cart_errors"
+	"ecommerce/pkg/errors/product_errors"
+	"ecommerce/pkg/errors/user_errors"
 	"ecommerce/pkg/logger"
-	"net/http"
 
 	"go.uber.org/zap"
 )
@@ -62,11 +64,7 @@ func (s *cartService) FindAll(req *requests.FindAllCarts) ([]*response.CartRespo
 			zap.Int("pageSize", pageSize),
 			zap.String("search", search))
 
-		return nil, nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to fetch cart",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, nil, cart_errors.ErrFailedFindAllCarts
 	}
 
 	cartRes := s.mapping.ToCartsResponse(cart)
@@ -87,11 +85,7 @@ func (s *cartService) CreateCart(req *requests.CreateCartRequest) (*response.Car
 			zap.Error(err),
 			zap.Int("product_id", req.UserID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve product details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, product_errors.ErrFailedFindProductById
 	}
 
 	_, err = s.userRepository.FindById(req.UserID)
@@ -101,11 +95,7 @@ func (s *cartService) CreateCart(req *requests.CreateCartRequest) (*response.Car
 			zap.Error(err),
 			zap.Int("user_id", req.UserID))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to retrieve user details",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, user_errors.ErrUserNotFoundRes
 	}
 
 	cartRecord := &requests.CartCreateRecord{
@@ -125,11 +115,7 @@ func (s *cartService) CreateCart(req *requests.CreateCartRequest) (*response.Car
 			zap.Error(err),
 			zap.Any("request", req))
 
-		return nil, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to create new cart record",
-			Code:    http.StatusInternalServerError,
-		}
+		return nil, cart_errors.ErrFailedCreateCart
 	}
 
 	so := s.mapping.ToCartResponse(res)
@@ -147,11 +133,7 @@ func (s *cartService) DeletePermanent(cart_id int) (bool, *response.ErrorRespons
 			zap.Error(err),
 			zap.Int("cart_id", cart_id))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete cart",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, cart_errors.ErrFailedDeleteCart
 	}
 
 	return success, nil
@@ -166,11 +148,7 @@ func (s *cartService) DeleteAllPermanently(req *requests.DeleteCartRequest) (boo
 		s.logger.Error("Failed to permanently delete all trashed cart",
 			zap.Error(err))
 
-		return false, &response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to permanently delete all trashed cart",
-			Code:    http.StatusInternalServerError,
-		}
+		return false, cart_errors.ErrFailedDeleteAllCarts
 	}
 
 	return success, nil

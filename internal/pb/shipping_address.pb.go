@@ -197,7 +197,6 @@ func (x *FindAllShippingOrderRequest) GetSearch() string {
 
 type CreateShippingAddressRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrderId        int32                  `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	Alamat         string                 `protobuf:"bytes,2,opt,name=alamat,proto3" json:"alamat,omitempty"`
 	Provinsi       string                 `protobuf:"bytes,3,opt,name=provinsi,proto3" json:"provinsi,omitempty"`
 	Kota           string                 `protobuf:"bytes,4,opt,name=kota,proto3" json:"kota,omitempty"`
@@ -237,13 +236,6 @@ func (x *CreateShippingAddressRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateShippingAddressRequest.ProtoReflect.Descriptor instead.
 func (*CreateShippingAddressRequest) Descriptor() ([]byte, []int) {
 	return file_shipping_address_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *CreateShippingAddressRequest) GetOrderId() int32 {
-	if x != nil {
-		return x.OrderId
-	}
-	return 0
 }
 
 func (x *CreateShippingAddressRequest) GetAlamat() string {
@@ -298,7 +290,6 @@ func (x *CreateShippingAddressRequest) GetNegara() string {
 type UpdateShippingAddressRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	ShippingId     int32                  `protobuf:"varint,1,opt,name=shipping_id,json=shippingId,proto3" json:"shipping_id,omitempty"`
-	OrderId        int32                  `protobuf:"varint,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	Alamat         string                 `protobuf:"bytes,3,opt,name=alamat,proto3" json:"alamat,omitempty"`
 	Provinsi       string                 `protobuf:"bytes,4,opt,name=provinsi,proto3" json:"provinsi,omitempty"`
 	Kota           string                 `protobuf:"bytes,5,opt,name=kota,proto3" json:"kota,omitempty"`
@@ -343,13 +334,6 @@ func (*UpdateShippingAddressRequest) Descriptor() ([]byte, []int) {
 func (x *UpdateShippingAddressRequest) GetShippingId() int32 {
 	if x != nil {
 		return x.ShippingId
-	}
-	return 0
-}
-
-func (x *UpdateShippingAddressRequest) GetOrderId() int32 {
-	if x != nil {
-		return x.OrderId
 	}
 	return 0
 }
@@ -404,17 +388,19 @@ func (x *UpdateShippingAddressRequest) GetNegara() string {
 }
 
 type ShippingResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	OrderId       int32                  `protobuf:"varint,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	Alamat        string                 `protobuf:"bytes,3,opt,name=alamat,proto3" json:"alamat,omitempty"`
-	Provinsi      string                 `protobuf:"bytes,4,opt,name=provinsi,proto3" json:"provinsi,omitempty"`
-	Negara        string                 `protobuf:"bytes,5,opt,name=negara,proto3" json:"negara,omitempty"`
-	Kota          string                 `protobuf:"bytes,6,opt,name=kota,proto3" json:"kota,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrderId        int32                  `protobuf:"varint,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	Alamat         string                 `protobuf:"bytes,3,opt,name=alamat,proto3" json:"alamat,omitempty"`
+	Provinsi       string                 `protobuf:"bytes,4,opt,name=provinsi,proto3" json:"provinsi,omitempty"`
+	Negara         string                 `protobuf:"bytes,5,opt,name=negara,proto3" json:"negara,omitempty"`
+	Kota           string                 `protobuf:"bytes,6,opt,name=kota,proto3" json:"kota,omitempty"`
+	ShippingMethod string                 `protobuf:"bytes,7,opt,name=shippingMethod,proto3" json:"shippingMethod,omitempty"`
+	ShippingCost   int32                  `protobuf:"varint,8,opt,name=shippingCost,proto3" json:"shippingCost,omitempty"`
+	CreatedAt      string                 `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      string                 `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ShippingResponse) Reset() {
@@ -489,6 +475,20 @@ func (x *ShippingResponse) GetKota() string {
 	return ""
 }
 
+func (x *ShippingResponse) GetShippingMethod() string {
+	if x != nil {
+		return x.ShippingMethod
+	}
+	return ""
+}
+
+func (x *ShippingResponse) GetShippingCost() int32 {
+	if x != nil {
+		return x.ShippingCost
+	}
+	return 0
+}
+
 func (x *ShippingResponse) GetCreatedAt() string {
 	if x != nil {
 		return x.CreatedAt
@@ -504,18 +504,20 @@ func (x *ShippingResponse) GetUpdatedAt() string {
 }
 
 type ShippingResponseDeleteAt struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Id            int32                   `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	OrderId       int32                   `protobuf:"varint,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	Alamat        string                  `protobuf:"bytes,3,opt,name=alamat,proto3" json:"alamat,omitempty"`
-	Provinsi      string                  `protobuf:"bytes,4,opt,name=provinsi,proto3" json:"provinsi,omitempty"`
-	Negara        string                  `protobuf:"bytes,5,opt,name=negara,proto3" json:"negara,omitempty"`
-	Kota          string                  `protobuf:"bytes,6,opt,name=kota,proto3" json:"kota,omitempty"`
-	CreatedAt     string                  `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                  `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	DeletedAt     *wrapperspb.StringValue `protobuf:"bytes,9,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState  `protogen:"open.v1"`
+	Id             int32                   `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrderId        int32                   `protobuf:"varint,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	Alamat         string                  `protobuf:"bytes,3,opt,name=alamat,proto3" json:"alamat,omitempty"`
+	Provinsi       string                  `protobuf:"bytes,4,opt,name=provinsi,proto3" json:"provinsi,omitempty"`
+	Negara         string                  `protobuf:"bytes,5,opt,name=negara,proto3" json:"negara,omitempty"`
+	Kota           string                  `protobuf:"bytes,6,opt,name=kota,proto3" json:"kota,omitempty"`
+	ShippingMethod string                  `protobuf:"bytes,7,opt,name=shippingMethod,proto3" json:"shippingMethod,omitempty"`
+	ShippingCost   int32                   `protobuf:"varint,8,opt,name=shippingCost,proto3" json:"shippingCost,omitempty"`
+	CreatedAt      string                  `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      string                  `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DeletedAt      *wrapperspb.StringValue `protobuf:"bytes,11,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ShippingResponseDeleteAt) Reset() {
@@ -588,6 +590,20 @@ func (x *ShippingResponseDeleteAt) GetKota() string {
 		return x.Kota
 	}
 	return ""
+}
+
+func (x *ShippingResponseDeleteAt) GetShippingMethod() string {
+	if x != nil {
+		return x.ShippingMethod
+	}
+	return ""
+}
+
+func (x *ShippingResponseDeleteAt) GetShippingCost() int32 {
+	if x != nil {
+		return x.ShippingCost
+	}
+	return 0
 }
 
 func (x *ShippingResponseDeleteAt) GetCreatedAt() string {
@@ -1046,51 +1062,55 @@ const file_shipping_address_proto_rawDesc = "" +
 	"\border_id\x18\x01 \x01(\x05R\aorderId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x16\n" +
-	"\x06search\x18\x04 \x01(\tR\x06search\"\x81\x02\n" +
-	"\x1cCreateShippingAddressRequest\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\x05R\aorderId\x12\x16\n" +
+	"\x06search\x18\x04 \x01(\tR\x06search\"\xe6\x01\n" +
+	"\x1cCreateShippingAddressRequest\x12\x16\n" +
 	"\x06alamat\x18\x02 \x01(\tR\x06alamat\x12\x1a\n" +
 	"\bprovinsi\x18\x03 \x01(\tR\bprovinsi\x12\x12\n" +
 	"\x04kota\x18\x04 \x01(\tR\x04kota\x12\x18\n" +
 	"\acourier\x18\x05 \x01(\tR\acourier\x12'\n" +
 	"\x0fshipping_method\x18\x06 \x01(\tR\x0eshippingMethod\x12#\n" +
 	"\rshipping_cost\x18\a \x01(\x05R\fshippingCost\x12\x16\n" +
-	"\x06negara\x18\b \x01(\tR\x06negara\"\xa2\x02\n" +
+	"\x06negara\x18\b \x01(\tR\x06negara\"\x87\x02\n" +
 	"\x1cUpdateShippingAddressRequest\x12\x1f\n" +
 	"\vshipping_id\x18\x01 \x01(\x05R\n" +
-	"shippingId\x12\x19\n" +
-	"\border_id\x18\x02 \x01(\x05R\aorderId\x12\x16\n" +
+	"shippingId\x12\x16\n" +
 	"\x06alamat\x18\x03 \x01(\tR\x06alamat\x12\x1a\n" +
 	"\bprovinsi\x18\x04 \x01(\tR\bprovinsi\x12\x12\n" +
 	"\x04kota\x18\x05 \x01(\tR\x04kota\x12\x18\n" +
 	"\acourier\x18\x06 \x01(\tR\acourier\x12'\n" +
 	"\x0fshipping_method\x18\a \x01(\tR\x0eshippingMethod\x12#\n" +
 	"\rshipping_cost\x18\b \x01(\x05R\fshippingCost\x12\x16\n" +
-	"\x06negara\x18\t \x01(\tR\x06negara\"\xdb\x01\n" +
+	"\x06negara\x18\t \x01(\tR\x06negara\"\xa7\x02\n" +
 	"\x10ShippingResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x19\n" +
 	"\border_id\x18\x02 \x01(\x05R\aorderId\x12\x16\n" +
 	"\x06alamat\x18\x03 \x01(\tR\x06alamat\x12\x1a\n" +
 	"\bprovinsi\x18\x04 \x01(\tR\bprovinsi\x12\x16\n" +
 	"\x06negara\x18\x05 \x01(\tR\x06negara\x12\x12\n" +
-	"\x04kota\x18\x06 \x01(\tR\x04kota\x12\x1d\n" +
+	"\x04kota\x18\x06 \x01(\tR\x04kota\x12&\n" +
+	"\x0eshippingMethod\x18\a \x01(\tR\x0eshippingMethod\x12\"\n" +
+	"\fshippingCost\x18\b \x01(\x05R\fshippingCost\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\a \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\tR\tupdatedAt\"\xa0\x02\n" +
+	"updated_at\x18\n" +
+	" \x01(\tR\tupdatedAt\"\xec\x02\n" +
 	"\x18ShippingResponseDeleteAt\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x19\n" +
 	"\border_id\x18\x02 \x01(\x05R\aorderId\x12\x16\n" +
 	"\x06alamat\x18\x03 \x01(\tR\x06alamat\x12\x1a\n" +
 	"\bprovinsi\x18\x04 \x01(\tR\bprovinsi\x12\x16\n" +
 	"\x06negara\x18\x05 \x01(\tR\x06negara\x12\x12\n" +
-	"\x04kota\x18\x06 \x01(\tR\x04kota\x12\x1d\n" +
+	"\x04kota\x18\x06 \x01(\tR\x04kota\x12&\n" +
+	"\x0eshippingMethod\x18\a \x01(\tR\x0eshippingMethod\x12\"\n" +
+	"\fshippingCost\x18\b \x01(\x05R\fshippingCost\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\a \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\tR\tupdatedAt\x12;\n" +
+	"updated_at\x18\n" +
+	" \x01(\tR\tupdatedAt\x12;\n" +
 	"\n" +
-	"deleted_at\x18\t \x01(\v2\x1c.google.protobuf.StringValueR\tdeletedAt\"q\n" +
+	"deleted_at\x18\v \x01(\v2\x1c.google.protobuf.StringValueR\tdeletedAt\"q\n" +
 	"\x13ApiResponseShipping\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12(\n" +

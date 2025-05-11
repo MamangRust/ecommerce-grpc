@@ -6,7 +6,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
-	"fmt"
+	review_errors "ecommerce/pkg/errors/review"
 )
 
 type reviewRepository struct {
@@ -39,7 +39,7 @@ func (r *reviewRepository) FindAllReview(req *requests.FindAllReview) ([]*record
 	res, err := r.db.GetReviews(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find all review: %w", err)
+		return nil, nil, review_errors.ErrFindAllReviews
 	}
 
 	var totalCount int
@@ -66,7 +66,7 @@ func (r *reviewRepository) FindByProduct(req *requests.FindAllReviewByProduct) (
 	res, err := r.db.GetReviewByProductId(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find product review: %w", err)
+		return nil, nil, review_errors.ErrFindReviewsByProduct
 	}
 
 	var totalCount int
@@ -93,7 +93,7 @@ func (r *reviewRepository) FindByMerchant(req *requests.FindAllReviewByMerchant)
 	res, err := r.db.GetReviewByMerchantId(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find product review: %w", err)
+		return nil, nil, review_errors.ErrFindReviewsByMerchant
 	}
 
 	var totalCount int
@@ -119,7 +119,7 @@ func (r *reviewRepository) FindByActive(req *requests.FindAllReview) ([]*record.
 	res, err := r.db.GetReviewsActive(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find active review: %w", err)
+		return nil, nil, review_errors.ErrFindActiveReviews
 	}
 
 	var totalCount int
@@ -145,7 +145,7 @@ func (r *reviewRepository) FindByTrashed(req *requests.FindAllReview) ([]*record
 	res, err := r.db.GetReviewsTrashed(r.ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find review: %w", err)
+		return nil, nil, review_errors.ErrFindTrashedReviews
 	}
 
 	var totalCount int
@@ -163,7 +163,7 @@ func (r *reviewRepository) FindById(id int) (*record.ReviewRecord, error) {
 	res, err := r.db.GetReviewByID(r.ctx, int32(id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to find id review: %w", err)
+		return nil, review_errors.ErrFindReviewByID
 	}
 
 	return r.mapping.ToReviewRecord(res), nil
@@ -180,7 +180,7 @@ func (r *reviewRepository) CreateReview(request *requests.CreateReviewRequest) (
 	review, err := r.db.CreateReview(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create review: %w", err)
+		return nil, review_errors.ErrCreateReview
 	}
 
 	return r.mapping.ToReviewRecord(review), nil
@@ -197,7 +197,7 @@ func (r *reviewRepository) UpdateReview(request *requests.UpdateReviewRequest) (
 	res, err := r.db.UpdateReview(r.ctx, req)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to update review: %w", err)
+		return nil, review_errors.ErrUpdateReview
 	}
 
 	return r.mapping.ToReviewRecord(res), nil
@@ -207,7 +207,7 @@ func (r *reviewRepository) TrashReview(shipping_id int) (*record.ReviewRecord, e
 	res, err := r.db.TrashReview(r.ctx, int32(shipping_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to trash review: %w", err)
+		return nil, review_errors.ErrTrashReview
 	}
 
 	return r.mapping.ToReviewRecord(res), nil
@@ -217,7 +217,7 @@ func (r *reviewRepository) RestoreReview(category_id int) (*record.ReviewRecord,
 	res, err := r.db.RestoreReview(r.ctx, int32(category_id))
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to restore review: %w", err)
+		return nil, review_errors.ErrRestoreReview
 	}
 
 	return r.mapping.ToReviewRecord(res), nil
@@ -227,7 +227,7 @@ func (r *reviewRepository) DeleteReviewPermanently(category_id int) (bool, error
 	err := r.db.DeleteReviewPermanently(r.ctx, int32(category_id))
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete review: %w", err)
+		return false, review_errors.ErrDeleteReviewPermanent
 	}
 
 	return true, nil
@@ -237,7 +237,7 @@ func (r *reviewRepository) RestoreAllReview() (bool, error) {
 	err := r.db.RestoreAllReviews(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to restore all review: %w", err)
+		return false, review_errors.ErrRestoreAllReviews
 	}
 	return true, nil
 }
@@ -246,7 +246,7 @@ func (r *reviewRepository) DeleteAllPermanentReview() (bool, error) {
 	err := r.db.DeleteAllPermanentReviews(r.ctx)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to delete all review permanently: %w", err)
+		return false, review_errors.ErrDeleteAllPermanentReview
 	}
 	return true, nil
 }
