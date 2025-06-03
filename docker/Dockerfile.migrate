@@ -1,0 +1,46 @@
+# Build stage
+FROM golang:1.23-alpine AS builder
+
+# Set the working directory
+WORKDIR /app
+
+# Install dependencies
+RUN apk add --no-cache git
+
+# Copy environment files (if available)
+COPY .env* ./
+
+# Copy go.mod and go.sum
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod tidy
+
+# Copy the entire source code
+COPY . .
+
+# Create migrations directory (if not exists)
+RUN mkdir -p ./pkg/database/migrations
+
+# Debugging: Show directory structure
+RUN find . -type d && ls -l ./pkg/database/
+
+# Build the migrate binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o migrate ./cmd/migrate
+
+# Final runtime image
+FROM alpine:latest
+
+# Install required libraries
+RUN apk add --no-cache ca-certificates
+
+# Copy the built binary and environment files
+COPY --from=builder /app/migrate /usr/local/bin/migrate
+COPY --from=builder /app/docker.env* /app/
+COPY --from=builder /app/pkg/database/migrations /app/pkg/database/migrations
+
+# Set the working directory
+WORKDIR /app
+
+# Command to run the migration tool
+CMD ["/usr/local/bin/migrate", "up"]

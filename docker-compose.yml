@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: DRAGON
+      POSTGRES_PASSWORD: DRAGON
+      POSTGRES_DB: ECOMMERCE
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U DRAGON -d ECOMMERCE"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.migrate
+    volumes:
+      - ./docker.env:/app/docker.env
+      - ./pkg/database/migrations:/app/pkg/database/migrations
+    container_name: migrate
+    env_file: ./docker.env
+    environment:
+      - DB_URL=postgres://DRAGON:DRAGON@postgres/ECOMMERCE
+      - APP_ENV=docker
+    networks:
+      - app_network
+    depends_on:
+      - postgres
+  server:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.server
+    volumes:
+      - ./docker.env:/app/docker.env
+    container_name: server
+    env_file: ./docker.env
+    ports:
+    - "50051:50051"
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      - APP_ENV=docker
+
+  client:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.client
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./docker.env:/app/docker.env
+    env_file: ./docker.env
+    container_name: client
+    networks:
+      - app_network
+    depends_on:
+      server:
+        condition: service_started
+    environment:
+      - APP_ENV=docker
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge
