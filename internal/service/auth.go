@@ -254,13 +254,6 @@ func (s *authService) GetMe(token string) (*response.UserResponse, *response.Err
 	return so, nil
 }
 
-func maskToken(token string) string {
-	if len(token) < 8 {
-		return "******"
-	}
-	return token[:4] + "****" + token[len(token)-4:]
-}
-
 func (s *authService) createAccessToken(id int) (string, error) {
 	s.logger.Debug("Creating access token",
 		zap.Int("userID", id),
