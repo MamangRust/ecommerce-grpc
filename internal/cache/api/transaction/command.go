@@ -1,0 +1,20 @@
+package transaction_cache
+
+import (
+	"context"
+	"ecommerce/internal/cache"
+	"fmt"
+)
+
+type transactionCommandCache struct {
+	store *cache.CacheStore
+}
+
+func NewTransactionCommandCache(store *cache.CacheStore) *transactionCommandCache {
+	return &transactionCommandCache{store: store}
+}
+
+func (t *transactionCommandCache) DeleteTransactionCache(ctx context.Context, transactionID int) {
+	key := fmt.Sprintf(transactionByIdCacheKey, transactionID)
+	cache.DeleteFromCache(ctx, t.store, key)
+}

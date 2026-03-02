@@ -3,29 +3,26 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/errors/slider_errors"
 	"math"
 
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type sliderHandleGrpc struct {
 	pb.UnimplementedSliderServiceServer
 	sliderService service.SliderService
-	mapping       protomapper.SliderProtoMapper
 }
 
 func NewSliderHandleGrpc(
 	sliderService service.SliderService,
-	mapping protomapper.SliderProtoMapper,
 ) *sliderHandleGrpc {
 	return &sliderHandleGrpc{
 		sliderService: sliderService,
-		mapping:       mapping,
 	}
 }
 
@@ -47,10 +44,20 @@ func (s *sliderHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllSlide
 		Search:   search,
 	}
 
-	category, totalRecords, err := s.sliderService.FindAll(&reqService)
-
+	sliders, totalRecords, err := s.sliderService.FindAllSlider(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoSliders := make([]*pb.SliderResponse, len(sliders))
+	for i, slider := range sliders {
+		protoSliders[i] = &pb.SliderResponse{
+			Id:        int32(slider.SliderID),
+			Name:      slider.Name,
+			Image:     slider.Image,
+			CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -62,8 +69,12 @@ func (s *sliderHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllSlide
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationSlider(paginationMeta, "success", "Successfully fetched slider", category)
-	return so, nil
+	return &pb.ApiResponsePaginationSlider{
+		Status:     "success",
+		Message:    "Successfully fetched slider records",
+		Data:       protoSliders,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *sliderHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAllSliderRequest) (*pb.ApiResponsePaginationSliderDeleteAt, error) {
@@ -84,10 +95,26 @@ func (s *sliderHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAll
 		Search:   search,
 	}
 
-	users, totalRecords, err := s.sliderService.FindByActive(&reqService)
-
+	sliders, totalRecords, err := s.sliderService.FindByActive(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoSliders := make([]*pb.SliderResponseDeleteAt, len(sliders))
+	for i, slider := range sliders {
+		var deletedAt string
+		if slider.DeletedAt.Valid {
+			deletedAt = slider.DeletedAt.Time.Format("2006-01-02")
+		}
+
+		protoSliders[i] = &pb.SliderResponseDeleteAt{
+			Id:        int32(slider.SliderID),
+			Name:      slider.Name,
+			Image:     slider.Image,
+			CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
+			DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -98,9 +125,13 @@ func (s *sliderHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAll
 		TotalPages:   int32(totalPages),
 		TotalRecords: int32(*totalRecords),
 	}
-	so := s.mapping.ToProtoResponsePaginationSliderDeleteAt(paginationMeta, "success", "Successfully fetched active slider", users)
 
-	return so, nil
+	return &pb.ApiResponsePaginationSliderDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched active slider records",
+		Data:       protoSliders,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *sliderHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAllSliderRequest) (*pb.ApiResponsePaginationSliderDeleteAt, error) {
@@ -121,10 +152,26 @@ func (s *sliderHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAl
 		Search:   search,
 	}
 
-	users, totalRecords, err := s.sliderService.FindByTrashed(&reqService)
-
+	sliders, totalRecords, err := s.sliderService.FindByTrashed(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoSliders := make([]*pb.SliderResponseDeleteAt, len(sliders))
+	for i, slider := range sliders {
+		var deletedAt string
+		if slider.DeletedAt.Valid {
+			deletedAt = slider.DeletedAt.Time.Format("2006-01-02")
+		}
+
+		protoSliders[i] = &pb.SliderResponseDeleteAt{
+			Id:        int32(slider.SliderID),
+			Name:      slider.Name,
+			Image:     slider.Image,
+			CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
+			DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -136,9 +183,12 @@ func (s *sliderHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAl
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationSliderDeleteAt(paginationMeta, "success", "Successfully fetched trashed slider", users)
-
-	return so, nil
+	return &pb.ApiResponsePaginationSliderDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched trashed slider records",
+		Data:       protoSliders,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *sliderHandleGrpc) Create(ctx context.Context, request *pb.CreateSliderRequest) (*pb.ApiResponseSlider, error) {
@@ -151,13 +201,24 @@ func (s *sliderHandleGrpc) Create(ctx context.Context, request *pb.CreateSliderR
 		return nil, slider_errors.ErrGrpcValidateCreateSlider
 	}
 
-	slider, err := s.sliderService.CreateSlider(req)
-
+	slider, err := s.sliderService.CreateSlider(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseSlider("success", "Successfully created slider", slider), nil
+	protoSlider := &pb.SliderResponse{
+		Id:        int32(slider.SliderID),
+		Name:      slider.Name,
+		Image:     slider.Image,
+		CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
+	}
+
+	return &pb.ApiResponseSlider{
+		Status:  "success",
+		Message: "Successfully created slider",
+		Data:    protoSlider,
+	}, nil
 }
 
 func (s *sliderHandleGrpc) Update(ctx context.Context, request *pb.UpdateSliderRequest) (*pb.ApiResponseSlider, error) {
@@ -177,13 +238,24 @@ func (s *sliderHandleGrpc) Update(ctx context.Context, request *pb.UpdateSliderR
 		return nil, slider_errors.ErrGrpcValidateUpdateSlider
 	}
 
-	slider, err := s.sliderService.UpdateSlider(req)
-
+	slider, err := s.sliderService.UpdateSlider(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseSlider("success", "Successfully updated slider", slider), nil
+	protoSlider := &pb.SliderResponse{
+		Id:        int32(slider.SliderID),
+		Name:      slider.Name,
+		Image:     slider.Image,
+		CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
+	}
+
+	return &pb.ApiResponseSlider{
+		Status:  "success",
+		Message: "Successfully updated slider",
+		Data:    protoSlider,
+	}, nil
 }
 
 func (s *sliderHandleGrpc) TrashedSlider(ctx context.Context, request *pb.FindByIdSliderRequest) (*pb.ApiResponseSliderDeleteAt, error) {
@@ -193,15 +265,30 @@ func (s *sliderHandleGrpc) TrashedSlider(ctx context.Context, request *pb.FindBy
 		return nil, slider_errors.ErrGrpcInvalidID
 	}
 
-	slider, err := s.sliderService.TrashedSlider(id)
-
+	slider, err := s.sliderService.TrashSlider(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseSliderDeleteAt("success", "Successfully trashed slider", slider)
+	var deletedAt string
+	if slider.DeletedAt.Valid {
+		deletedAt = slider.DeletedAt.Time.Format("2006-01-02")
+	}
 
-	return so, nil
+	protoSlider := &pb.SliderResponseDeleteAt{
+		Id:        int32(slider.SliderID),
+		Name:      slider.Name,
+		Image:     slider.Image,
+		CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
+		DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+	}
+
+	return &pb.ApiResponseSliderDeleteAt{
+		Status:  "success",
+		Message: "Successfully trashed slider",
+		Data:    protoSlider,
+	}, nil
 }
 
 func (s *sliderHandleGrpc) RestoreSlider(ctx context.Context, request *pb.FindByIdSliderRequest) (*pb.ApiResponseSliderDeleteAt, error) {
@@ -211,15 +298,30 @@ func (s *sliderHandleGrpc) RestoreSlider(ctx context.Context, request *pb.FindBy
 		return nil, slider_errors.ErrGrpcInvalidID
 	}
 
-	slider, err := s.sliderService.RestoreSlider(id)
-
+	slider, err := s.sliderService.RestoreSlider(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseSliderDeleteAt("success", "Successfully restored slider", slider)
+	var deletedAt string
+	if slider.DeletedAt.Valid {
+		deletedAt = slider.DeletedAt.Time.Format("2006-01-02")
+	}
 
-	return so, nil
+	protoSlider := &pb.SliderResponseDeleteAt{
+		Id:        int32(slider.SliderID),
+		Name:      slider.Name,
+		Image:     slider.Image,
+		CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
+		DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+	}
+
+	return &pb.ApiResponseSliderDeleteAt{
+		Status:  "success",
+		Message: "Successfully restored slider",
+		Data:    protoSlider,
+	}, nil
 }
 
 func (s *sliderHandleGrpc) DeleteSliderPermanent(ctx context.Context, request *pb.FindByIdSliderRequest) (*pb.ApiResponseSliderDelete, error) {
@@ -229,37 +331,37 @@ func (s *sliderHandleGrpc) DeleteSliderPermanent(ctx context.Context, request *p
 		return nil, slider_errors.ErrGrpcInvalidID
 	}
 
-	_, err := s.sliderService.DeleteSliderPermanent(id)
-
+	_, err := s.sliderService.DeleteSliderPermanently(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseSliderDelete("success", "Successfully deleted slider permanently")
-
-	return so, nil
+	return &pb.ApiResponseSliderDelete{
+		Status:  "success",
+		Message: "Successfully deleted slider permanently",
+	}, nil
 }
 
 func (s *sliderHandleGrpc) RestoreAllSlider(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseSliderAll, error) {
-	_, err := s.sliderService.RestoreAllSliders()
-
+	_, err := s.sliderService.RestoreAllSliders(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseSliderAll("success", "Successfully restored all sliders")
-
-	return so, nil
+	return &pb.ApiResponseSliderAll{
+		Status:  "success",
+		Message: "Successfully restored all sliders",
+	}, nil
 }
 
 func (s *sliderHandleGrpc) DeleteAllSliderPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseSliderAll, error) {
-	_, err := s.sliderService.DeleteAllSlidersPermanent()
-
+	_, err := s.sliderService.DeleteAllPermanentSlider(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseSliderAll("success", "Successfully deleted all sliders permanently")
-
-	return so, nil
+	return &pb.ApiResponseSliderAll{
+		Status:  "success",
+		Message: "Successfully deleted all sliders permanently",
+	}, nil
 }

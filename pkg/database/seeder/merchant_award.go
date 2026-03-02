@@ -2,11 +2,11 @@ package seeder
 
 import (
 	"context"
-	"database/sql"
 	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/logger"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
@@ -29,74 +29,74 @@ func (r *merchantAwardSeeder) Seed() error {
 		{
 			MerchantID:     1,
 			Title:          "ISO 9001 Certified",
-			Description:    sql.NullString{String: "Manajemen mutu bersertifikat", Valid: true},
-			IssuedBy:       sql.NullString{String: "ISO Organization", Valid: true},
-			IssueDate:      sql.NullTime{Time: time.Date(2020, time.January, 15, 0, 0, 0, 0, time.UTC), Valid: true},
-			ExpiryDate:     sql.NullTime{Time: time.Date(2025, time.January, 15, 0, 0, 0, 0, time.UTC), Valid: true},
-			CertificateUrl: sql.NullString{String: "https://example.com/iso9001-cert.pdf", Valid: true},
+			Description:    strPtr("Manajemen mutu bersertifikat"),
+			IssuedBy:       strPtr("ISO Organization"),
+			IssueDate:      mustDate(2020, time.January, 15),
+			ExpiryDate:     mustDate(2025, time.January, 15),
+			CertificateUrl: strPtr("https://example.com/iso9001-cert.pdf"),
 		},
 		{
 			MerchantID:     2,
 			Title:          "Top UMKM 2023",
-			Description:    sql.NullString{String: "Penghargaan untuk UMKM terbaik tahun 2023", Valid: true},
-			IssuedBy:       sql.NullString{String: "Kementerian Koperasi", Valid: true},
-			IssueDate:      sql.NullTime{Time: time.Date(2023, time.July, 1, 0, 0, 0, 0, time.UTC), Valid: true},
-			ExpiryDate:     sql.NullTime{Valid: false},
-			CertificateUrl: sql.NullString{String: "https://example.com/umkm-award-2023.pdf", Valid: true},
+			Description:    strPtr("Penghargaan untuk UMKM terbaik tahun 2023"),
+			IssuedBy:       strPtr("Kementerian Koperasi"),
+			IssueDate:      mustDate(2023, time.July, 1),
+			ExpiryDate:     nullDate(),
+			CertificateUrl: strPtr("https://example.com/umkm-award-2023.pdf"),
 		},
 		{
 			MerchantID:     3,
 			Title:          "Halal Certified",
-			Description:    sql.NullString{String: "Sertifikasi halal dari MUI", Valid: true},
-			IssuedBy:       sql.NullString{String: "Majelis Ulama Indonesia", Valid: true},
-			IssueDate:      sql.NullTime{Time: time.Date(2021, time.March, 12, 0, 0, 0, 0, time.UTC), Valid: true},
-			ExpiryDate:     sql.NullTime{Time: time.Date(2024, time.March, 12, 0, 0, 0, 0, time.UTC), Valid: true},
-			CertificateUrl: sql.NullString{String: "https://example.com/halal-cert.pdf", Valid: true},
+			Description:    strPtr("Sertifikasi halal dari MUI"),
+			IssuedBy:       strPtr("Majelis Ulama Indonesia"),
+			IssueDate:      mustDate(2021, time.March, 12),
+			ExpiryDate:     mustDate(2024, time.March, 12),
+			CertificateUrl: strPtr("https://example.com/halal-cert.pdf"),
 		},
 		{
 			MerchantID:     4,
 			Title:          "Best Food Product 2022",
-			Description:    sql.NullString{String: "Penghargaan untuk produk makanan terbaik tahun 2022", Valid: true},
-			IssuedBy:       sql.NullString{String: "Asosiasi Kuliner Indonesia", Valid: true},
-			IssueDate:      sql.NullTime{Time: time.Date(2022, time.November, 5, 0, 0, 0, 0, time.UTC), Valid: true},
-			ExpiryDate:     sql.NullTime{Valid: false},
-			CertificateUrl: sql.NullString{String: "https://example.com/best-food-2022.pdf", Valid: true},
+			Description:    strPtr("Penghargaan untuk produk makanan terbaik tahun 2022"),
+			IssuedBy:       strPtr("Asosiasi Kuliner Indonesia"),
+			IssueDate:      mustDate(2022, time.November, 5),
+			ExpiryDate:     nullDate(),
+			CertificateUrl: strPtr("https://example.com/best-food-2022.pdf"),
 		},
 		{
 			MerchantID:     5,
 			Title:          "Eco-Friendly Business",
-			Description:    sql.NullString{String: "Sertifikasi bisnis ramah lingkungan", Valid: true},
-			IssuedBy:       sql.NullString{String: "Green Business Council", Valid: true},
-			IssueDate:      sql.NullTime{Time: time.Date(2023, time.April, 22, 0, 0, 0, 0, time.UTC), Valid: true},
-			ExpiryDate:     sql.NullTime{Time: time.Date(2026, time.April, 22, 0, 0, 0, 0, time.UTC), Valid: true},
-			CertificateUrl: sql.NullString{String: "https://example.com/eco-friendly-cert.pdf", Valid: true},
+			Description:    strPtr("Sertifikasi bisnis ramah lingkungan"),
+			IssuedBy:       strPtr("Green Business Council"),
+			IssueDate:      mustDate(2023, time.April, 22),
+			ExpiryDate:     mustDate(2026, time.April, 22),
+			CertificateUrl: strPtr("https://example.com/eco-friendly-cert.pdf"),
 		},
 		{
 			MerchantID:     6,
 			Title:          "Top Seller 2023",
-			Description:    sql.NullString{String: "Penjual terbaik platform e-commerce tahun 2023", Valid: true},
-			IssuedBy:       sql.NullString{String: "Tokopedia", Valid: true},
-			IssueDate:      sql.NullTime{Time: time.Date(2024, time.January, 10, 0, 0, 0, 0, time.UTC), Valid: true},
-			ExpiryDate:     sql.NullTime{Valid: false},
-			CertificateUrl: sql.NullString{String: "https://example.com/top-seller-2023.pdf", Valid: true},
+			Description:    strPtr("Penjual terbaik platform e-commerce tahun 2023"),
+			IssuedBy:       strPtr("Tokopedia"),
+			IssueDate:      mustDate(2024, time.January, 10),
+			ExpiryDate:     nullDate(),
+			CertificateUrl: strPtr("https://example.com/top-seller-2023.pdf"),
 		},
 		{
 			MerchantID:     7,
 			Title:          "BPOM Certified",
-			Description:    sql.NullString{String: "Sertifikasi produk dari Badan Pengawas Obat dan Makanan", Valid: true},
-			IssuedBy:       sql.NullString{String: "Badan POM RI", Valid: true},
-			IssueDate:      sql.NullTime{Time: time.Date(2022, time.August, 3, 0, 0, 0, 0, time.UTC), Valid: true},
-			ExpiryDate:     sql.NullTime{Time: time.Date(2025, time.August, 3, 0, 0, 0, 0, time.UTC), Valid: true},
-			CertificateUrl: sql.NullString{String: "https://example.com/bpom-cert.pdf", Valid: true},
+			Description:    strPtr("Sertifikasi produk dari Badan Pengawas Obat dan Makanan"),
+			IssuedBy:       strPtr("Badan POM RI"),
+			IssueDate:      mustDate(2022, time.August, 3),
+			ExpiryDate:     mustDate(2025, time.August, 3),
+			CertificateUrl: strPtr("https://example.com/bpom-cert.pdf"),
 		},
 		{
 			MerchantID:     8,
 			Title:          "Creativepreneur Award",
-			Description:    sql.NullString{String: "Penghargaan untuk wirausaha kreatif", Valid: true},
-			IssuedBy:       sql.NullString{String: "Kementerian Pariwisata dan Ekonomi Kreatif", Valid: true},
-			IssueDate:      sql.NullTime{Time: time.Date(2023, time.December, 15, 0, 0, 0, 0, time.UTC), Valid: true},
-			ExpiryDate:     sql.NullTime{Valid: false},
-			CertificateUrl: sql.NullString{String: "https://example.com/creativepreneur-award.pdf", Valid: true},
+			Description:    strPtr("Penghargaan untuk wirausaha kreatif"),
+			IssuedBy:       strPtr("Kementerian Pariwisata dan Ekonomi Kreatif"),
+			IssueDate:      mustDate(2023, time.December, 15),
+			ExpiryDate:     nullDate(),
+			CertificateUrl: strPtr("https://example.com/creativepreneur-award.pdf"),
 		},
 	}
 
@@ -108,6 +108,9 @@ func (r *merchantAwardSeeder) Seed() error {
 	}
 
 	r.logger.Info("merchant awards seeded successfully")
-
 	return nil
+}
+
+func nullDate() pgtype.Date {
+	return pgtype.Date{Valid: false}
 }

@@ -1,23 +1,29 @@
 package api
 
 import (
+	review_cache "ecommerce/internal/cache/api/review"
 	"ecommerce/internal/domain/requests"
-	response_api "ecommerce/internal/mapper/response/api"
+	response_api "ecommerce/internal/mapper"
 	"ecommerce/internal/pb"
-	review_errors "ecommerce/pkg/errors/review"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/logger"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type reviewHandleApi struct {
-	client  pb.ReviewServiceClient
-	logger  logger.LoggerInterface
-	mapping response_api.ReviewResponseMapper
+	client     pb.ReviewServiceClient
+	logger     logger.LoggerInterface
+	mapping    response_api.ReviewResponseMapper
+	apiHandler errors.ApiHandler
+	cache      review_cache.ReviewMencache
 }
 
 func NewHandlerReview(
@@ -25,29 +31,66 @@ func NewHandlerReview(
 	client pb.ReviewServiceClient,
 	logger logger.LoggerInterface,
 	mapping response_api.ReviewResponseMapper,
+	apiHandler errors.ApiHandler,
+	cache review_cache.ReviewMencache,
 ) *reviewHandleApi {
 	reviewHandler := &reviewHandleApi{
-		client:  client,
-		logger:  logger,
-		mapping: mapping,
+		client:     client,
+		logger:     logger,
+		mapping:    mapping,
+		apiHandler: apiHandler,
+		cache:      cache,
 	}
 
-	routerreview := router.Group("/api/review")
+	routerReview := router.Group("/api/review")
 
-	routerreview.GET("", reviewHandler.FindAll)
-	routerreview.GET("/product/:id", reviewHandler.FindByProduct)
-	routerreview.GET("/active", reviewHandler.FindByActive)
-	routerreview.GET("/trashed", reviewHandler.FindByTrashed)
+	routerReview.GET(
+		"",
+		apiHandler.Handle("findAll", reviewHandler.FindAll),
+	)
+	routerReview.GET(
+		"/product/:id",
+		apiHandler.Handle("findByProduct", reviewHandler.FindByProduct),
+	)
+	routerReview.GET(
+		"/active",
+		apiHandler.Handle("findByActive", reviewHandler.FindByActive),
+	)
+	routerReview.GET(
+		"/trashed",
+		apiHandler.Handle("findByTrashed", reviewHandler.FindByTrashed),
+	)
 
-	routerreview.POST("/create", reviewHandler.Create)
-	routerreview.POST("/update/:id", reviewHandler.Update)
+	routerReview.POST(
+		"/create",
+		apiHandler.Handle("create", reviewHandler.Create),
+	)
+	routerReview.POST(
+		"/update/:id",
+		apiHandler.Handle("update", reviewHandler.Update),
+	)
 
-	routerreview.POST("/trashed/:id", reviewHandler.TrashedReview)
-	routerreview.POST("/restore/:id", reviewHandler.RestoreReview)
-	routerreview.DELETE("/permanent/:id", reviewHandler.DeleteReviewPermanent)
+	routerReview.POST(
+		"/trashed/:id",
+		apiHandler.Handle("trashed", reviewHandler.TrashedReview),
+	)
+	routerReview.POST(
+		"/restore/:id",
+		apiHandler.Handle("restore", reviewHandler.RestoreReview),
+	)
+	routerReview.DELETE(
+		"/permanent/:id",
+		apiHandler.Handle("deletePermanent", reviewHandler.DeleteReviewPermanent),
+	)
 
-	routerreview.POST("/restore/all", reviewHandler.RestoreAllReview)
-	routerreview.POST("/permanent/all", reviewHandler.DeleteAllReviewPermanent)
+	routerReview.POST(
+		"/restore/all",
+		apiHandler.Handle("restoreAll", reviewHandler.RestoreAllReview),
+	)
+	routerReview.POST(
+		"/permanent/all",
+		apiHandler.Handle("deleteAllPermanent", reviewHandler.DeleteAllReviewPermanent),
+	)
 
 	return reviewHandler
 }
@@ -88,8 +131,7 @@ func (h *reviewHandleApi) FindAll(c echo.Context) error {
 	res, err := h.client.FindAll(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to fetch reviews", zap.Error(err))
-		return review_errors.ErrApiFailedFindAllReviews(c)
+		return h.handleGrpcError(err, "FindAll")
 	}
 
 	so := h.mapping.ToApiResponsePaginationReview(res)
@@ -114,7 +156,7 @@ func (h *reviewHandleApi) FindAll(c echo.Context) error {
 func (h *reviewHandleApi) FindByProduct(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return review_errors.ErrApiReviewInvalidProductId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	page, _ := strconv.Atoi(c.QueryParam("page"))
@@ -139,8 +181,7 @@ func (h *reviewHandleApi) FindByProduct(c echo.Context) error {
 
 	res, err := h.client.FindByProduct(ctx, req)
 	if err != nil {
-		h.logger.Error("Failed to fetch reviews product", zap.Error(err))
-		return review_errors.ErrApiFailedFindProductReviews(c)
+		return h.handleGrpcError(err, "FindByProduct")
 	}
 
 	so := h.mapping.ToApiResponsePaginationReviewsDetail(res)
@@ -164,7 +205,7 @@ func (h *reviewHandleApi) FindByProduct(c echo.Context) error {
 func (h *reviewHandleApi) FindByMerchant(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return review_errors.ErrApiReviewInvalidMerchantId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	page, _ := strconv.Atoi(c.QueryParam("page"))
@@ -180,21 +221,35 @@ func (h *reviewHandleApi) FindByMerchant(c echo.Context) error {
 	search := c.QueryParam("search")
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllReviewMerchantRequest{
+	cacheReq := &requests.FindAllReviewByMerchant{
+		MerchantID: id,
+		Page:       page,
+		PageSize:   pageSize,
+		Search:     search,
+	}
+
+	cachedData, found := h.cache.GetReviewByMerchantCache(ctx, cacheReq)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllReviewMerchantRequest{
 		MerchantId: int32(id),
 		Page:       int32(page),
 		PageSize:   int32(pageSize),
 		Search:     search,
 	}
 
-	res, err := h.client.FindByMerchant(ctx, req)
+	res, err := h.client.FindByMerchant(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch reviews merchant", zap.Error(err))
-		return review_errors.ErrApiFailedFindMerchantReviews(c)
+		return h.handleGrpcError(err, "FindByMerchant")
 	}
 
-	so := h.mapping.ToApiResponsePaginationReviewsDetail(res)
-	return c.JSON(http.StatusOK, so)
+	apiResponse := h.mapping.ToApiResponsePaginationReviewsDetail(res)
+
+	h.cache.SetReviewByMerchantCache(ctx, cacheReq, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -224,23 +279,33 @@ func (h *reviewHandleApi) FindByActive(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllReviewRequest{
+	req := &requests.FindAllReview{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetReviewActiveCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllReviewRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByActive(ctx, req)
-
+	res, err := h.client.FindByActive(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch review details", zap.Error(err))
-
-		return review_errors.ErrApiFailedFindActiveReviews(c)
+		return h.handleGrpcError(err, "FindByActive")
 	}
 
-	so := h.mapping.ToApiResponsePaginationReviewDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationReviewDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetReviewActiveCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -271,22 +336,33 @@ func (h *reviewHandleApi) FindByTrashed(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllReviewRequest{
+	req := &requests.FindAllReview{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetReviewTrashedCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllReviewRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByTrashed(ctx, req)
-
+	res, err := h.client.FindByTrashed(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch archived reviews", zap.Error(err))
-		return review_errors.ErrApiFailedFindTrashedReviews(c)
+		return h.handleGrpcError(err, "FindByTrashed")
 	}
 
-	so := h.mapping.ToApiResponsePaginationReviewDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationReviewDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetReviewTrashedCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -302,36 +378,30 @@ func (h *reviewHandleApi) FindByTrashed(c echo.Context) error {
 // @Failure 500 {object} response.ErrorResponse "Failed to create review"
 // @Router /api/review/create [post]
 func (h *reviewHandleApi) Create(c echo.Context) error {
-	var req requests.CreateReviewRequest
+	var body requests.CreateReviewRequest
 
-	if err := c.Bind(&req); err != nil {
-		h.logger.Debug("Invalid request format", zap.Error(err))
-		return review_errors.ErrApiBindCreateReview(c)
+	if err := c.Bind(&body); err != nil {
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
 	}
 
-	if err := req.Validate(); err != nil {
-		h.logger.Debug("Validation failed", zap.Error(err))
-		return review_errors.ErrApiValidateCreateReview(c)
+	if err := body.Validate(); err != nil {
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
 
 	grpcReq := &pb.CreateReviewRequest{
-		UserId:    int32(req.UserID),
-		ProductId: int32(req.ProductID),
-		Comment:   req.Comment,
-		Rating:    int32(req.Rating),
+		UserId:    int32(body.UserID),
+		ProductId: int32(body.ProductID),
+		Comment:   body.Comment,
+		Rating:    int32(body.Rating),
 	}
 
 	res, err := h.client.Create(ctx, grpcReq)
 
 	if err != nil {
-		h.logger.Error("review creation failed",
-			zap.Error(err),
-			zap.Any("request", req),
-		)
-
-		return review_errors.ErrApiFailedCreateReview(c)
+		return h.handleGrpcError(err, "Create")
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -356,34 +426,33 @@ func (h *reviewHandleApi) Update(c echo.Context) error {
 	idInt, err := strconv.Atoi(id)
 
 	if err != nil {
-		h.logger.Debug("Invalid id parameter", zap.Error(err))
-		return review_errors.ErrApiReviewInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
-	var req requests.UpdateReviewRequest
+	var body requests.UpdateReviewRequest
 
-	if err := c.Bind(&req); err != nil {
-		return review_errors.ErrApiBindUpdateReview(c)
+	if err := c.Bind(&body); err != nil {
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
+	}
+
+	if err := body.Validate(); err != nil {
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
 
 	grpcReq := &pb.UpdateReviewRequest{
 		ReviewId: int32(idInt),
-		Name:     req.Name,
-		Comment:  req.Comment,
-		Rating:   int32(req.Rating),
+		Name:     body.Name,
+		Comment:  body.Comment,
+		Rating:   int32(body.Rating),
 	}
 
 	res, err := h.client.Update(ctx, grpcReq)
 
 	if err != nil {
-		h.logger.Error("review update failed",
-			zap.Error(err),
-			zap.Any("request", req),
-		)
-
-		return review_errors.ErrApiFailedUpdateReview(c)
+		return h.handleGrpcError(err, "Update")
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -405,8 +474,7 @@ func (h *reviewHandleApi) TrashedReview(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid review ID format", zap.Error(err))
-		return review_errors.ErrApiReviewInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -418,8 +486,7 @@ func (h *reviewHandleApi) TrashedReview(c echo.Context) error {
 	res, err := h.client.TrashedReview(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to archive review", zap.Error(err))
-		return review_errors.ErrApiFailedTrashedReview(c)
+		return h.handleGrpcError(err, "Trashed")
 	}
 
 	so := h.mapping.ToApiResponseReviewDeleteAt(res)
@@ -443,8 +510,7 @@ func (h *reviewHandleApi) RestoreReview(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid review ID format", zap.Error(err))
-		return review_errors.ErrApiReviewInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -456,8 +522,7 @@ func (h *reviewHandleApi) RestoreReview(c echo.Context) error {
 	res, err := h.client.RestoreReview(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to restore review", zap.Error(err))
-		return review_errors.ErrApiFailedRestoreReview(c)
+		return h.handleGrpcError(err, "RestoreReview")
 	}
 
 	so := h.mapping.ToApiResponseReviewDeleteAt(res)
@@ -481,8 +546,7 @@ func (h *reviewHandleApi) DeleteReviewPermanent(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid review ID format", zap.Error(err))
-		return review_errors.ErrApiReviewInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -494,8 +558,7 @@ func (h *reviewHandleApi) DeleteReviewPermanent(c echo.Context) error {
 	res, err := h.client.DeleteReviewPermanent(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to permanently delete review", zap.Error(err))
-		return review_errors.ErrApiFailedDeleteReviewPermanent(c)
+		return h.handleGrpcError(err, "DeleteReviewPermanent")
 	}
 
 	so := h.mapping.ToApiResponseReviewDelete(res)
@@ -521,8 +584,7 @@ func (h *reviewHandleApi) RestoreAllReview(c echo.Context) error {
 	res, err := h.client.RestoreAllReview(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk review restoration failed", zap.Error(err))
-		return review_errors.ErrApiFailedRestoreAllReviews(c)
+		return h.handleGrpcError(err, "RestoreAll")
 	}
 
 	so := h.mapping.ToApiResponseReviewAll(res)
@@ -550,8 +612,7 @@ func (h *reviewHandleApi) DeleteAllReviewPermanent(c echo.Context) error {
 	res, err := h.client.DeleteAllReviewPermanent(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk review deletion failed", zap.Error(err))
-		return review_errors.ErrApiFailedDeleteAllReviewsPermanent(c)
+		return h.handleGrpcError(err, "DeleteAll")
 	}
 
 	so := h.mapping.ToApiResponseReviewAll(res)
@@ -559,4 +620,82 @@ func (h *reviewHandleApi) DeleteAllReviewPermanent(c echo.Context) error {
 	h.logger.Debug("Successfully deleted all review permanently")
 
 	return c.JSON(http.StatusOK, so)
+}
+
+func (h *reviewHandleApi) handleGrpcError(err error, operation string) *errors.AppError {
+	st, ok := status.FromError(err)
+	if !ok {
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return errors.NewNotFoundError("Review").WithInternal(err)
+
+	case codes.AlreadyExists:
+		return errors.NewConflictError("Review already exists").WithInternal(err)
+
+	case codes.InvalidArgument:
+		return errors.NewBadRequestError(st.Message()).WithInternal(err)
+
+	case codes.PermissionDenied:
+		return errors.ErrForbidden.WithInternal(err)
+
+	case codes.Unauthenticated:
+		return errors.ErrUnauthorized.WithInternal(err)
+
+	case codes.ResourceExhausted:
+		return errors.ErrTooManyRequests.WithInternal(err)
+
+	case codes.Unavailable:
+		return errors.NewServiceUnavailableError("Review service").WithInternal(err)
+
+	case codes.DeadlineExceeded:
+		return errors.ErrTimeout.WithInternal(err)
+
+	default:
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+}
+
+func (h *reviewHandleApi) parseValidationErrors(err error) []errors.ValidationError {
+	var validationErrs []errors.ValidationError
+
+	if ve, ok := err.(validator.ValidationErrors); ok {
+		for _, fe := range ve {
+			validationErrs = append(validationErrs, errors.ValidationError{
+				Field:   fe.Field(),
+				Message: h.getValidationMessage(fe),
+			})
+		}
+		return validationErrs
+	}
+
+	return []errors.ValidationError{
+		{
+			Field:   "general",
+			Message: err.Error(),
+		},
+	}
+}
+
+func (h *reviewHandleApi) getValidationMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return fmt.Sprintf("Must be at least %s", fe.Param())
+	case "max":
+		return fmt.Sprintf("Must be at most %s", fe.Param())
+	case "gte":
+		return fmt.Sprintf("Must be greater than or equal to %s", fe.Param())
+	case "lte":
+		return fmt.Sprintf("Must be less than or equal to %s", fe.Param())
+	case "oneof":
+		return fmt.Sprintf("Must be one of: %s", fe.Param())
+	default:
+		return fmt.Sprintf("Validation failed on '%s' tag", fe.Tag())
+	}
 }

@@ -3,29 +3,27 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/errors/banner_errors"
+	"fmt"
 	"math"
 
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type bannerHandleGrpc struct {
 	pb.UnimplementedBannerServiceServer
 	bannerService service.BannerService
-	mapping       protomapper.BannerProtoMapper
 }
 
-func NewBannerHaandleGrpc(
+func NewBannerHandleGrpc(
 	bannerService service.BannerService,
-	mapping protomapper.BannerProtoMapper,
 ) *bannerHandleGrpc {
 	return &bannerHandleGrpc{
 		bannerService: bannerService,
-		mapping:       mapping,
 	}
 }
 
@@ -47,10 +45,44 @@ func (s *bannerHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllBanne
 		Search:   search,
 	}
 
-	Banner, totalRecords, err := s.bannerService.FindAll(&reqService)
-
+	banners, totalRecords, err := s.bannerService.FindAll(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoBanners := make([]*pb.BannerResponse, len(banners))
+	for i, banner := range banners {
+		protoBanner := &pb.BannerResponse{
+			BannerId:  int32(banner.BannerID),
+			Name:      banner.Name,
+			IsActive:  *banner.IsActive,
+			CreatedAt: banner.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
+			UpdatedAt: banner.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
+		}
+
+		if banner.StartDate.Valid {
+			protoBanner.StartDate = banner.StartDate.Time.Format("2006-01-02")
+		}
+
+		if banner.EndDate.Valid {
+			protoBanner.EndDate = banner.EndDate.Time.Format("2006-01-02")
+		}
+
+		if banner.StartTime.Valid {
+			hours := banner.StartTime.Microseconds / (1000000 * 60 * 60)
+			minutes := (banner.StartTime.Microseconds / (1000000 * 60)) % 60
+			seconds := (banner.StartTime.Microseconds / 1000000) % 60
+			protoBanner.StartTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		}
+
+		if banner.EndTime.Valid {
+			hours := banner.EndTime.Microseconds / (1000000 * 60 * 60)
+			minutes := (banner.EndTime.Microseconds / (1000000 * 60)) % 60
+			seconds := (banner.EndTime.Microseconds / 1000000) % 60
+			protoBanner.EndTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		}
+
+		protoBanners[i] = protoBanner
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -62,8 +94,12 @@ func (s *bannerHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllBanne
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationBanner(paginationMeta, "success", "Successfully fetched banner", Banner)
-	return so, nil
+	return &pb.ApiResponsePaginationBanner{
+		Status:     "success",
+		Message:    "Successfully fetched banners",
+		Data:       protoBanners,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *bannerHandleGrpc) FindById(ctx context.Context, request *pb.FindByIdBannerRequest) (*pb.ApiResponseBanner, error) {
@@ -73,16 +109,46 @@ func (s *bannerHandleGrpc) FindById(ctx context.Context, request *pb.FindByIdBan
 		return nil, banner_errors.ErrGrpcBannerInvalidId
 	}
 
-	Banner, err := s.bannerService.FindById(id)
-
+	banner, err := s.bannerService.FindById(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseBanner("success", "Successfully fetched banner", Banner)
+	protoBanner := &pb.BannerResponse{
+		BannerId:  int32(banner.BannerID),
+		Name:      banner.Name,
+		IsActive:  *banner.IsActive,
+		CreatedAt: banner.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
+		UpdatedAt: banner.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
+	}
 
-	return so, nil
+	if banner.StartDate.Valid {
+		protoBanner.StartDate = banner.StartDate.Time.Format("2006-01-02")
+	}
 
+	if banner.EndDate.Valid {
+		protoBanner.EndDate = banner.EndDate.Time.Format("2006-01-02")
+	}
+
+	if banner.StartTime.Valid {
+		hours := banner.StartTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.StartTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.StartTime.Microseconds / 1000000) % 60
+		protoBanner.StartTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	if banner.EndTime.Valid {
+		hours := banner.EndTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.EndTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.EndTime.Microseconds / 1000000) % 60
+		protoBanner.EndTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	return &pb.ApiResponseBanner{
+		Status:  "success",
+		Message: "Successfully fetched banner",
+		Data:    protoBanner,
+	}, nil
 }
 
 func (s *bannerHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAllBannerRequest) (*pb.ApiResponsePaginationBannerDeleteAt, error) {
@@ -103,10 +169,49 @@ func (s *bannerHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAll
 		Search:   search,
 	}
 
-	Banner, totalRecords, err := s.bannerService.FindByActive(&reqService)
-
+	banners, totalRecords, err := s.bannerService.FindByActive(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoBanners := make([]*pb.BannerResponseDeleteAt, len(banners))
+	for i, banner := range banners {
+		protoBanner := &pb.BannerResponseDeleteAt{
+			BannerId:  int32(banner.BannerID),
+			Name:      banner.Name,
+			IsActive:  *banner.IsActive,
+			CreatedAt: banner.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
+			UpdatedAt: banner.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
+		}
+
+		if banner.StartDate.Valid {
+			protoBanner.StartDate = banner.StartDate.Time.Format("2006-01-02")
+		}
+
+		if banner.EndDate.Valid {
+			protoBanner.EndDate = banner.EndDate.Time.Format("2006-01-02")
+		}
+
+		if banner.StartTime.Valid {
+			hours := banner.StartTime.Microseconds / (1000000 * 60 * 60)
+			minutes := (banner.StartTime.Microseconds / (1000000 * 60)) % 60
+			seconds := (banner.StartTime.Microseconds / 1000000) % 60
+			protoBanner.StartTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		}
+
+		if banner.EndTime.Valid {
+			hours := banner.EndTime.Microseconds / (1000000 * 60 * 60)
+			minutes := (banner.EndTime.Microseconds / (1000000 * 60)) % 60
+			seconds := (banner.EndTime.Microseconds / 1000000) % 60
+			protoBanner.EndTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		}
+
+		if banner.DeletedAt.Valid {
+			deletedAt := banner.DeletedAt.Time.Format("2006-01-02 15:04:05.000")
+			protoBanner.DeletedAt = &wrapperspb.StringValue{Value: deletedAt}
+		}
+
+		protoBanners[i] = protoBanner
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -118,9 +223,12 @@ func (s *bannerHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAll
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationBannerDeleteAt(paginationMeta, "success", "Successfully fetched active banner", Banner)
-
-	return so, nil
+	return &pb.ApiResponsePaginationBannerDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched active banners",
+		Data:       protoBanners,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *bannerHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAllBannerRequest) (*pb.ApiResponsePaginationBannerDeleteAt, error) {
@@ -141,10 +249,49 @@ func (s *bannerHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAl
 		Search:   search,
 	}
 
-	users, totalRecords, err := s.bannerService.FindByTrashed(&reqService)
-
+	banners, totalRecords, err := s.bannerService.FindByTrashed(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoBanners := make([]*pb.BannerResponseDeleteAt, len(banners))
+	for i, banner := range banners {
+		protoBanner := &pb.BannerResponseDeleteAt{
+			BannerId:  int32(banner.BannerID),
+			Name:      banner.Name,
+			IsActive:  *banner.IsActive,
+			CreatedAt: banner.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
+			UpdatedAt: banner.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
+		}
+
+		if banner.StartDate.Valid {
+			protoBanner.StartDate = banner.StartDate.Time.Format("2006-01-02")
+		}
+
+		if banner.EndDate.Valid {
+			protoBanner.EndDate = banner.EndDate.Time.Format("2006-01-02")
+		}
+
+		if banner.StartTime.Valid {
+			hours := banner.StartTime.Microseconds / (1000000 * 60 * 60)
+			minutes := (banner.StartTime.Microseconds / (1000000 * 60)) % 60
+			seconds := (banner.StartTime.Microseconds / 1000000) % 60
+			protoBanner.StartTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		}
+
+		if banner.EndTime.Valid {
+			hours := banner.EndTime.Microseconds / (1000000 * 60 * 60)
+			minutes := (banner.EndTime.Microseconds / (1000000 * 60)) % 60
+			seconds := (banner.EndTime.Microseconds / 1000000) % 60
+			protoBanner.EndTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		}
+
+		if banner.DeletedAt.Valid {
+			deletedAt := banner.DeletedAt.Time.Format("2006-01-02 15:04:05.000")
+			protoBanner.DeletedAt = &wrapperspb.StringValue{Value: deletedAt}
+		}
+
+		protoBanners[i] = protoBanner
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -156,9 +303,12 @@ func (s *bannerHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAl
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationBannerDeleteAt(paginationMeta, "success", "Successfully fetched trashed Banner", users)
-
-	return so, nil
+	return &pb.ApiResponsePaginationBannerDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched trashed banners",
+		Data:       protoBanners,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *bannerHandleGrpc) Create(ctx context.Context, request *pb.CreateBannerRequest) (*pb.ApiResponseBanner, error) {
@@ -175,13 +325,46 @@ func (s *bannerHandleGrpc) Create(ctx context.Context, request *pb.CreateBannerR
 		return nil, banner_errors.ErrGrpcValidateCreateBanner
 	}
 
-	Banner, err := s.bannerService.CreateBanner(req)
+	banner, err := s.bannerService.CreateBanner(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseBanner("success", "Successfully created banner", Banner)
-	return so, nil
+	protoBanner := &pb.BannerResponse{
+		BannerId:  int32(banner.BannerID),
+		Name:      banner.Name,
+		IsActive:  *banner.IsActive,
+		CreatedAt: banner.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
+		UpdatedAt: banner.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
+	}
+
+	if banner.StartDate.Valid {
+		protoBanner.StartDate = banner.StartDate.Time.Format("2006-01-02")
+	}
+
+	if banner.EndDate.Valid {
+		protoBanner.EndDate = banner.EndDate.Time.Format("2006-01-02")
+	}
+
+	if banner.StartTime.Valid {
+		hours := banner.StartTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.StartTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.StartTime.Microseconds / 1000000) % 60
+		protoBanner.StartTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	if banner.EndTime.Valid {
+		hours := banner.EndTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.EndTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.EndTime.Microseconds / 1000000) % 60
+		protoBanner.EndTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	return &pb.ApiResponseBanner{
+		Status:  "success",
+		Message: "Successfully created banner",
+		Data:    protoBanner,
+	}, nil
 }
 
 func (s *bannerHandleGrpc) Update(ctx context.Context, request *pb.UpdateBannerRequest) (*pb.ApiResponseBanner, error) {
@@ -205,13 +388,46 @@ func (s *bannerHandleGrpc) Update(ctx context.Context, request *pb.UpdateBannerR
 		return nil, banner_errors.ErrGrpcValidateUpdateBanner
 	}
 
-	Banner, err := s.bannerService.UpdateBanner(req)
+	banner, err := s.bannerService.UpdateBanner(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseBanner("success", "Successfully updated banner", Banner)
-	return so, nil
+	protoBanner := &pb.BannerResponse{
+		BannerId:  int32(banner.BannerID),
+		Name:      banner.Name,
+		IsActive:  *banner.IsActive,
+		CreatedAt: banner.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
+		UpdatedAt: banner.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
+	}
+
+	if banner.StartDate.Valid {
+		protoBanner.StartDate = banner.StartDate.Time.Format("2006-01-02")
+	}
+
+	if banner.EndDate.Valid {
+		protoBanner.EndDate = banner.EndDate.Time.Format("2006-01-02")
+	}
+
+	if banner.StartTime.Valid {
+		hours := banner.StartTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.StartTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.StartTime.Microseconds / 1000000) % 60
+		protoBanner.StartTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	if banner.EndTime.Valid {
+		hours := banner.EndTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.EndTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.EndTime.Microseconds / 1000000) % 60
+		protoBanner.EndTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	return &pb.ApiResponseBanner{
+		Status:  "success",
+		Message: "Successfully updated banner",
+		Data:    protoBanner,
+	}, nil
 }
 
 func (s *bannerHandleGrpc) TrashedBanner(ctx context.Context, request *pb.FindByIdBannerRequest) (*pb.ApiResponseBannerDeleteAt, error) {
@@ -221,15 +437,51 @@ func (s *bannerHandleGrpc) TrashedBanner(ctx context.Context, request *pb.FindBy
 		return nil, banner_errors.ErrGrpcBannerInvalidId
 	}
 
-	Banner, err := s.bannerService.TrashedBanner(id)
-
+	banner, err := s.bannerService.TrashedBanner(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseBannerDeleteAt("success", "Successfully trashed Banner", Banner)
+	protoBanner := &pb.BannerResponseDeleteAt{
+		BannerId:  int32(banner.BannerID),
+		Name:      banner.Name,
+		IsActive:  *banner.IsActive,
+		CreatedAt: banner.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
+		UpdatedAt: banner.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
+	}
 
-	return so, nil
+	if banner.StartDate.Valid {
+		protoBanner.StartDate = banner.StartDate.Time.Format("2006-01-02")
+	}
+
+	if banner.EndDate.Valid {
+		protoBanner.EndDate = banner.EndDate.Time.Format("2006-01-02")
+	}
+
+	if banner.StartTime.Valid {
+		hours := banner.StartTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.StartTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.StartTime.Microseconds / 1000000) % 60
+		protoBanner.StartTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	if banner.EndTime.Valid {
+		hours := banner.EndTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.EndTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.EndTime.Microseconds / 1000000) % 60
+		protoBanner.EndTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	if banner.DeletedAt.Valid {
+		deletedAt := banner.DeletedAt.Time.Format("2006-01-02 15:04:05.000")
+		protoBanner.DeletedAt = &wrapperspb.StringValue{Value: deletedAt}
+	}
+
+	return &pb.ApiResponseBannerDeleteAt{
+		Status:  "success",
+		Message: "Successfully trashed banner",
+		Data:    protoBanner,
+	}, nil
 }
 
 func (s *bannerHandleGrpc) RestoreBanner(ctx context.Context, request *pb.FindByIdBannerRequest) (*pb.ApiResponseBannerDeleteAt, error) {
@@ -239,15 +491,51 @@ func (s *bannerHandleGrpc) RestoreBanner(ctx context.Context, request *pb.FindBy
 		return nil, banner_errors.ErrGrpcBannerInvalidId
 	}
 
-	Banner, err := s.bannerService.RestoreBanner(id)
-
+	banner, err := s.bannerService.RestoreBanner(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseBannerDeleteAt("success", "Successfully restored Banner", Banner)
+	protoBanner := &pb.BannerResponseDeleteAt{
+		BannerId:  int32(banner.BannerID),
+		Name:      banner.Name,
+		IsActive:  *banner.IsActive,
+		CreatedAt: banner.CreatedAt.Time.Format("2006-01-02 15:04:05.000"),
+		UpdatedAt: banner.UpdatedAt.Time.Format("2006-01-02 15:04:05.000"),
+	}
 
-	return so, nil
+	if banner.StartDate.Valid {
+		protoBanner.StartDate = banner.StartDate.Time.Format("2006-01-02")
+	}
+
+	if banner.EndDate.Valid {
+		protoBanner.EndDate = banner.EndDate.Time.Format("2006-01-02")
+	}
+
+	if banner.StartTime.Valid {
+		hours := banner.StartTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.StartTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.StartTime.Microseconds / 1000000) % 60
+		protoBanner.StartTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	if banner.EndTime.Valid {
+		hours := banner.EndTime.Microseconds / (1000000 * 60 * 60)
+		minutes := (banner.EndTime.Microseconds / (1000000 * 60)) % 60
+		seconds := (banner.EndTime.Microseconds / 1000000) % 60
+		protoBanner.EndTime = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+
+	if banner.DeletedAt.Valid {
+		deletedAt := banner.DeletedAt.Time.Format("2006-01-02 15:04:05.000")
+		protoBanner.DeletedAt = &wrapperspb.StringValue{Value: deletedAt}
+	}
+
+	return &pb.ApiResponseBannerDeleteAt{
+		Status:  "success",
+		Message: "Successfully restored banner",
+		Data:    protoBanner,
+	}, nil
 }
 
 func (s *bannerHandleGrpc) DeleteBannerPermanent(ctx context.Context, request *pb.FindByIdBannerRequest) (*pb.ApiResponseBannerDelete, error) {
@@ -257,37 +545,36 @@ func (s *bannerHandleGrpc) DeleteBannerPermanent(ctx context.Context, request *p
 		return nil, banner_errors.ErrGrpcBannerInvalidId
 	}
 
-	_, err := s.bannerService.DeleteBannerPermanent(id)
-
+	_, err := s.bannerService.DeleteBannerPermanent(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseBannerDelete("success", "Successfully deleted Banner permanently")
-
-	return so, nil
+	return &pb.ApiResponseBannerDelete{
+		Status:  "success",
+		Message: "Successfully deleted banner permanently",
+	}, nil
 }
 
 func (s *bannerHandleGrpc) RestoreAllBanner(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseBannerAll, error) {
-	_, err := s.bannerService.RestoreAllBanner()
-
+	_, err := s.bannerService.RestoreAllBanner(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseBannerAll("success", "Successfully restore all Banner")
-
-	return so, nil
+	return &pb.ApiResponseBannerAll{
+		Status:  "success",
+		Message: "Successfully restored all banners",
+	}, nil
 }
 
 func (s *bannerHandleGrpc) DeleteAllBannerPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseBannerAll, error) {
-	_, err := s.bannerService.DeleteAllBannerPermanent()
-
+	_, err := s.bannerService.DeleteAllBannerPermanent(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseBannerAll("success", "Successfully delete Banner permanen")
-
-	return so, nil
+	return &pb.ApiResponseBannerAll{
+		Status: "Successfully deleted all banners permanently",
+	}, nil
 }

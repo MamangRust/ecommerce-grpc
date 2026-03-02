@@ -1,255 +1,448 @@
 package service
 
 import (
+	"context"
+	shippingaddress_cache "ecommerce/internal/cache/shipping_address"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	response_service "ecommerce/internal/mapper/response/services"
+	"ecommerce/internal/errorhandler"
 	"ecommerce/internal/repository"
+	db "ecommerce/pkg/database/schema"
 	shippingaddress_errors "ecommerce/pkg/errors/shipping_address_errors"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/observability"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
 type shippingAddressService struct {
 	shippingRepository repository.ShippingAddressRepository
 	logger             logger.LoggerInterface
-	mapping            response_service.ShippingAddressResponseMapper
+	observability      observability.TraceLoggerObservability
+	cache              shippingaddress_cache.ShippingAddressMencache
 }
 
-func NewShippingAddressService(
-	shippingRepository repository.ShippingAddressRepository,
-	logger logger.LoggerInterface,
-	mapping response_service.ShippingAddressResponseMapper,
-) *shippingAddressService {
+type ShippingAddressServiceDeps struct {
+	ShippingRepository repository.ShippingAddressRepository
+	Logger             logger.LoggerInterface
+	Observability      observability.TraceLoggerObservability
+	Cache              shippingaddress_cache.ShippingAddressMencache
+}
+
+func NewShippingAddressService(deps ShippingAddressServiceDeps) ShippingAddressService {
 	return &shippingAddressService{
-		shippingRepository: shippingRepository,
-		logger:             logger,
-		mapping:            mapping,
+		shippingRepository: deps.ShippingRepository,
+		logger:             deps.Logger,
+		observability:      deps.Observability,
+		cache:              deps.Cache,
 	}
 }
 
-func (s *shippingAddressService) FindAll(req *requests.FindAllShippingAddress) ([]*response.ShippingAddressResponse, *int, *response.ErrorResponse) {
+func (s *shippingAddressService) FindAllShippingAddress(ctx context.Context, req *requests.FindAllShippingAddress) ([]*db.GetShippingAddressRow, *int, error) {
+	const method = "FindAllShippingAddresses"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching shipping address",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	shipping, totalRecords, err := s.shippingRepository.FindAllShippingAddress(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve shipping address list",
-			zap.Error(err),
-			zap.String("search", search),
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetShippingAddressAllCache(ctx, req); found {
+		logSuccess("Successfully retrieved all shipping address records from cache",
+			zap.Int("totalRecords", *total),
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
-
-		return nil, nil, shippingaddress_errors.ErrFailedFindAllShippingAddresses
+		return data, total, nil
 	}
 
-	shippingRes := s.mapping.ToShippingAddressesResponse(shipping)
+	shippingAddresses, err := s.shippingRepository.FindAllShippingAddress(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetShippingAddressRow](
+			s.logger,
+			shippingaddress_errors.ErrFailedFindAllShippingAddresses,
+			method,
+			span,
 
-	s.logger.Debug("Successfully fetched shipping address",
-		zap.Int("totalRecords", *totalRecords),
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(shippingAddresses) > 0 {
+		totalCount = int(shippingAddresses[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetShippingAddressAllCache(ctx, req, shippingAddresses, &totalCount)
+
+	logSuccess("Successfully fetched all shipping addresses",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return shippingRes, totalRecords, nil
+	return shippingAddresses, &totalCount, nil
 }
 
-func (s *shippingAddressService) FindById(shipping_id int) (*response.ShippingAddressResponse, *response.ErrorResponse) {
-	s.logger.Debug("Fetching Shipping Address by ID", zap.Int("shipping_id", shipping_id))
+func (s *shippingAddressService) FindById(ctx context.Context, shipping_id int) (*db.GetShippingByIDRow, error) {
+	const method = "FindShippingAddressById"
 
-	shipping, err := s.shippingRepository.FindById(shipping_id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("shipping_id", shipping_id))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve Shipping Address details",
-			zap.Int("Shipping Address ID", shipping_id),
-			zap.Error(err))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, shippingaddress_errors.ErrFailedFindShippingAddressByID
+	if data, found := s.cache.GetCachedShippingAddressCache(ctx, shipping_id); found {
+		logSuccess("Successfully retrieved shipping address by ID from cache",
+			zap.Int("shipping_id", shipping_id))
+		return data, nil
 	}
 
-	return s.mapping.ToShippingAddressResponse(shipping), nil
-}
-
-func (s *shippingAddressService) FindByOrder(order_id int) (*response.ShippingAddressResponse, *response.ErrorResponse) {
-	s.logger.Debug("Fetching shipping address by order id", zap.Int("shipping_id", order_id))
-
-	shipping, err := s.shippingRepository.FindByOrder(order_id)
-
+	shippingAddress, err := s.shippingRepository.FindById(ctx, shipping_id)
 	if err != nil {
-		s.logger.Error("Failed to retrieve Shipping Address details",
-			zap.Int("Order ID", order_id),
-			zap.Error(err))
+		status = "error"
+		return errorhandler.HandleError[*db.GetShippingByIDRow](
+			s.logger,
+			shippingaddress_errors.ErrFailedFindShippingAddressByID,
+			method,
+			span,
 
-		return nil, shippingaddress_errors.ErrFailedFindShippingAddressByOrder
+			zap.Int("shipping_id", shipping_id),
+		)
 	}
 
-	return s.mapping.ToShippingAddressResponse(shipping), nil
+	s.cache.SetCachedShippingAddressCache(ctx, shippingAddress)
+
+	logSuccess("Successfully fetched shipping address by ID",
+		zap.Int("shipping_id", shipping_id))
+
+	return shippingAddress, nil
 }
 
-func (s *shippingAddressService) FindByActive(req *requests.FindAllShippingAddress) ([]*response.ShippingAddressResponseDeleteAt, *int, *response.ErrorResponse) {
+func (s *shippingAddressService) FindByOrder(ctx context.Context, order_id int) (*db.GetShippingAddressByOrderIDRow, error) {
+	const method = "FindShippingAddressByOrder"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("order_id", order_id))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetCachedShippingAddressByOrderCache(ctx, order_id); found {
+		logSuccess("Successfully retrieved shipping address by order ID from cache",
+			zap.Int("order_id", order_id))
+		return data, nil
+	}
+
+	shippingAddress, err := s.shippingRepository.FindByOrder(ctx, order_id)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[*db.GetShippingAddressByOrderIDRow](
+			s.logger,
+			shippingaddress_errors.ErrFailedFindShippingAddressByOrder,
+			method,
+			span,
+
+			zap.Int("order_id", order_id),
+		)
+	}
+
+	s.cache.SetCachedShippingAddressByOrderCache(ctx, shippingAddress)
+
+	logSuccess("Successfully fetched shipping address by order ID",
+		zap.Int("order_id", order_id))
+
+	return shippingAddress, nil
+}
+
+func (s *shippingAddressService) FindByActive(ctx context.Context, req *requests.FindAllShippingAddress) ([]*db.GetShippingAddressActiveRow, *int, error) {
+	const method = "FindActiveShippingAddresses"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching categories",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	cashiers, totalRecords, err := s.shippingRepository.FindByActive(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve active Shipping Address",
-			zap.Error(err),
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetShippingAddressActiveCache(ctx, req); found {
+		logSuccess("Successfully retrieved active shipping address records from cache",
+			zap.Int("totalRecords", *total),
 			zap.Int("page", page),
-			zap.Int("page_size", pageSize),
-			zap.String("search", search))
-
-		return nil, nil, shippingaddress_errors.ErrFailedFindActiveShippingAddresses
+			zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched shipping address",
-		zap.Int("totalRecords", *totalRecords),
+	shippingAddresses, err := s.shippingRepository.FindByActive(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetShippingAddressActiveRow](
+			s.logger,
+			shippingaddress_errors.ErrFailedFindActiveShippingAddresses,
+			method,
+			span,
+
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(shippingAddresses) > 0 {
+		totalCount = int(shippingAddresses[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetShippingAddressActiveCache(ctx, req, shippingAddresses, &totalCount)
+
+	logSuccess("Successfully fetched active shipping addresses",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return s.mapping.ToShippingAddressesResponseDeleteAt(cashiers), totalRecords, nil
+	return shippingAddresses, &totalCount, nil
 }
 
-func (s *shippingAddressService) FindByTrashed(req *requests.FindAllShippingAddress) ([]*response.ShippingAddressResponseDeleteAt, *int, *response.ErrorResponse) {
+func (s *shippingAddressService) FindByTrashed(ctx context.Context, req *requests.FindAllShippingAddress) ([]*db.GetShippingAddressTrashedRow, *int, error) {
+	const method = "FindTrashedShippingAddresses"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching Shipping Address",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	shipping, totalRecords, err := s.shippingRepository.FindByTrashed(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve trashed shipping address",
-			zap.Error(err),
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetShippingAddressTrashedCache(ctx, req); found {
+		logSuccess("Successfully retrieved trashed shipping address records from cache",
+			zap.Int("totalRecords", *total),
 			zap.Int("page", page),
-			zap.Int("page_size", pageSize),
-			zap.String("search", search))
-
-		return nil, nil, shippingaddress_errors.ErrFailedFindTrashedShippingAddresses
+			zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched shipping address",
-		zap.Int("totalRecords", *totalRecords),
+	shippingAddresses, err := s.shippingRepository.FindByTrashed(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetShippingAddressTrashedRow](
+			s.logger,
+			shippingaddress_errors.ErrFailedFindTrashedShippingAddresses,
+			method,
+			span,
+
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(shippingAddresses) > 0 {
+		totalCount = int(shippingAddresses[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetShippingAddressTrashedCache(ctx, req, shippingAddresses, &totalCount)
+
+	logSuccess("Successfully fetched trashed shipping addresses",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return s.mapping.ToShippingAddressesResponseDeleteAt(shipping), totalRecords, nil
+	return shippingAddresses, &totalCount, nil
 }
 
-func (s *shippingAddressService) TrashShippingAddress(shipping_id int) (*response.ShippingAddressResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Trashing shipping address", zap.Int("category", shipping_id))
+func (s *shippingAddressService) TrashShippingAddress(ctx context.Context, shipping_id int) (*db.ShippingAddress, error) {
+	const method = "TrashShippingAddress"
 
-	category, err := s.shippingRepository.TrashShippingAddress(shipping_id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("shipping_id", shipping_id))
 
+	defer func() {
+		end(status)
+	}()
+
+	shippingAddress, err := s.shippingRepository.TrashShippingAddress(ctx, shipping_id)
 	if err != nil {
-		s.logger.Error("Failed to move shipping address to trash",
+		status = "error"
+		return errorhandler.HandleError[*db.ShippingAddress](
+			s.logger,
+			shippingaddress_errors.ErrFailedTrashShippingAddress,
+			method,
+			span,
+
 			zap.Int("shipping_id", shipping_id),
-			zap.Error(err))
-
-		return nil, shippingaddress_errors.ErrFailedTrashShippingAddress
+		)
 	}
 
-	return s.mapping.ToShippingAddressResponseDeleteAt(category), nil
+	s.cache.DeleteShippingAddressCache(ctx, shipping_id)
+
+	logSuccess("Successfully trashed shipping address",
+		zap.Int("shipping_id", shipping_id))
+
+	return shippingAddress, nil
 }
 
-func (s *shippingAddressService) RestoreShippingAddress(shipping_id int) (*response.ShippingAddressResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Restoring Shipping Address", zap.Int("shipping_id", shipping_id))
+func (s *shippingAddressService) RestoreShippingAddress(ctx context.Context, shipping_id int) (*db.ShippingAddress, error) {
+	const method = "RestoreShippingAddress"
 
-	shipping, err := s.shippingRepository.RestoreShippingAddress(shipping_id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("shipping_id", shipping_id))
 
+	defer func() {
+		end(status)
+	}()
+
+	shippingAddress, err := s.shippingRepository.RestoreShippingAddress(ctx, shipping_id)
 	if err != nil {
-		s.logger.Error("Failed to restore role from trash",
+		status = "error"
+		return errorhandler.HandleError[*db.ShippingAddress](
+			s.logger,
+			shippingaddress_errors.ErrFailedRestoreShippingAddress,
+			method,
+			span,
+
 			zap.Int("shipping_id", shipping_id),
-			zap.Error(err))
-
-		return nil, shippingaddress_errors.ErrFailedRestoreShippingAddress
+		)
 	}
 
-	return s.mapping.ToShippingAddressResponseDeleteAt(shipping), nil
+	s.cache.DeleteShippingAddressCache(ctx, shipping_id)
+
+	logSuccess("Successfully restored shipping address",
+		zap.Int("shipping_id", shipping_id))
+
+	return shippingAddress, nil
 }
 
-func (s *shippingAddressService) DeleteShippingAddressPermanently(shipping_id int) (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting shipping address", zap.Int("shipping_id", shipping_id))
+func (s *shippingAddressService) DeleteShippingAddressPermanently(ctx context.Context, shipping_id int) (bool, error) {
+	const method = "DeleteShippingAddressPermanently"
 
-	success, err := s.shippingRepository.DeleteShippingAddressPermanently(shipping_id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("shipping_id", shipping_id))
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.shippingRepository.DeleteShippingAddressPermanently(ctx, shipping_id)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete role",
-			zap.Int("shipping_address", shipping_id),
-			zap.Error(err))
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			shippingaddress_errors.ErrFailedDeleteShippingAddressPermanent,
+			method,
+			span,
 
-		return false, shippingaddress_errors.ErrFailedDeleteShippingAddressPermanent
+			zap.Int("shipping_id", shipping_id),
+		)
 	}
+
+	s.cache.DeleteShippingAddressCache(ctx, shipping_id)
+
+	logSuccess("Successfully permanently deleted shipping address",
+		zap.Int("shipping_id", shipping_id))
 
 	return success, nil
 }
 
-func (s *shippingAddressService) RestoreAllShippingAddress() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Restoring all trashed shipping address")
+func (s *shippingAddressService) RestoreAllShippingAddress(ctx context.Context) (bool, error) {
+	const method = "RestoreAllShippingAddress"
 
-	success, err := s.shippingRepository.RestoreAllShippingAddress()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.shippingRepository.RestoreAllShippingAddress(ctx)
 	if err != nil {
-		s.logger.Error("Failed to restore all trashed shipping address",
-			zap.Error(err))
-		return false, shippingaddress_errors.ErrFailedRestoreAllShippingAddresses
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			shippingaddress_errors.ErrFailedRestoreAllShippingAddresses,
+			method,
+			span,
+		)
 	}
+
+	logSuccess("Successfully restored all trashed shipping addresses")
 
 	return success, nil
 }
 
-func (s *shippingAddressService) DeleteAllPermanentShippingAddress() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting all shipping address")
+func (s *shippingAddressService) DeleteAllPermanentShippingAddress(ctx context.Context) (bool, error) {
+	const method = "DeleteAllPermanentShippingAddress"
 
-	success, err := s.shippingRepository.DeleteAllPermanentShippingAddress()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.shippingRepository.DeleteAllPermanentShippingAddress(ctx)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete all trashed shipping address",
-			zap.Error(err))
-
-		return false, shippingaddress_errors.ErrFailedDeleteAllShippingAddressesPermanent
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			shippingaddress_errors.ErrFailedDeleteAllShippingAddressesPermanent,
+			method,
+			span,
+		)
 	}
+
+	logSuccess("Successfully permanently deleted all trashed shipping addresses")
 
 	return success, nil
 }

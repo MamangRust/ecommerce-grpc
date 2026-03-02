@@ -13,13 +13,27 @@
 --   - Provides total_count for pagination calculations
 -- name: GetReviews :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    review_id,
+    user_id,
+    product_id,
+    name,
+    comment,
+    rating,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
 FROM reviews
-WHERE deleted_at IS NULL
-AND ($1::TEXT IS NULL OR review_id::TEXT ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR review_id::TEXT ILIKE '%' || $1 || '%'
+        OR name ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetReviewsActive: Retrieves paginated list of active reviews with search capability
 -- Purpose: Display active reviews in storefront/admin UI
@@ -36,13 +50,28 @@ LIMIT $2 OFFSET $3;
 --   - Provides total_count for pagination calculations
 -- name: GetReviewsActive :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    review_id,
+    user_id,
+    product_id,
+    name,
+    comment,
+    rating,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM reviews
-WHERE deleted_at IS NULL
-AND ($1::TEXT IS NULL OR review_id::TEXT ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR review_id::TEXT ILIKE '%' || $1 || '%'
+        OR name ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetReviewsTrashed: Retrieves paginated list of trashed reviews with search capability
 -- Purpose: Display deleted reviews in admin recycle bin
@@ -59,30 +88,44 @@ LIMIT $2 OFFSET $3;
 --   - Provides total_count for pagination calculations
 -- name: GetReviewsTrashed :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    review_id,
+    user_id,
+    product_id,
+    name,
+    comment,
+    rating,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM reviews
-WHERE deleted_at IS NOT NULL
-AND ($1::TEXT IS NULL OR review_id::TEXT ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NOT NULL
+    AND (
+        $1::TEXT IS NULL
+        OR review_id::TEXT ILIKE '%' || $1 || '%'
+        OR name ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- name: GetReviewByProductId :many
 -- Retrieves paginated list of product reviews with details and optional rating filter
--- 
+--
 -- Purpose: Display reviews for a specific product in storefront
--- 
+--
 -- Parameters:
 --   $1: product_id - ID of the product to get reviews for
 --   $2: rating_filter - Optional rating value to filter by (NULL for all ratings)
 --   $3: limit - Maximum number of records to return
 --   $4: offset - Number of records to skip for pagination
--- 
+--
 -- Returns:
 --   - Review fields with aggregated review details (images/videos) as JSON array
 --   - Includes total_count for pagination
--- 
+--
 -- Business Logic:
 --   - Only shows active (non-deleted) reviews
 --   - Filters by specific product only
@@ -100,28 +143,32 @@ SELECT
     r.created_at,
     r.updated_at,
     r.deleted_at,
-    COUNT(*) OVER() AS total_count,
+    COUNT(*) OVER () AS total_count,
     COALESCE(
-        (SELECT json_agg(
-            jsonb_build_object(
-                'detail_id', rd.detail_id,
-                'type', rd.type,
-                'url', rd.url,
-                'caption', rd.caption,
-                'created_at', rd.created_at
-            )
-        )
-        FROM review_details rd
-        WHERE rd.review_id = r.review_id),
+        (
+            SELECT json_agg(
+                    jsonb_build_object(
+                        'detail_id', rd.detail_id, 'type', rd.type, 'url', rd.url, 'caption', rd.caption, 'created_at', rd.created_at
+                    )
+                )
+            FROM review_details rd
+            WHERE
+                rd.review_id = r.review_id
+        ),
         '[]'
     ) AS review_details
 FROM reviews r
-WHERE r.deleted_at IS NULL
-  AND r.product_id = $1
-  AND ($2::INT IS NULL OR r.rating = $2)
+WHERE
+    r.deleted_at IS NULL
+    AND r.product_id = $1
+    AND (
+        $2::INT IS NULL
+        OR r.rating = $2
+    )
 ORDER BY r.created_at DESC
-LIMIT $3 OFFSET $4;
-
+LIMIT $3
+OFFSET
+    $4;
 
 -- name: GetReviewByMerchantId :many
 -- Retrieves paginated reviews for all products belonging to a merchant
@@ -155,31 +202,33 @@ SELECT
     r.created_at,
     r.updated_at,
     r.deleted_at,
-    COUNT(*) OVER() AS total_count,
+    COUNT(*) OVER () AS total_count,
     COALESCE(
-        (SELECT json_agg(
-            jsonb_build_object(
-                'detail_id', rd.detail_id,
-                'type', rd.type,
-                'url', rd.url,
-                'caption', rd.caption,
-                'created_at', rd.created_at
-            )
-        )
-        FROM review_details rd
-        WHERE rd.review_id = r.review_id),
+        (
+            SELECT json_agg(
+                    jsonb_build_object(
+                        'detail_id', rd.detail_id, 'type', rd.type, 'url', rd.url, 'caption', rd.caption, 'created_at', rd.created_at
+                    )
+                )
+            FROM review_details rd
+            WHERE
+                rd.review_id = r.review_id
+        ),
         '[]'
     ) AS review_details
 FROM reviews r
-JOIN products p ON r.product_id = p.product_id
-WHERE r.deleted_at IS NULL
-  AND p.merchant_id = $1
-  AND ($2::INT IS NULL OR r.rating = $2)
+    JOIN products p ON r.product_id = p.product_id
+WHERE
+    r.deleted_at IS NULL
+    AND p.merchant_id = $1
+    AND (
+        $2::INT IS NULL
+        OR r.rating = $2
+    )
 ORDER BY r.created_at DESC
-LIMIT $3 OFFSET $4;
-
-
-
+LIMIT $3
+OFFSET
+    $4;
 
 -- GetReviewByID: Retrieves a single active review by ID
 -- Purpose: Display review details in UI
@@ -191,10 +240,19 @@ LIMIT $3 OFFSET $4;
 --   - Only returns non-deleted (active) reviews
 --   - Used for displaying individual review details
 -- name: GetReviewByID :one
-SELECT *
+SELECT
+    review_id,
+    user_id,
+    product_id,
+    name,
+    comment,
+    rating,
+    created_at,
+    updated_at
 FROM reviews
-WHERE review_id = $1
-  AND deleted_at IS NULL;
+WHERE
+    review_id = $1
+    AND deleted_at IS NULL;
 
 -- CreateReview: Creates a new product review
 -- Purpose: Allow users to submit product reviews
@@ -211,10 +269,24 @@ WHERE review_id = $1
 --   - Requires user_id and product_id for reference
 --   - Returns full record for immediate display
 -- name: CreateReview :one
-INSERT INTO reviews (
-    user_id, product_id, name, comment, rating
-) VALUES ($1, $2, $3, $4, $5)
-RETURNING *;
+INSERT INTO
+    reviews (
+        user_id,
+        product_id,
+        name,
+        comment,
+        rating
+    )
+VALUES ($1, $2, $3, $4, $5)
+RETURNING
+    review_id,
+    user_id,
+    product_id,
+    name,
+    comment,
+    rating,
+    created_at,
+    updated_at;
 
 -- UpdateReview: Modifies an existing review
 -- Purpose: Allow users to edit their reviews
@@ -231,14 +303,23 @@ RETURNING *;
 --   - Automatically updates timestamp
 -- name: UpdateReview :one
 UPDATE reviews
-SET 
+SET
     name = $2,
     comment = $3,
     rating = $4,
     updated_at = CURRENT_TIMESTAMP
-WHERE review_id = $1
-AND deleted_at IS NULL
-RETURNING *;
+WHERE
+    review_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    review_id,
+    user_id,
+    product_id,
+    name,
+    comment,
+    rating,
+    created_at,
+    updated_at;
 
 -- TrashReview: Soft-deletes a review
 -- Purpose: Remove review from public view while preserving data
@@ -252,10 +333,21 @@ RETURNING *;
 --   - Allows recovery via RestoreReview
 -- name: TrashReview :one
 UPDATE reviews
-SET deleted_at = CURRENT_TIMESTAMP
-WHERE review_id = $1
-AND deleted_at IS NULL
-RETURNING *;
+SET
+    deleted_at = CURRENT_TIMESTAMP
+WHERE
+    review_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    review_id,
+    user_id,
+    product_id,
+    name,
+    comment,
+    rating,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreReview: Recovers a soft-deleted review
 -- Purpose: Reactivate previously trashed reviews
@@ -269,10 +361,21 @@ RETURNING *;
 --   - Returns review to active status
 -- name: RestoreReview :one
 UPDATE reviews
-SET deleted_at = NULL
-WHERE review_id = $1
-AND deleted_at IS NOT NULL
-RETURNING *;
+SET
+    deleted_at = NULL
+WHERE
+    review_id = $1
+    AND deleted_at IS NOT NULL
+RETURNING
+    review_id,
+    user_id,
+    product_id,
+    name,
+    comment,
+    rating,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeleteReviewPermanently: Removes a review from database
 -- Purpose: Permanent deletion of trashed reviews
@@ -297,9 +400,7 @@ DELETE FROM reviews WHERE review_id = $1 AND deleted_at IS NOT NULL;
 --   - Admin-level operation
 --   - Returns all reviews to active status
 -- name: RestoreAllReviews :exec
-UPDATE reviews
-SET deleted_at = NULL
-WHERE deleted_at IS NOT NULL;
+UPDATE reviews SET deleted_at = NULL WHERE deleted_at IS NOT NULL;
 
 -- DeleteAllPermanentReviews: Purges all trashed reviews
 -- Purpose: Clean up review recycle bin
@@ -311,5 +412,4 @@ WHERE deleted_at IS NOT NULL;
 --   - Admin-level operation
 --   - Irreversible bulk deletion
 -- name: DeleteAllPermanentReviews :exec
-DELETE FROM reviews
-WHERE deleted_at IS NOT NULL;
+DELETE FROM reviews WHERE deleted_at IS NOT NULL;

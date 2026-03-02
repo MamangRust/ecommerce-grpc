@@ -1,25 +1,23 @@
 package auth_errors
 
 import (
-	"ecommerce/internal/domain/response"
+	"ecommerce/pkg/errors"
 
 	"google.golang.org/grpc/codes"
 )
 
-var ErrGrpcLogin = response.NewGrpcError(
-	"error",
+var ErrGrpcLogin = errors.NewGrpcError(
+
 	"login failed: invalid argument provided",
 	int(codes.InvalidArgument),
 )
 
-var ErrGrpcGetMe = response.NewGrpcError(
-	"error",
+var ErrGrpcGetMe = errors.NewGrpcError(
 	"get user info failed: unauthenticated",
 	int(codes.Unauthenticated),
 )
 
-var ErrGrpcRegisterToken = response.NewGrpcError(
-	"error",
+var ErrGrpcRegisterToken = errors.NewGrpcError(
 	"register failed: invalid argument",
 	int(codes.InvalidArgument),
 )

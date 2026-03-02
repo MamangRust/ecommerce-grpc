@@ -2,32 +2,24 @@ package repository
 
 import (
 	"context"
-	"ecommerce/internal/domain/record"
 	"ecommerce/internal/domain/requests"
-	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/errors/slider_errors"
 )
 
 type sliderRepository struct {
-	db      *db.Queries
-	ctx     context.Context
-	mapping recordmapper.SliderMapping
+	db *db.Queries
 }
 
 func NewSliderRepository(
 	db *db.Queries,
-	ctx context.Context,
-	mapping recordmapper.SliderMapping,
 ) *sliderRepository {
 	return &sliderRepository{
-		db:      db,
-		ctx:     ctx,
-		mapping: mapping,
+		db: db,
 	}
 }
 
-func (r *sliderRepository) FindAllSlider(req *requests.FindAllSlider) ([]*record.SliderRecord, *int, error) {
+func (r *sliderRepository) FindAllSlider(ctx context.Context, req *requests.FindAllSlider) ([]*db.GetSlidersRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetSlidersParams{
@@ -36,24 +28,16 @@ func (r *sliderRepository) FindAllSlider(req *requests.FindAllSlider) ([]*record
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetSliders(r.ctx, reqDb)
+	res, err := r.db.GetSliders(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, slider_errors.ErrFindAllSliders
+		return nil, slider_errors.ErrFindAllSliders
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToSlidersRecordPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *sliderRepository) FindByActive(req *requests.FindAllSlider) ([]*record.SliderRecord, *int, error) {
+func (r *sliderRepository) FindByActive(ctx context.Context, req *requests.FindAllSlider) ([]*db.GetSlidersActiveRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetSlidersActiveParams{
@@ -62,24 +46,16 @@ func (r *sliderRepository) FindByActive(req *requests.FindAllSlider) ([]*record.
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetSlidersActive(r.ctx, reqDb)
+	res, err := r.db.GetSlidersActive(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, slider_errors.ErrFindActiveSliders
+		return nil, slider_errors.ErrFindActiveSliders
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToSlidersRecordActivePagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *sliderRepository) FindByTrashed(req *requests.FindAllSlider) ([]*record.SliderRecord, *int, error) {
+func (r *sliderRepository) FindByTrashed(ctx context.Context, req *requests.FindAllSlider) ([]*db.GetSlidersTrashedRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetSlidersTrashedParams{
@@ -88,76 +64,68 @@ func (r *sliderRepository) FindByTrashed(req *requests.FindAllSlider) ([]*record
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetSlidersTrashed(r.ctx, reqDb)
+	res, err := r.db.GetSlidersTrashed(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, slider_errors.ErrFindTrashedSliders
+		return nil, slider_errors.ErrFindTrashedSliders
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToSlidersRecordTrashedPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *sliderRepository) CreateSlider(request *requests.CreateSliderRequest) (*record.SliderRecord, error) {
+func (r *sliderRepository) CreateSlider(ctx context.Context, request *requests.CreateSliderRequest) (*db.CreateSliderRow, error) {
 	req := db.CreateSliderParams{
 		Name:  request.Nama,
 		Image: request.FilePath,
 	}
 
-	slider, err := r.db.CreateSlider(r.ctx, req)
+	slider, err := r.db.CreateSlider(ctx, req)
 
 	if err != nil {
 		return nil, slider_errors.ErrCreateSlider
 	}
 
-	return r.mapping.ToSliderRecord(slider), nil
+	return slider, nil
 }
 
-func (r *sliderRepository) UpdateSlider(request *requests.UpdateSliderRequest) (*record.SliderRecord, error) {
+func (r *sliderRepository) UpdateSlider(ctx context.Context, request *requests.UpdateSliderRequest) (*db.UpdateSliderRow, error) {
 	req := db.UpdateSliderParams{
 		SliderID: int32(*request.ID),
 		Name:     request.Nama,
 		Image:    request.FilePath,
 	}
 
-	res, err := r.db.UpdateSlider(r.ctx, req)
+	res, err := r.db.UpdateSlider(ctx, req)
 
 	if err != nil {
 		return nil, slider_errors.ErrUpdateSlider
 	}
 
-	return r.mapping.ToSliderRecord(res), nil
+	return res, nil
 }
 
-func (r *sliderRepository) TrashSlider(slider_id int) (*record.SliderRecord, error) {
-	res, err := r.db.TrashSlider(r.ctx, int32(slider_id))
+func (r *sliderRepository) TrashSlider(ctx context.Context, slider_id int) (*db.Slider, error) {
+	res, err := r.db.TrashSlider(ctx, int32(slider_id))
 
 	if err != nil {
 		return nil, slider_errors.ErrTrashSlider
 	}
 
-	return r.mapping.ToSliderRecord(res), nil
+	return res, nil
 }
 
-func (r *sliderRepository) RestoreSlider(slider_id int) (*record.SliderRecord, error) {
-	res, err := r.db.RestoreSlider(r.ctx, int32(slider_id))
+func (r *sliderRepository) RestoreSlider(ctx context.Context, slider_id int) (*db.Slider, error) {
+	res, err := r.db.RestoreSlider(ctx, int32(slider_id))
 
 	if err != nil {
 		return nil, slider_errors.ErrRestoreSlider
 	}
 
-	return r.mapping.ToSliderRecord(res), nil
+	return res, nil
 }
 
-func (r *sliderRepository) DeleteSliderPermanently(slider_id int) (bool, error) {
-	err := r.db.DeleteSliderPermanently(r.ctx, int32(slider_id))
+func (r *sliderRepository) DeleteSliderPermanently(ctx context.Context, slider_id int) (bool, error) {
+	err := r.db.DeleteSliderPermanently(ctx, int32(slider_id))
 
 	if err != nil {
 		return false, slider_errors.ErrDeletePermanentSlider
@@ -166,8 +134,8 @@ func (r *sliderRepository) DeleteSliderPermanently(slider_id int) (bool, error) 
 	return true, nil
 }
 
-func (r *sliderRepository) RestoreAllSlider() (bool, error) {
-	err := r.db.RestoreAllSliders(r.ctx)
+func (r *sliderRepository) RestoreAllSlider(ctx context.Context) (bool, error) {
+	err := r.db.RestoreAllSliders(ctx)
 
 	if err != nil {
 		return false, slider_errors.ErrRestoreAllSlider
@@ -175,8 +143,8 @@ func (r *sliderRepository) RestoreAllSlider() (bool, error) {
 	return true, nil
 }
 
-func (r *sliderRepository) DeleteAllPermanentSlider() (bool, error) {
-	err := r.db.DeleteAllPermanentSliders(r.ctx)
+func (r *sliderRepository) DeleteAllPermanentSlider(ctx context.Context) (bool, error) {
+	err := r.db.DeleteAllPermanentSliders(ctx)
 
 	if err != nil {
 		return false, slider_errors.ErrDeleteAllPermanentSlider

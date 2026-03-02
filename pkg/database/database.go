@@ -1,77 +1,89 @@
 package database
 
 import (
-	"database/sql"
+	"context"
 	"ecommerce/pkg/logger"
 	"fmt"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
-func NewClient(logger logger.LoggerInterface) (*sql.DB, error) {
+func NewClient(logger logger.LoggerInterface) (*pgxpool.Pool, error) {
 	dbDriver := viper.GetString("DB_DRIVER")
 
-	var connStr string
-	switch dbDriver {
-	case "postgres":
-		connStr = fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
-			viper.GetString("DB_HOST"),
-			viper.GetString("DB_PORT"),
-			viper.GetString("DB_USERNAME"),
-			viper.GetString("DB_NAME"),
-			viper.GetString("DB_PASSWORD"),
-		)
-	case "mysql":
-		connStr = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
-			viper.GetString("DB_USERNAME"),
-			viper.GetString("DB_PASSWORD"),
-			viper.GetString("DB_HOST"),
-			viper.GetString("DB_PORT"),
-			viper.GetString("DB_NAME"),
-		)
-	default:
-		logger.Error("Unsupported database driver", zap.String("DB_DRIVER", dbDriver))
-		return nil, fmt.Errorf("unsupported database driver: %s", dbDriver)
+	if dbDriver != "postgres" && dbDriver != "pgx" {
+		logger.Error("pgxpool only supports PostgreSQL", zap.String("DB_DRIVER", dbDriver))
+		return nil, fmt.Errorf("pgxpool only supports PostgreSQL, got: %s", dbDriver)
 	}
 
-	con, err := sql.Open(dbDriver, connStr)
+	connStr := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
+		viper.GetString("DB_HOST"),
+		viper.GetString("DB_PORT"),
+		viper.GetString("DB_USERNAME"),
+		viper.GetString("DB_NAME"),
+		viper.GetString("DB_PASSWORD"),
+	)
 
+	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
-		logger.Error("Failed to connect to database", zap.Error(err))
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
-
-	if err := con.Ping(); err != nil {
-		logger.Error("Failed to ping database", zap.Error(err))
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		logger.Error("Failed to parse database config", zap.Error(err))
+		return nil, fmt.Errorf("failed to parse database config: %w", err)
 	}
 
 	maxOpenConns := viper.GetInt("DB_MAX_OPEN_CONNS")
-	if maxOpenConns == 0 {
-		maxOpenConns = 25
+	if maxOpenConns <= 0 {
+		maxOpenConns = 100
 	}
-	con.SetMaxOpenConns(maxOpenConns)
+	config.MaxConns = int32(maxOpenConns)
 
-	maxIdleConns := viper.GetInt("DB_MAX_IDLE_CONNS")
-	if maxIdleConns == 0 {
-		maxIdleConns = 5
+	minIdleConns := viper.GetInt("DB_MIN_IDLE_CONNS")
+	if minIdleConns <= 0 {
+		minIdleConns = 50
 	}
-	con.SetMaxIdleConns(maxIdleConns)
+	config.MinConns = int32(minIdleConns)
 
 	connMaxLifetime := viper.GetDuration("DB_CONN_MAX_LIFETIME")
 	if connMaxLifetime == 0 {
 		connMaxLifetime = time.Hour
 	}
-	con.SetConnMaxLifetime(connMaxLifetime)
+	config.MaxConnLifetime = connMaxLifetime
 
-	logger.Debug("Database connection established successfully with connection pool settings",
-		zap.String("DB_DRIVER", dbDriver),
-		zap.Int("MaxOpenConns", maxOpenConns),
-		zap.Int("MaxIdleConns", maxIdleConns),
-		zap.Duration("ConnMaxLifetime", connMaxLifetime),
+	connMaxIdleTime := viper.GetDuration("DB_CONN_MAX_IDLE_TIME")
+	if connMaxIdleTime == 0 {
+		connMaxIdleTime = 30 * time.Minute
+	}
+	config.MaxConnIdleTime = connMaxIdleTime
+
+	healthCheckPeriod := viper.GetDuration("DB_HEALTH_CHECK_PERIOD")
+	if healthCheckPeriod == 0 {
+		healthCheckPeriod = time.Minute
+	}
+	config.HealthCheckPeriod = healthCheckPeriod
+
+	ctx := context.Background()
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		logger.Error("Failed to create connection pool", zap.Error(err))
+		return nil, fmt.Errorf("failed to create connection pool: %w", err)
+	}
+
+	if err := pool.Ping(ctx); err != nil {
+		logger.Error("Failed to ping database", zap.Error(err))
+		pool.Close()
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	logger.Debug("Database connection pool established successfully",
+		zap.String("DB_DRIVER", "pgx"),
+		zap.Int32("MaxConns", config.MaxConns),
+		zap.Int32("MinConns", config.MinConns),
+		zap.Duration("MaxConnLifetime", config.MaxConnLifetime),
+		zap.Duration("MaxConnIdleTime", config.MaxConnIdleTime),
+		zap.Duration("HealthCheckPeriod", config.HealthCheckPeriod),
 	)
-	return con, nil
+
+	return pool, nil
 }

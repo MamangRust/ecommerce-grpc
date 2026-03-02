@@ -3,20 +3,18 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors"
 )
 
 type authHandleGrpc struct {
 	pb.UnimplementedAuthServiceServer
 	authService service.AuthService
-	mapping     protomapper.AuthProtoMapper
 }
 
-func NewAuthHandleGrpc(auth service.AuthService, mapping protomapper.AuthProtoMapper) *authHandleGrpc {
-	return &authHandleGrpc{authService: auth, mapping: mapping}
+func NewAuthHandleGrpc(auth service.AuthService) *authHandleGrpc {
+	return &authHandleGrpc{authService: auth}
 }
 
 func (s *authHandleGrpc) LoginUser(ctx context.Context, req *pb.LoginRequest) (*pb.ApiResponseLogin, error) {
@@ -25,32 +23,63 @@ func (s *authHandleGrpc) LoginUser(ctx context.Context, req *pb.LoginRequest) (*
 		Password: req.Password,
 	}
 
-	res, err := s.authService.Login(request)
+	res, err := s.authService.Login(ctx, request)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseLogin("success", "Login successful", res), nil
+	pbRes := &pb.ApiResponseLogin{
+		Status:  "success",
+		Message: "Login successfully",
+		Data: &pb.TokenResponse{
+			AccessToken:  res.AccessToken,
+			RefreshToken: res.RefreshToken,
+		},
+	}
+
+	return pbRes, nil
 }
 
 func (s *authHandleGrpc) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.ApiResponseRefreshToken, error) {
-	res, err := s.authService.RefreshToken(req.RefreshToken)
+	res, err := s.authService.RefreshToken(ctx, req.RefreshToken)
 
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseRefreshToken("success", "Registration successful", res), nil
+	pbRes := &pb.ApiResponseRefreshToken{
+		Status:  "success",
+		Message: "Refresh token successfully",
+		Data: &pb.TokenResponse{
+			AccessToken:  res.AccessToken,
+			RefreshToken: res.RefreshToken,
+		},
+	}
+
+	return pbRes, nil
 }
 
 func (s *authHandleGrpc) GetMe(ctx context.Context, req *pb.GetMeRequest) (*pb.ApiResponseGetMe, error) {
-	res, err := s.authService.GetMe(req.AccessToken)
+	res, err := s.authService.GetMe(ctx, req.AccessToken)
 
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseGetMe("success", "Refresh token successful", res), nil
+	pbRes := &pb.ApiResponseGetMe{
+		Status:  "success",
+		Message: "Get me successfully",
+		Data: &pb.UserResponse{
+			Id:        res.UserID,
+			Firstname: res.Firstname,
+			Lastname:  res.Lastname,
+			Email:     res.Email,
+			CreatedAt: res.CreatedAt.Time.String(),
+			UpdatedAt: res.UpdatedAt.Time.String(),
+		},
+	}
+
+	return pbRes, nil
 }
 
 func (s *authHandleGrpc) RegisterUser(ctx context.Context, req *pb.RegisterRequest) (*pb.ApiResponseRegister, error) {
@@ -62,10 +91,23 @@ func (s *authHandleGrpc) RegisterUser(ctx context.Context, req *pb.RegisterReque
 		ConfirmPassword: req.ConfirmPassword,
 	}
 
-	res, errResp := s.authService.Register(request)
-	if errResp != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(errResp)
+	res, err := s.authService.Register(ctx, request)
+	if err != nil {
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseRegister("success", "Get me successful", res), nil
+	pbRes := &pb.ApiResponseRegister{
+		Status:  "success",
+		Message: "Registration successfully",
+		Data: &pb.UserResponse{
+			Id:        res.UserID,
+			Firstname: res.Firstname,
+			Lastname:  res.Lastname,
+			Email:     res.Email,
+			CreatedAt: res.CreatedAt.Time.String(),
+			UpdatedAt: res.UpdatedAt.Time.String(),
+		},
+	}
+
+	return pbRes, nil
 }

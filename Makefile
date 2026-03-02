@@ -22,6 +22,16 @@ run-client:
 run-server:
 	go run cmd/server/main.go
 
+
+build-client:
+	go build -ldflags="-s -w" -o client cmd/client/main.go
+
+build-server:
+	go build -ldflags="-s -w" -o server cmd/server/main.go
+
+build-migrate:
+	go build -ldflags="-s -w" -o migrate cmd/migrate/main.go
+
 # gen:
 # 	mockgen -source=internal/service/interfaces.go -destination=internal/service/mocks/mock.go
 # 	mockgen -source=internal/repository/interfaces.go -destination=internal/repository/mocks/mock.go

@@ -1,18 +1,18 @@
 package cart_errors
 
 import (
-	"ecommerce/internal/domain/response"
+	"ecommerce/pkg/errors"
 	"net/http"
 )
 
 var (
-	ErrCartNotFoundRes   = response.NewErrorResponse("Cart not found", http.StatusNotFound)
-	ErrCartAlreadyExists = response.NewErrorResponse("Cart already exists", http.StatusBadRequest)
-	ErrCartInvalidData   = response.NewErrorResponse("Invalid cart data", http.StatusBadRequest)
+	ErrCartNotFoundRes   = errors.NewErrorResponse("Cart not found", http.StatusNotFound)
+	ErrCartAlreadyExists = errors.NewErrorResponse("Cart already exists", http.StatusBadRequest)
+	ErrCartInvalidData   = errors.NewErrorResponse("Invalid cart data", http.StatusBadRequest)
 
-	ErrFailedFindAllCarts = response.NewErrorResponse("Failed to fetch carts", http.StatusInternalServerError)
-	ErrFailedCreateCart   = response.NewErrorResponse("Failed to create cart", http.StatusInternalServerError)
+	ErrFailedFindAllCarts = errors.NewErrorResponse("Failed to fetch carts", http.StatusInternalServerError)
+	ErrFailedCreateCart   = errors.NewErrorResponse("Failed to create cart", http.StatusInternalServerError)
 
-	ErrFailedDeleteCart     = response.NewErrorResponse("Failed to permanently delete cart", http.StatusInternalServerError)
-	ErrFailedDeleteAllCarts = response.NewErrorResponse("Failed to permanently delete all carts", http.StatusInternalServerError)
+	ErrFailedDeleteCart     = errors.NewErrorResponse("Failed to permanently delete cart", http.StatusInternalServerError)
+	ErrFailedDeleteAllCarts = errors.NewErrorResponse("Failed to permanently delete all carts", http.StatusInternalServerError)
 )

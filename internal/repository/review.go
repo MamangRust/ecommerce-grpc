@@ -2,32 +2,24 @@ package repository
 
 import (
 	"context"
-	"ecommerce/internal/domain/record"
 	"ecommerce/internal/domain/requests"
-	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
 	review_errors "ecommerce/pkg/errors/review"
 )
 
 type reviewRepository struct {
-	db      *db.Queries
-	ctx     context.Context
-	mapping recordmapper.ReviewRecordMapping
+	db *db.Queries
 }
 
 func NewReviewRepository(
 	db *db.Queries,
-	ctx context.Context,
-	mapping recordmapper.ReviewRecordMapping,
 ) *reviewRepository {
 	return &reviewRepository{
-		db:      db,
-		ctx:     ctx,
-		mapping: mapping,
+		db: db,
 	}
 }
 
-func (r *reviewRepository) FindAllReview(req *requests.FindAllReview) ([]*record.ReviewRecord, *int, error) {
+func (r *reviewRepository) FindAllReview(ctx context.Context, req *requests.FindAllReview) ([]*db.GetReviewsRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetReviewsParams{
@@ -36,24 +28,16 @@ func (r *reviewRepository) FindAllReview(req *requests.FindAllReview) ([]*record
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetReviews(r.ctx, reqDb)
+	res, err := r.db.GetReviews(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, review_errors.ErrFindAllReviews
+		return nil, review_errors.ErrFindAllReviews
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToReviewsRecordPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *reviewRepository) FindByProduct(req *requests.FindAllReviewByProduct) ([]*record.ReviewsDetailRecord, *int, error) {
+func (r *reviewRepository) FindByProduct(ctx context.Context, req *requests.FindAllReviewByProduct) ([]*db.GetReviewByProductIdRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetReviewByProductIdParams{
@@ -63,24 +47,16 @@ func (r *reviewRepository) FindByProduct(req *requests.FindAllReviewByProduct) (
 		Offset:    int32(offset),
 	}
 
-	res, err := r.db.GetReviewByProductId(r.ctx, reqDb)
+	res, err := r.db.GetReviewByProductId(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, review_errors.ErrFindReviewsByProduct
+		return nil, review_errors.ErrFindReviewsByProduct
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToReviewsProductRecordPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *reviewRepository) FindByMerchant(req *requests.FindAllReviewByMerchant) ([]*record.ReviewsDetailRecord, *int, error) {
+func (r *reviewRepository) FindByMerchant(ctx context.Context, req *requests.FindAllReviewByMerchant) ([]*db.GetReviewByMerchantIdRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetReviewByMerchantIdParams{
@@ -90,24 +66,16 @@ func (r *reviewRepository) FindByMerchant(req *requests.FindAllReviewByMerchant)
 		Offset:     int32(offset),
 	}
 
-	res, err := r.db.GetReviewByMerchantId(r.ctx, reqDb)
+	res, err := r.db.GetReviewByMerchantId(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, review_errors.ErrFindReviewsByMerchant
+		return nil, review_errors.ErrFindReviewsByMerchant
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToReviewsMerchantRecordPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *reviewRepository) FindByActive(req *requests.FindAllReview) ([]*record.ReviewRecord, *int, error) {
+func (r *reviewRepository) FindByActive(ctx context.Context, req *requests.FindAllReview) ([]*db.GetReviewsActiveRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetReviewsActiveParams{
@@ -116,24 +84,16 @@ func (r *reviewRepository) FindByActive(req *requests.FindAllReview) ([]*record.
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetReviewsActive(r.ctx, reqDb)
+	res, err := r.db.GetReviewsActive(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, review_errors.ErrFindActiveReviews
+		return nil, review_errors.ErrFindActiveReviews
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToReviewsRecordActivePagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *reviewRepository) FindByTrashed(req *requests.FindAllReview) ([]*record.ReviewRecord, *int, error) {
+func (r *reviewRepository) FindByTrashed(ctx context.Context, req *requests.FindAllReview) ([]*db.GetReviewsTrashedRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetReviewsTrashedParams{
@@ -142,34 +102,26 @@ func (r *reviewRepository) FindByTrashed(req *requests.FindAllReview) ([]*record
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetReviewsTrashed(r.ctx, reqDb)
+	res, err := r.db.GetReviewsTrashed(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, review_errors.ErrFindTrashedReviews
+		return nil, review_errors.ErrFindTrashedReviews
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToReviewsRecordTrashedPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *reviewRepository) FindById(id int) (*record.ReviewRecord, error) {
-	res, err := r.db.GetReviewByID(r.ctx, int32(id))
+func (r *reviewRepository) FindById(ctx context.Context, id int) (*db.GetReviewByIDRow, error) {
+	res, err := r.db.GetReviewByID(ctx, int32(id))
 
 	if err != nil {
 		return nil, review_errors.ErrFindReviewByID
 	}
 
-	return r.mapping.ToReviewRecord(res), nil
+	return res, nil
 }
 
-func (r *reviewRepository) CreateReview(request *requests.CreateReviewRequest) (*record.ReviewRecord, error) {
+func (r *reviewRepository) CreateReview(ctx context.Context, request *requests.CreateReviewRequest) (*db.CreateReviewRow, error) {
 	req := db.CreateReviewParams{
 		UserID:    int32(request.UserID),
 		ProductID: int32(request.ProductID),
@@ -177,16 +129,16 @@ func (r *reviewRepository) CreateReview(request *requests.CreateReviewRequest) (
 		Comment:   request.Comment,
 	}
 
-	review, err := r.db.CreateReview(r.ctx, req)
+	review, err := r.db.CreateReview(ctx, req)
 
 	if err != nil {
 		return nil, review_errors.ErrCreateReview
 	}
 
-	return r.mapping.ToReviewRecord(review), nil
+	return review, nil
 }
 
-func (r *reviewRepository) UpdateReview(request *requests.UpdateReviewRequest) (*record.ReviewRecord, error) {
+func (r *reviewRepository) UpdateReview(ctx context.Context, request *requests.UpdateReviewRequest) (*db.UpdateReviewRow, error) {
 	req := db.UpdateReviewParams{
 		ReviewID: int32(*request.ReviewID),
 		Name:     request.Name,
@@ -194,37 +146,37 @@ func (r *reviewRepository) UpdateReview(request *requests.UpdateReviewRequest) (
 		Comment:  request.Comment,
 	}
 
-	res, err := r.db.UpdateReview(r.ctx, req)
+	res, err := r.db.UpdateReview(ctx, req)
 
 	if err != nil {
 		return nil, review_errors.ErrUpdateReview
 	}
 
-	return r.mapping.ToReviewRecord(res), nil
+	return res, nil
 }
 
-func (r *reviewRepository) TrashReview(shipping_id int) (*record.ReviewRecord, error) {
-	res, err := r.db.TrashReview(r.ctx, int32(shipping_id))
+func (r *reviewRepository) TrashReview(ctx context.Context, shipping_id int) (*db.Review, error) {
+	res, err := r.db.TrashReview(ctx, int32(shipping_id))
 
 	if err != nil {
 		return nil, review_errors.ErrTrashReview
 	}
 
-	return r.mapping.ToReviewRecord(res), nil
+	return res, nil
 }
 
-func (r *reviewRepository) RestoreReview(category_id int) (*record.ReviewRecord, error) {
-	res, err := r.db.RestoreReview(r.ctx, int32(category_id))
+func (r *reviewRepository) RestoreReview(ctx context.Context, category_id int) (*db.Review, error) {
+	res, err := r.db.RestoreReview(ctx, int32(category_id))
 
 	if err != nil {
 		return nil, review_errors.ErrRestoreReview
 	}
 
-	return r.mapping.ToReviewRecord(res), nil
+	return res, nil
 }
 
-func (r *reviewRepository) DeleteReviewPermanently(category_id int) (bool, error) {
-	err := r.db.DeleteReviewPermanently(r.ctx, int32(category_id))
+func (r *reviewRepository) DeleteReviewPermanently(ctx context.Context, category_id int) (bool, error) {
+	err := r.db.DeleteReviewPermanently(ctx, int32(category_id))
 
 	if err != nil {
 		return false, review_errors.ErrDeleteReviewPermanent
@@ -233,8 +185,8 @@ func (r *reviewRepository) DeleteReviewPermanently(category_id int) (bool, error
 	return true, nil
 }
 
-func (r *reviewRepository) RestoreAllReview() (bool, error) {
-	err := r.db.RestoreAllReviews(r.ctx)
+func (r *reviewRepository) RestoreAllReview(ctx context.Context) (bool, error) {
+	err := r.db.RestoreAllReviews(ctx)
 
 	if err != nil {
 		return false, review_errors.ErrRestoreAllReviews
@@ -242,8 +194,8 @@ func (r *reviewRepository) RestoreAllReview() (bool, error) {
 	return true, nil
 }
 
-func (r *reviewRepository) DeleteAllPermanentReview() (bool, error) {
-	err := r.db.DeleteAllPermanentReviews(r.ctx)
+func (r *reviewRepository) DeleteAllPermanentReview(ctx context.Context) (bool, error) {
+	err := r.db.DeleteAllPermanentReviews(ctx)
 
 	if err != nil {
 		return false, review_errors.ErrDeleteAllPermanentReview

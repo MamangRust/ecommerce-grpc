@@ -9,15 +9,30 @@
 --   - Applies pagination using limit and offset
 -- Returns: Certification records matching the search, with total_count
 -- name: GetMerchantCertificationsAndAwards :many
-SELECT 
-    mca.*,
+SELECT
+    mca.merchant_certification_id,
+    mca.merchant_id,
+    mca.title,
+    mca.description,
+    mca.issued_by,
+    mca.issue_date,
+    mca.expiry_date,
+    mca.certificate_url,
+    mca.created_at,
+    mca.updated_at,
     m.name AS merchant_name,
-    COUNT(*) OVER() AS total_count
-FROM merchant_certifications_and_awards mca
-JOIN merchants m ON mca.merchant_id = m.merchant_id
-WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', $1::text, '%'))
-LIMIT $2 OFFSET $3;
-
+    COUNT(*) OVER () AS total_count
+FROM
+    merchant_certifications_and_awards mca
+    JOIN merchants m ON mca.merchant_id = m.merchant_id
+WHERE
+    mca.deleted_at IS NULL
+    AND m.deleted_at IS NULL
+    AND m.name ILIKE '%' || $1 || '%'
+ORDER BY mca.created_at DESC
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetMerchantCertificationsAndAwardsActive: Retrieves certifications for active merchants with pagination and optional search
 -- Parameters:
@@ -30,16 +45,29 @@ LIMIT $2 OFFSET $3;
 --   - Applies pagination using limit and offset
 -- Returns: Active merchant certification records matching the search, with total_count
 -- name: GetMerchantCertificationsAndAwardsActive :many
-SELECT 
-    mca.*,
+SELECT
+    mca.merchant_certification_id,
+    mca.merchant_id,
+    mca.title,
+    mca.description,
+    mca.issued_by,
+    mca.issue_date,
+    mca.expiry_date,
+    mca.certificate_url,
+    mca.created_at,
+    mca.updated_at,
+    mca.deleted_at,
     m.name AS merchant_name,
-    COUNT(*) OVER() AS total_count
-FROM merchant_certifications_and_awards mca
-JOIN merchants m ON mca.merchant_id = m.merchant_id
-WHERE m.deleted_at IS NULL
-  AND LOWER(m.name) LIKE LOWER(CONCAT('%', $1::text, '%'))
-LIMIT $2 OFFSET $3;
-
+    COUNT(*) OVER () AS total_count
+FROM
+    merchant_certifications_and_awards mca
+    JOIN merchants m ON mca.merchant_id = m.merchant_id
+WHERE
+    m.deleted_at IS NULL
+    AND LOWER(m.name) LIKE LOWER(CONCAT('%', $1::text, '%'))
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetMerchantCertificationsAndAwardsTrashed: Retrieves certifications for deleted merchants with pagination and optional search
 -- Parameters:
@@ -52,17 +80,29 @@ LIMIT $2 OFFSET $3;
 --   - Applies pagination using limit and offset
 -- Returns: Trashed merchant certification records matching the search, with total_count
 -- name: GetMerchantCertificationsAndAwardsTrashed :many
-SELECT 
-    mca.*,
+SELECT
+    mca.merchant_certification_id,
+    mca.merchant_id,
+    mca.title,
+    mca.description,
+    mca.issued_by,
+    mca.issue_date,
+    mca.expiry_date,
+    mca.certificate_url,
+    mca.created_at,
+    mca.updated_at,
+    mca.deleted_at,
     m.name AS merchant_name,
-    COUNT(*) OVER() AS total_count
-FROM merchant_certifications_and_awards mca
-JOIN merchants m ON mca.merchant_id = m.merchant_id
-WHERE m.deleted_at IS NOT NULL
-  AND LOWER(m.name) LIKE LOWER(CONCAT('%', $1::text, '%'))
-LIMIT $2 OFFSET $3;
-
-
+    COUNT(*) OVER () AS total_count
+FROM
+    merchant_certifications_and_awards mca
+    JOIN merchants m ON mca.merchant_id = m.merchant_id
+WHERE
+    m.deleted_at IS NOT NULL
+    AND LOWER(m.name) LIKE LOWER(CONCAT('%', $1::text, '%'))
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetMerchantCertificationOrAward: Retrieves a single merchant award or certification that is not soft-deleted
 -- Parameters:
@@ -71,13 +111,12 @@ LIMIT $2 OFFSET $3;
 --   - Returns the merchant award or certification where deleted_at IS NULL
 -- Returns: A single merchant_certifications_and_awards record
 -- name: GetMerchantCertificationOrAward :one
-SELECT *
-FROM merchant_certifications_and_awards
-WHERE merchant_certification_id = $1
-AND deleted_at IS NULL;
-
-
-
+SELECT mca.merchant_certification_id, mca.merchant_id, mca.title, mca.description, mca.issued_by, mca.issue_date, mca.expiry_date, mca.certificate_url, mca.created_at, mca.updated_at
+FROM
+    merchant_certifications_and_awards mca
+WHERE
+    merchant_certification_id = $1
+    AND deleted_at IS NULL;
 
 -- CreateMerchantCertificationOrAward: Inserts a new certification or award
 -- Purpose: Register a new certification or award for a merchant
@@ -94,19 +133,28 @@ AND deleted_at IS NULL;
 --   - Sets created_at automatically
 --   - Requires merchant_id and title
 -- name: CreateMerchantCertificationOrAward :one
-INSERT INTO merchant_certifications_and_awards (
+INSERT INTO
+    merchant_certifications_and_awards (
+        merchant_id,
+        title,
+        description,
+        issued_by,
+        issue_date,
+        expiry_date,
+        certificate_url
+    )
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING
+    merchant_certification_id,
     merchant_id,
     title,
     description,
     issued_by,
     issue_date,
     expiry_date,
-    certificate_url
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
-)
-RETURNING *;
-
+    certificate_url,
+    created_at,
+    updated_at;
 
 -- UpdateMerchantCertificationOrAward: Updates an existing certification or award
 -- Purpose: Modify certification or award details
@@ -135,8 +183,17 @@ SET
 WHERE
     merchant_certification_id = $1
     AND deleted_at IS NULL
-RETURNING *;
-
+RETURNING
+    merchant_certification_id,
+    merchant_id,
+    title,
+    description,
+    issued_by,
+    issue_date,
+    expiry_date,
+    certificate_url,
+    created_at,
+    updated_at;
 
 -- TrashMerchantCertificationOrAward: Soft-deletes a certification or award
 -- Purpose: Deactivate a record without permanent deletion
@@ -148,12 +205,23 @@ RETURNING *;
 --   - Only affects active records
 -- name: TrashMerchantCertificationOrAward :one
 UPDATE merchant_certifications_and_awards
-SET deleted_at = CURRENT_TIMESTAMP
-WHERE merchant_certification_id = $1
-  AND deleted_at IS NULL
-RETURNING *;
-
-
+SET
+    deleted_at = CURRENT_TIMESTAMP
+WHERE
+    merchant_certification_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    merchant_certification_id,
+    merchant_id,
+    title,
+    description,
+    issued_by,
+    issue_date,
+    expiry_date,
+    certificate_url,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreMerchantCertificationOrAward: Restores a soft-deleted certification
 -- Purpose: Reactivate a previously deleted record
@@ -165,12 +233,23 @@ RETURNING *;
 --   - Only works on previously soft-deleted entries
 -- name: RestoreMerchantCertificationOrAward :one
 UPDATE merchant_certifications_and_awards
-SET deleted_at = NULL
-WHERE merchant_certification_id = $1
-  AND deleted_at IS NOT NULL
-RETURNING *;
-
-
+SET
+    deleted_at = NULL
+WHERE
+    merchant_certification_id = $1
+    AND deleted_at IS NOT NULL
+RETURNING
+    merchant_certification_id,
+    merchant_id,
+    title,
+    description,
+    issued_by,
+    issue_date,
+    expiry_date,
+    certificate_url,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeleteMerchantCertificationOrAwardPermanently: Hard-deletes a certification record
 -- Purpose: Permanently remove a soft-deleted record
@@ -181,9 +260,9 @@ RETURNING *;
 --   - Irreversible action
 -- name: DeleteMerchantCertificationOrAwardPermanently :exec
 DELETE FROM merchant_certifications_and_awards
-WHERE merchant_certification_id = $1
-  AND deleted_at IS NOT NULL;
-
+WHERE
+    merchant_certification_id = $1
+    AND deleted_at IS NOT NULL;
 
 -- RestoreAllMerchantCertificationsAndAwards: Restores all soft-deleted certifications
 -- Purpose: Bulk restore operation
@@ -192,10 +271,10 @@ WHERE merchant_certification_id = $1
 --   - Useful for recovery or admin batch restore
 -- name: RestoreAllMerchantCertificationsAndAwards :exec
 UPDATE merchant_certifications_and_awards
-SET deleted_at = NULL
-WHERE deleted_at IS NOT NULL;
-
-
+SET
+    deleted_at = NULL
+WHERE
+    deleted_at IS NOT NULL;
 
 -- DeleteAllPermanentMerchantCertificationsAndAwards: Hard-deletes all trashed certifications
 -- Purpose: Bulk clean-up operation
@@ -204,4 +283,5 @@ WHERE deleted_at IS NOT NULL;
 --   - Should be restricted to admin-level actions
 -- name: DeleteAllPermanentMerchantCertificationsAndAwards :exec
 DELETE FROM merchant_certifications_and_awards
-WHERE deleted_at IS NOT NULL;
+WHERE
+    deleted_at IS NOT NULL;

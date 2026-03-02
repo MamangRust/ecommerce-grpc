@@ -8,14 +8,20 @@
 -- Business Logic:
 --   - Sets created_at, updated_at automatically
 -- name: CreateMerchantSocialMediaLink :one
-INSERT INTO merchant_social_media_links (
+INSERT INTO
+    merchant_social_media_links (
+        merchant_detail_id,
+        platform,
+        url
+    )
+VALUES ($1, $2, $3)
+RETURNING
+    merchant_social_id,
     merchant_detail_id,
     platform,
-    url
-) VALUES (
-    $1, $2, $3
-)
-RETURNING *;
+    url,
+    created_at,
+    updated_at;
 
 -- UpdateMerchantSocialMediaLink: Updates an existing merchant social media link
 -- Purpose: Modify platform or URL
@@ -35,8 +41,13 @@ SET
     updated_at = CURRENT_TIMESTAMP
 WHERE
     merchant_social_id = $1
-RETURNING *;
-
+RETURNING
+    merchant_social_id,
+    merchant_detail_id,
+    platform,
+    url,
+    created_at,
+    updated_at;
 
 -- TrashMerchantSocialMediaLink: Soft-deletes a merchant social media link
 -- Purpose: Temporarily deactivate a link without permanent deletion
@@ -48,10 +59,19 @@ RETURNING *;
 --   - Only affects active records
 -- name: TrashMerchantSocialMediaLink :one
 UPDATE merchant_social_media_links
-SET deleted_at = CURRENT_TIMESTAMP
-WHERE merchant_social_id = $1
-  AND deleted_at IS NULL
-RETURNING *;
+SET
+    deleted_at = CURRENT_TIMESTAMP
+WHERE
+    merchant_social_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    merchant_social_id,
+    merchant_detail_id,
+    platform,
+    url,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreMerchantSocialMediaLink: Restores a soft-deleted social media link
 -- Purpose: Reactivate a previously deleted link
@@ -63,12 +83,19 @@ RETURNING *;
 --   - Only works on previously soft-deleted entries
 -- name: RestoreMerchantSocialMediaLink :one
 UPDATE merchant_social_media_links
-SET deleted_at = NULL
-WHERE merchant_social_id = $1
-  AND deleted_at IS NOT NULL
-RETURNING *;
-
-
+SET
+    deleted_at = NULL
+WHERE
+    merchant_social_id = $1
+    AND deleted_at IS NOT NULL
+RETURNING
+    merchant_social_id,
+    merchant_detail_id,
+    platform,
+    url,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeleteMerchantSocialMediaLinkPermanently: Hard-deletes a social media link
 -- Purpose: Permanently remove a link
@@ -76,8 +103,8 @@ RETURNING *;
 --   $1: merchant_social_id
 -- name: DeleteMerchantSocialMediaLinkPermanently :exec
 DELETE FROM merchant_social_media_links
-WHERE merchant_social_id = $1;
-
+WHERE
+    merchant_social_id = $1;
 
 -- RestoreAllMerchantSocialMediaLinks: Restores all soft-deleted social media links
 -- Purpose: Bulk recovery operation
@@ -85,9 +112,10 @@ WHERE merchant_social_id = $1;
 --   - Clears deleted_at on all trashed records
 -- name: RestoreAllMerchantSocialMediaLinks :exec
 UPDATE merchant_social_media_links
-SET deleted_at = NULL
-WHERE deleted_at IS NOT NULL;
-
+SET
+    deleted_at = NULL
+WHERE
+    deleted_at IS NOT NULL;
 
 -- DeleteAllMerchantSocialMediaLinksPermanently: Hard-deletes all soft-deleted social media links
 -- Purpose: Permanently remove all trashed links
@@ -95,5 +123,4 @@ WHERE deleted_at IS NOT NULL;
 --   - Irreversible delete
 --   - Only affects already soft-deleted records
 -- name: DeleteAllMerchantSocialMediaLinksPermanently :exec
-DELETE FROM merchant_social_media_links
-WHERE deleted_at IS NOT NULL;
+DELETE FROM merchant_social_media_links WHERE deleted_at IS NOT NULL;

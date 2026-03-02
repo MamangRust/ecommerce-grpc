@@ -3,29 +3,26 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/errors/category_errors"
 	"math"
 
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type categoryHandleGrpc struct {
 	pb.UnimplementedCategoryServiceServer
 	categoryService service.CategoryService
-	mapping         protomapper.CategoryProtoMapper
 }
 
 func NewCategoryHandleGrpc(
 	categoryService service.CategoryService,
-	mapping protomapper.CategoryProtoMapper,
 ) *categoryHandleGrpc {
 	return &categoryHandleGrpc{
 		categoryService: categoryService,
-		mapping:         mapping,
 	}
 }
 
@@ -47,10 +44,22 @@ func (s *categoryHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllCat
 		Search:   search,
 	}
 
-	category, totalRecords, err := s.categoryService.FindAll(&reqService)
-
+	categories, totalRecords, err := s.categoryService.FindAll(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoCategories := make([]*pb.CategoryResponse, len(categories))
+	for i, category := range categories {
+		protoCategories[i] = &pb.CategoryResponse{
+			Id:            int32(category.CategoryID),
+			Name:          category.Name,
+			Description:   *category.Description,
+			SlugCategory:  *category.SlugCategory,
+			ImageCategory: *category.ImageCategory,
+			CreatedAt:     category.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt:     category.UpdatedAt.Time.Format("2006-01-02"),
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -62,8 +71,12 @@ func (s *categoryHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllCat
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationCategory(paginationMeta, "success", "Successfully fetched categories", category)
-	return so, nil
+	return &pb.ApiResponsePaginationCategory{
+		Status:     "success",
+		Message:    "Successfully fetched categories",
+		Data:       protoCategories,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindById(ctx context.Context, request *pb.FindByIdCategoryRequest) (*pb.ApiResponseCategory, error) {
@@ -73,16 +86,26 @@ func (s *categoryHandleGrpc) FindById(ctx context.Context, request *pb.FindByIdC
 		return nil, category_errors.ErrGrpcCategoryInvalidId
 	}
 
-	category, err := s.categoryService.FindById(id)
-
+	category, err := s.categoryService.FindById(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCategory("success", "Successfully fetched category", category)
+	protoCategory := &pb.CategoryResponse{
+		Id:            int32(category.CategoryID),
+		Name:          category.Name,
+		Description:   *category.Description,
+		SlugCategory:  *category.SlugCategory,
+		ImageCategory: *category.ImageCategory,
+		CreatedAt:     category.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt:     category.UpdatedAt.Time.Format("2006-01-02"),
+	}
 
-	return so, nil
-
+	return &pb.ApiResponseCategory{
+		Status:  "success",
+		Message: "Successfully fetched category",
+		Data:    protoCategory,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAllCategoryRequest) (*pb.ApiResponsePaginationCategoryDeleteAt, error) {
@@ -103,10 +126,28 @@ func (s *categoryHandleGrpc) FindByActive(ctx context.Context, request *pb.FindA
 		Search:   search,
 	}
 
-	users, totalRecords, err := s.categoryService.FindByActive(&reqService)
-
+	categories, totalRecords, err := s.categoryService.FindByActive(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoCategories := make([]*pb.CategoryResponseDeleteAt, len(categories))
+	for i, category := range categories {
+		var deletedAt string
+		if category.DeletedAt.Valid {
+			deletedAt = category.DeletedAt.Time.Format("2006-01-02")
+		}
+
+		protoCategories[i] = &pb.CategoryResponseDeleteAt{
+			Id:            int32(category.CategoryID),
+			Name:          category.Name,
+			Description:   *category.Description,
+			SlugCategory:  *category.SlugCategory,
+			ImageCategory: *category.ImageCategory,
+			CreatedAt:     category.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt:     category.UpdatedAt.Time.Format("2006-0-01-02"),
+			DeletedAt:     &wrapperspb.StringValue{Value: deletedAt},
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -118,9 +159,12 @@ func (s *categoryHandleGrpc) FindByActive(ctx context.Context, request *pb.FindA
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationCategoryDeleteAt(paginationMeta, "success", "Successfully fetched active categories", users)
-
-	return so, nil
+	return &pb.ApiResponsePaginationCategoryDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched active categories",
+		Data:       protoCategories,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAllCategoryRequest) (*pb.ApiResponsePaginationCategoryDeleteAt, error) {
@@ -141,10 +185,28 @@ func (s *categoryHandleGrpc) FindByTrashed(ctx context.Context, request *pb.Find
 		Search:   search,
 	}
 
-	categories, totalRecords, err := s.categoryService.FindByTrashed(&reqService)
-
+	categories, totalRecords, err := s.categoryService.FindByTrashed(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoCategories := make([]*pb.CategoryResponseDeleteAt, len(categories))
+	for i, category := range categories {
+		var deletedAt string
+		if category.DeletedAt.Valid {
+			deletedAt = category.DeletedAt.Time.Format("2006-01-02")
+		}
+
+		protoCategories[i] = &pb.CategoryResponseDeleteAt{
+			Id:            int32(category.CategoryID),
+			Name:          category.Name,
+			Description:   *category.Description,
+			SlugCategory:  *category.SlugCategory,
+			ImageCategory: *category.ImageCategory,
+			CreatedAt:     category.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt:     category.UpdatedAt.Time.Format("2006-01-02"),
+			DeletedAt:     &wrapperspb.StringValue{Value: deletedAt},
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -156,9 +218,12 @@ func (s *categoryHandleGrpc) FindByTrashed(ctx context.Context, request *pb.Find
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationCategoryDeleteAt(paginationMeta, "success", "Successfully fetched trashed categories", categories)
-
-	return so, nil
+	return &pb.ApiResponsePaginationCategoryDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched trashed categories",
+		Data:       protoCategories,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindMonthlyTotalPrices(ctx context.Context, req *pb.FindYearMonthTotalPrices) (*pb.ApiResponseCategoryMonthlyTotalPrice, error) {
@@ -169,7 +234,7 @@ func (s *categoryHandleGrpc) FindMonthlyTotalPrices(ctx context.Context, req *pb
 		return nil, category_errors.ErrGrpcCategoryInvalidYear
 	}
 
-	if month <= 0 || month >= 12 {
+	if month <= 0 || month > 12 {
 		return nil, category_errors.ErrGrpcCategoryInvalidMonth
 	}
 
@@ -178,12 +243,25 @@ func (s *categoryHandleGrpc) FindMonthlyTotalPrices(ctx context.Context, req *pb
 		Month: month,
 	}
 
-	methods, err := s.categoryService.FindMonthlyTotalPrice(&reqService)
+	serviceResults, err := s.categoryService.FindMonthlyTotalPrice(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseMonthlyTotalPrice("success", "Monthly sales retrieved successfully", methods), nil
+	var data []*pb.CategoriesMonthlyTotalPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoriesMonthlyTotalPriceResponse{
+			Year:         result.Year,
+			Month:        result.Month,
+			TotalRevenue: int32(result.TotalRevenue),
+		})
+	}
+
+	return &pb.ApiResponseCategoryMonthlyTotalPrice{
+		Status:  "success",
+		Message: "Monthly sales retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindYearlyTotalPrices(ctx context.Context, req *pb.FindYearTotalPrices) (*pb.ApiResponseCategoryYearlyTotalPrice, error) {
@@ -193,13 +271,24 @@ func (s *categoryHandleGrpc) FindYearlyTotalPrices(ctx context.Context, req *pb.
 		return nil, category_errors.ErrGrpcCategoryInvalidYear
 	}
 
-	methods, err := s.categoryService.FindYearlyTotalPrice(year)
-
+	serviceResults, err := s.categoryService.FindYearlyTotalPrice(ctx, year)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseYearlyTotalPrice("success", "Yearly payment methods retrieved successfully", methods), nil
+	var data []*pb.CategoriesYearlyTotalPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoriesYearlyTotalPriceResponse{
+			Year:         result.Year,
+			TotalRevenue: int32(result.TotalRevenue),
+		})
+	}
+
+	return &pb.ApiResponseCategoryYearlyTotalPrice{
+		Status:  "success",
+		Message: "Yearly payment methods retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindMonthlyTotalPricesById(ctx context.Context, req *pb.FindYearMonthTotalPriceById) (*pb.ApiResponseCategoryMonthlyTotalPrice, error) {
@@ -211,7 +300,7 @@ func (s *categoryHandleGrpc) FindMonthlyTotalPricesById(ctx context.Context, req
 		return nil, category_errors.ErrGrpcCategoryInvalidYear
 	}
 
-	if month <= 0 || month >= 12 {
+	if month <= 0 || month > 12 {
 		return nil, category_errors.ErrGrpcCategoryInvalidMonth
 	}
 
@@ -225,13 +314,25 @@ func (s *categoryHandleGrpc) FindMonthlyTotalPricesById(ctx context.Context, req
 		CategoryID: id,
 	}
 
-	methods, err := s.categoryService.FindMonthlyTotalPriceById(&reqService)
-
+	serviceResults, err := s.categoryService.FindMonthlyTotalPriceById(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseMonthlyTotalPrice("success", "Monthly sales retrieved successfully", methods), nil
+	var data []*pb.CategoriesMonthlyTotalPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoriesMonthlyTotalPriceResponse{
+			Year:         result.Year,
+			Month:        result.Month,
+			TotalRevenue: int32(result.TotalRevenue),
+		})
+	}
+
+	return &pb.ApiResponseCategoryMonthlyTotalPrice{
+		Status:  "success",
+		Message: "Monthly sales retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindYearlyTotalPricesById(ctx context.Context, req *pb.FindYearTotalPriceById) (*pb.ApiResponseCategoryYearlyTotalPrice, error) {
@@ -251,13 +352,24 @@ func (s *categoryHandleGrpc) FindYearlyTotalPricesById(ctx context.Context, req 
 		CategoryID: id,
 	}
 
-	methods, err := s.categoryService.FindYearlyTotalPriceById(&reqService)
-
+	serviceResults, err := s.categoryService.FindYearlyTotalPriceById(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseYearlyTotalPrice("success", "Yearly payment methods retrieved successfully", methods), nil
+	var data []*pb.CategoriesYearlyTotalPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoriesYearlyTotalPriceResponse{
+			Year:         result.Year,
+			TotalRevenue: int32(result.TotalRevenue),
+		})
+	}
+
+	return &pb.ApiResponseCategoryYearlyTotalPrice{
+		Status:  "success",
+		Message: "Yearly payment methods retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindMonthlyTotalPricesByMerchant(ctx context.Context, req *pb.FindYearMonthTotalPriceByMerchant) (*pb.ApiResponseCategoryMonthlyTotalPrice, error) {
@@ -269,7 +381,7 @@ func (s *categoryHandleGrpc) FindMonthlyTotalPricesByMerchant(ctx context.Contex
 		return nil, category_errors.ErrGrpcCategoryInvalidYear
 	}
 
-	if month <= 0 || month >= 12 {
+	if month <= 0 || month > 12 {
 		return nil, category_errors.ErrGrpcCategoryInvalidMonth
 	}
 
@@ -283,13 +395,25 @@ func (s *categoryHandleGrpc) FindMonthlyTotalPricesByMerchant(ctx context.Contex
 		MerchantID: id,
 	}
 
-	methods, err := s.categoryService.FindMonthlyTotalPriceByMerchant(&reqService)
-
+	serviceResults, err := s.categoryService.FindMonthlyTotalPriceByMerchant(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseMonthlyTotalPrice("success", "Monthly sales retrieved successfully", methods), nil
+	var data []*pb.CategoriesMonthlyTotalPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoriesMonthlyTotalPriceResponse{
+			Year:         result.Year,
+			Month:        result.Month,
+			TotalRevenue: int32(result.TotalRevenue),
+		})
+	}
+
+	return &pb.ApiResponseCategoryMonthlyTotalPrice{
+		Status:  "success",
+		Message: "Monthly sales retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindYearlyTotalPricesByMerchant(ctx context.Context, req *pb.FindYearTotalPriceByMerchant) (*pb.ApiResponseCategoryYearlyTotalPrice, error) {
@@ -309,13 +433,24 @@ func (s *categoryHandleGrpc) FindYearlyTotalPricesByMerchant(ctx context.Context
 		MerchantID: id,
 	}
 
-	methods, err := s.categoryService.FindYearlyTotalPriceByMerchant(&reqService)
-
+	serviceResults, err := s.categoryService.FindYearlyTotalPriceByMerchant(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseYearlyTotalPrice("success", "Yearly payment methods retrieved successfully", methods), nil
+	var data []*pb.CategoriesYearlyTotalPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoriesYearlyTotalPriceResponse{
+			Year:         result.Year,
+			TotalRevenue: int32(result.TotalRevenue),
+		})
+	}
+
+	return &pb.ApiResponseCategoryYearlyTotalPrice{
+		Status:  "success",
+		Message: "Yearly payment methods retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindMonthPrice(ctx context.Context, req *pb.FindYearCategory) (*pb.ApiResponseCategoryMonthPrice, error) {
@@ -325,13 +460,28 @@ func (s *categoryHandleGrpc) FindMonthPrice(ctx context.Context, req *pb.FindYea
 		return nil, category_errors.ErrGrpcCategoryInvalidYear
 	}
 
-	methods, err := s.categoryService.FindMonthPrice(year)
-
+	serviceResults, err := s.categoryService.FindMonthPrice(ctx, year)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseCategoryMonthlyPrice("success", "Monthly payment methods retrieved successfully", methods), nil
+	var data []*pb.CategoryMonthPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoryMonthPriceResponse{
+			Month:        result.Month,
+			CategoryId:   int32(result.CategoryID),
+			CategoryName: result.CategoryName,
+			OrderCount:   int32(result.OrderCount),
+			ItemsSold:    int32(result.ItemsSold),
+			TotalRevenue: int32(result.TotalRevenue),
+		})
+	}
+
+	return &pb.ApiResponseCategoryMonthPrice{
+		Status:  "success",
+		Message: "Monthly payment methods retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindYearPrice(ctx context.Context, req *pb.FindYearCategory) (*pb.ApiResponseCategoryYearPrice, error) {
@@ -341,13 +491,29 @@ func (s *categoryHandleGrpc) FindYearPrice(ctx context.Context, req *pb.FindYear
 		return nil, category_errors.ErrGrpcCategoryInvalidYear
 	}
 
-	methods, err := s.categoryService.FindYearPrice(year)
-
+	serviceResults, err := s.categoryService.FindYearPrice(ctx, year)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseCategoryYearlyPrice("success", "Yearly payment methods retrieved successfully", methods), nil
+	var data []*pb.CategoryYearPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoryYearPriceResponse{
+			Year:               result.Year,
+			CategoryId:         int32(result.CategoryID),
+			CategoryName:       result.CategoryName,
+			OrderCount:         int32(result.OrderCount),
+			ItemsSold:          int32(result.ItemsSold),
+			TotalRevenue:       int32(result.TotalRevenue),
+			UniqueProductsSold: int32(result.UniqueProductsSold),
+		})
+	}
+
+	return &pb.ApiResponseCategoryYearPrice{
+		Status:  "success",
+		Message: "Yearly payment methods retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindMonthPriceByMerchant(ctx context.Context, req *pb.FindYearCategoryByMerchant) (*pb.ApiResponseCategoryMonthPrice, error) {
@@ -367,15 +533,28 @@ func (s *categoryHandleGrpc) FindMonthPriceByMerchant(ctx context.Context, req *
 		MerchantID: id,
 	}
 
-	methods, err := s.categoryService.FindMonthPriceByMerchant(
-		&reqService,
-	)
-
+	serviceResults, err := s.categoryService.FindMonthPriceByMerchant(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseCategoryMonthlyPrice("success", "Merchant monthly payment methods retrieved successfully", methods), nil
+	var data []*pb.CategoryMonthPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoryMonthPriceResponse{
+			Month:        result.Month,
+			CategoryId:   int32(result.CategoryID),
+			CategoryName: result.CategoryName,
+			OrderCount:   int32(result.OrderCount),
+			ItemsSold:    int32(result.ItemsSold),
+			TotalRevenue: int32(result.TotalRevenue),
+		})
+	}
+
+	return &pb.ApiResponseCategoryMonthPrice{
+		Status:  "success",
+		Message: "Merchant monthly payment methods retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindYearPriceByMerchant(ctx context.Context, req *pb.FindYearCategoryByMerchant) (*pb.ApiResponseCategoryYearPrice, error) {
@@ -395,15 +574,29 @@ func (s *categoryHandleGrpc) FindYearPriceByMerchant(ctx context.Context, req *p
 		MerchantID: id,
 	}
 
-	methods, err := s.categoryService.FindYearPriceByMerchant(
-		&reqService,
-	)
-
+	serviceResults, err := s.categoryService.FindYearPriceByMerchant(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseCategoryYearlyPrice("success", "Merchant yearly payment methods retrieved successfully", methods), nil
+	var data []*pb.CategoryYearPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoryYearPriceResponse{
+			Year:               result.Year,
+			CategoryId:         int32(result.CategoryID),
+			CategoryName:       result.CategoryName,
+			OrderCount:         int32(result.OrderCount),
+			ItemsSold:          int32(result.ItemsSold),
+			TotalRevenue:       int32(result.TotalRevenue),
+			UniqueProductsSold: int32(result.UniqueProductsSold),
+		})
+	}
+
+	return &pb.ApiResponseCategoryYearPrice{
+		Status:  "success",
+		Message: "Merchant yearly payment methods retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindMonthPriceById(ctx context.Context, req *pb.FindYearCategoryById) (*pb.ApiResponseCategoryMonthPrice, error) {
@@ -423,15 +616,28 @@ func (s *categoryHandleGrpc) FindMonthPriceById(ctx context.Context, req *pb.Fin
 		CategoryID: id,
 	}
 
-	methods, err := s.categoryService.FindMonthPriceById(
-		&reqService,
-	)
-
+	serviceResults, err := s.categoryService.FindMonthPriceById(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseCategoryMonthlyPrice("success", "Merchant monthly payment methods retrieved successfully", methods), nil
+	var data []*pb.CategoryMonthPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoryMonthPriceResponse{
+			Month:        result.Month,
+			CategoryId:   int32(result.CategoryID),
+			CategoryName: result.CategoryName,
+			OrderCount:   int32(result.OrderCount),
+			ItemsSold:    int32(result.ItemsSold),
+			TotalRevenue: int32(result.TotalRevenue),
+		})
+	}
+
+	return &pb.ApiResponseCategoryMonthPrice{
+		Status:  "success",
+		Message: "Category monthly payment methods retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) FindYearPriceById(ctx context.Context, req *pb.FindYearCategoryById) (*pb.ApiResponseCategoryYearPrice, error) {
@@ -451,15 +657,29 @@ func (s *categoryHandleGrpc) FindYearPriceById(ctx context.Context, req *pb.Find
 		CategoryID: id,
 	}
 
-	methods, err := s.categoryService.FindYearPriceById(
-		&reqService,
-	)
-
+	serviceResults, err := s.categoryService.FindYearPriceById(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	return s.mapping.ToProtoResponseCategoryYearlyPrice("success", "Merchant yearly payment methods retrieved successfully", methods), nil
+	var data []*pb.CategoryYearPriceResponse
+	for _, result := range serviceResults {
+		data = append(data, &pb.CategoryYearPriceResponse{
+			Year:               result.Year,
+			CategoryId:         int32(result.CategoryID),
+			CategoryName:       result.CategoryName,
+			OrderCount:         int32(result.OrderCount),
+			ItemsSold:          int32(result.ItemsSold),
+			TotalRevenue:       int32(result.TotalRevenue),
+			UniqueProductsSold: int32(result.UniqueProductsSold),
+		})
+	}
+
+	return &pb.ApiResponseCategoryYearPrice{
+		Status:  "success",
+		Message: "Category yearly payment methods retrieved successfully",
+		Data:    data,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) Create(ctx context.Context, request *pb.CreateCategoryRequest) (*pb.ApiResponseCategory, error) {
@@ -473,14 +693,26 @@ func (s *categoryHandleGrpc) Create(ctx context.Context, request *pb.CreateCateg
 		return nil, category_errors.ErrGrpcValidateCreateCategory
 	}
 
-	category, err := s.categoryService.CreateCategory(req)
-
+	category, err := s.categoryService.CreateCategory(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCategory("success", "Successfully created category", category)
-	return so, nil
+	protoCategory := &pb.CategoryResponse{
+		Id:            int32(category.CategoryID),
+		Name:          category.Name,
+		Description:   *category.Description,
+		SlugCategory:  *category.SlugCategory,
+		ImageCategory: *category.ImageCategory,
+		CreatedAt:     category.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt:     category.UpdatedAt.Time.Format("2006-01-02"),
+	}
+
+	return &pb.ApiResponseCategory{
+		Status:  "success",
+		Message: "Successfully created category",
+		Data:    protoCategory,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) Update(ctx context.Context, request *pb.UpdateCategoryRequest) (*pb.ApiResponseCategory, error) {
@@ -501,14 +733,26 @@ func (s *categoryHandleGrpc) Update(ctx context.Context, request *pb.UpdateCateg
 		return nil, category_errors.ErrGrpcValidateUpdateCategory
 	}
 
-	category, err := s.categoryService.UpdateCategory(req)
-
+	category, err := s.categoryService.UpdateCategory(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCategory("success", "Successfully updated category", category)
-	return so, nil
+	protoCategory := &pb.CategoryResponse{
+		Id:            int32(category.CategoryID),
+		Name:          category.Name,
+		Description:   *category.Description,
+		SlugCategory:  *category.SlugCategory,
+		ImageCategory: *category.ImageCategory,
+		CreatedAt:     category.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt:     category.UpdatedAt.Time.Format("2006-01-02"),
+	}
+
+	return &pb.ApiResponseCategory{
+		Status:  "success",
+		Message: "Successfully updated category",
+		Data:    protoCategory,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) TrashedCategory(ctx context.Context, request *pb.FindByIdCategoryRequest) (*pb.ApiResponseCategoryDeleteAt, error) {
@@ -518,15 +762,32 @@ func (s *categoryHandleGrpc) TrashedCategory(ctx context.Context, request *pb.Fi
 		return nil, category_errors.ErrGrpcCategoryInvalidId
 	}
 
-	category, err := s.categoryService.TrashedCategory(id)
-
+	category, err := s.categoryService.TrashedCategory(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCategoryDeleteAt("success", "Successfully trashed category", category)
+	var deletedAt string
+	if category.DeletedAt.Valid {
+		deletedAt = category.DeletedAt.Time.Format("2006-01-02")
+	}
 
-	return so, nil
+	protoCategory := &pb.CategoryResponseDeleteAt{
+		Id:            int32(category.CategoryID),
+		Name:          category.Name,
+		Description:   *category.Description,
+		SlugCategory:  *category.SlugCategory,
+		ImageCategory: *category.ImageCategory,
+		CreatedAt:     category.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt:     category.UpdatedAt.Time.Format("2006-0-01-02"),
+		DeletedAt:     &wrapperspb.StringValue{Value: deletedAt},
+	}
+
+	return &pb.ApiResponseCategoryDeleteAt{
+		Status:  "success",
+		Message: "Successfully trashed category",
+		Data:    protoCategory,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) RestoreCategory(ctx context.Context, request *pb.FindByIdCategoryRequest) (*pb.ApiResponseCategoryDeleteAt, error) {
@@ -536,15 +797,32 @@ func (s *categoryHandleGrpc) RestoreCategory(ctx context.Context, request *pb.Fi
 		return nil, category_errors.ErrGrpcCategoryInvalidId
 	}
 
-	category, err := s.categoryService.RestoreCategory(id)
-
+	category, err := s.categoryService.RestoreCategory(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCategoryDeleteAt("success", "Successfully restored category", category)
+	var deletedAt string
+	if category.DeletedAt.Valid {
+		deletedAt = category.DeletedAt.Time.Format("2006-01-02")
+	}
 
-	return so, nil
+	protoCategory := &pb.CategoryResponseDeleteAt{
+		Id:            int32(category.CategoryID),
+		Name:          category.Name,
+		Description:   *category.Description,
+		SlugCategory:  *category.SlugCategory,
+		ImageCategory: *category.ImageCategory,
+		CreatedAt:     category.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt:     category.UpdatedAt.Time.Format("2006-01-02"),
+		DeletedAt:     &wrapperspb.StringValue{Value: deletedAt},
+	}
+
+	return &pb.ApiResponseCategoryDeleteAt{
+		Status:  "success",
+		Message: "Successfully restored category",
+		Data:    protoCategory,
+	}, nil
 }
 
 func (s *categoryHandleGrpc) DeleteCategoryPermanent(ctx context.Context, request *pb.FindByIdCategoryRequest) (*pb.ApiResponseCategoryDelete, error) {
@@ -554,37 +832,37 @@ func (s *categoryHandleGrpc) DeleteCategoryPermanent(ctx context.Context, reques
 		return nil, category_errors.ErrGrpcCategoryInvalidId
 	}
 
-	_, err := s.categoryService.DeleteCategoryPermanent(id)
-
+	_, err := s.categoryService.DeleteCategoryPermanent(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCategoryDelete("success", "Successfully deleted category permanently")
-
-	return so, nil
+	return &pb.ApiResponseCategoryDelete{
+		Status:  "success",
+		Message: "Successfully deleted category permanently",
+	}, nil
 }
 
 func (s *categoryHandleGrpc) RestoreAllCategory(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseCategoryAll, error) {
-	_, err := s.categoryService.RestoreAllCategories()
-
+	_, err := s.categoryService.RestoreAllCategories(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCategoryAll("success", "Successfully restore all category")
-
-	return so, nil
+	return &pb.ApiResponseCategoryAll{
+		Status:  "success",
+		Message: "Successfully restored all categories",
+	}, nil
 }
 
 func (s *categoryHandleGrpc) DeleteAllCategoryPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseCategoryAll, error) {
-	_, err := s.categoryService.DeleteAllCategoriesPermanent()
-
+	_, err := s.categoryService.DeleteAllCategoriesPermanent(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCategoryAll("success", "Successfully delete category permanen")
-
-	return so, nil
+	return &pb.ApiResponseCategoryAll{
+		Status:  "success",
+		Message: "Successfully deleted all categories permanently",
+	}, nil
 }

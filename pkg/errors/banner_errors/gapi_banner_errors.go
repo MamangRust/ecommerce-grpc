@@ -1,15 +1,15 @@
 package banner_errors
 
 import (
-	"ecommerce/internal/domain/response"
+	"ecommerce/pkg/errors"
 
 	"google.golang.org/grpc/codes"
 )
 
 var (
-	ErrGrpcBannerNotFound  = response.NewGrpcError("error", "Banner not found", int(codes.NotFound))
-	ErrGrpcBannerInvalidId = response.NewGrpcError("error", "Invalid Banner ID", int(codes.InvalidArgument))
+	ErrGrpcBannerNotFound  = errors.NewGrpcError("Banner not found", int(codes.NotFound))
+	ErrGrpcBannerInvalidId = errors.NewGrpcError("Invalid Banner ID", int(codes.InvalidArgument))
 
-	ErrGrpcValidateCreateBanner = response.NewGrpcError("error", "Validation failed: invalid create banner request", int(codes.InvalidArgument))
-	ErrGrpcValidateUpdateBanner = response.NewGrpcError("error", "Validation failed: invalid update banner request", int(codes.InvalidArgument))
+	ErrGrpcValidateCreateBanner = errors.NewGrpcError("Validation failed: invalid create banner request", int(codes.InvalidArgument))
+	ErrGrpcValidateUpdateBanner = errors.NewGrpcError("Validation failed: invalid update banner request", int(codes.InvalidArgument))
 )

@@ -13,13 +13,23 @@
 --   - Provides total_count for pagination calculations
 -- name: GetSliders :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    slider_id,
+    name,
+    image,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
 FROM sliders
-WHERE deleted_at IS NULL
-AND ($1::TEXT IS NULL OR name ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR name ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetSlidersActive: Retrieves active sliders with optional name search and pagination
 -- Purpose: Display active sliders for frontend/backend UI
@@ -36,13 +46,24 @@ LIMIT $2 OFFSET $3;
 --   - Provides total_count for pagination calculations
 -- name: GetSlidersActive :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    slider_id,
+    name,
+    image,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM sliders
-WHERE deleted_at IS NULL
-AND ($1::TEXT IS NULL OR name ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR name ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetSlidersTrashed: Retrieves trashed sliders with optional name search and pagination
 -- Purpose: Display deleted sliders in admin recycle bin
@@ -59,14 +80,24 @@ LIMIT $2 OFFSET $3;
 --   - Provides total_count for pagination calculations
 -- name: GetSlidersTrashed :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    slider_id,
+    name,
+    image,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM sliders
-WHERE deleted_at IS NOT NULL
-AND ($1::TEXT IS NULL OR name ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NOT NULL
+    AND (
+        $1::TEXT IS NULL
+        OR name ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- CreateSlider: Creates a new slider entry
 -- Membuat slider baru
@@ -82,9 +113,15 @@ LIMIT $2 OFFSET $3;
 --   - Requires both name and image
 --   - Memerlukan nama dan gambar
 -- name: CreateSlider :one
-INSERT INTO sliders (name, image)
+INSERT INTO
+    sliders (name, image)
 VALUES ($1, $2)
-RETURNING *;
+RETURNING
+    slider_id,
+    name,
+    image,
+    created_at,
+    updated_at;
 
 -- GetSliderByID: Retrieves a single active slider by ID
 -- Mengambil satu slider aktif berdasarkan ID
@@ -97,10 +134,16 @@ RETURNING *;
 --   - Only returns non-deleted (active) sliders
 --   - Hanya mengembalikan slider yang tidak terhapus (aktif)
 -- name: GetSliderByID :one
-SELECT *
+SELECT
+    slider_id,
+    name,
+    image,
+    created_at,
+    updated_at
 FROM sliders
-WHERE slider_id = $1
-AND deleted_at IS NULL;
+WHERE
+    slider_id = $1
+    AND deleted_at IS NULL;
 
 -- UpdateSlider: Modifies an existing slider
 -- Memperbarui slider yang sudah ada
@@ -120,12 +163,19 @@ AND deleted_at IS NULL;
 --   - Otomatis memperbarui timestamp
 -- name: UpdateSlider :one
 UPDATE sliders
-SET name = $2,
+SET
+    name = $2,
     image = $3,
     updated_at = CURRENT_TIMESTAMP
-WHERE slider_id = $1
-AND deleted_at IS NULL
-RETURNING *;
+WHERE
+    slider_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    slider_id,
+    name,
+    image,
+    created_at,
+    updated_at;
 
 -- TrashSlider: Soft-deletes a slider
 -- Menghapus sementara slider (soft delete)
@@ -141,10 +191,18 @@ RETURNING *;
 --   - Hanya bekerja pada slider aktif
 -- name: TrashSlider :one
 UPDATE sliders
-SET deleted_at = CURRENT_TIMESTAMP
-WHERE slider_id = $1
-AND deleted_at IS NULL
-RETURNING *;
+SET
+    deleted_at = CURRENT_TIMESTAMP
+WHERE
+    slider_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    slider_id,
+    name,
+    image,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreSlider: Recovers a soft-deleted slider
 -- Memulihkan slider yang dihapus sementara
@@ -160,10 +218,18 @@ RETURNING *;
 --   - Hanya bekerja pada slider yang dihapus sementara
 -- name: RestoreSlider :one
 UPDATE sliders
-SET deleted_at = NULL
-WHERE slider_id = $1
-AND deleted_at IS NOT NULL
-RETURNING *;
+SET
+    deleted_at = NULL
+WHERE
+    slider_id = $1
+    AND deleted_at IS NOT NULL
+RETURNING
+    slider_id,
+    name,
+    image,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeleteSliderPermanently: Permanently removes a trashed slider
 -- Menghapus permanen slider yang sudah di-trash
@@ -191,9 +257,7 @@ DELETE FROM sliders WHERE slider_id = $1 AND deleted_at IS NOT NULL;
 --   - Admin-level bulk restore operation
 --   - Operasi pemulihan massal level admin
 -- name: RestoreAllSliders :exec
-UPDATE sliders
-SET deleted_at = NULL
-WHERE deleted_at IS NOT NULL;
+UPDATE sliders SET deleted_at = NULL WHERE deleted_at IS NOT NULL;
 
 -- DeleteAllPermanentSliders: Permanently removes all trashed sliders
 -- Menghapus permanen semua slider yang di-trash
@@ -206,5 +270,4 @@ WHERE deleted_at IS NOT NULL;
 --   - Irreversible operation
 --   - Operasi tidak dapat dibatalkan
 -- name: DeleteAllPermanentSliders :exec
-DELETE FROM sliders
-WHERE deleted_at IS NOT NULL;
+DELETE FROM sliders WHERE deleted_at IS NOT NULL;

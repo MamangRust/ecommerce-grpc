@@ -13,13 +13,30 @@
 --   - Provides total_count for pagination calculations
 -- name: GetShippingAddress :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    shipping_address_id,
+    order_id,
+    alamat,
+    provinsi,
+    negara,
+    kota,
+    courier,
+    shipping_method,
+    shipping_cost,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
 FROM shipping_addresses
-WHERE deleted_at IS NULL
-AND ($1::TEXT IS NULL OR shipping_address_id::TEXT ILIKE '%' || $1 || '%' OR alamat ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR shipping_address_id::TEXT ILIKE '%' || $1 || '%'
+        OR alamat ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetShippingAddressActive: Retrieves paginated list of active shipping addresses with search capability
 -- Purpose: Display active addresses in checkout/address book UI
@@ -36,13 +53,31 @@ LIMIT $2 OFFSET $3;
 --   - Provides total_count for pagination calculations
 -- name: GetShippingAddressActive :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    shipping_address_id,
+    order_id,
+    alamat,
+    provinsi,
+    negara,
+    kota,
+    courier,
+    shipping_method,
+    shipping_cost,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM shipping_addresses
-WHERE deleted_at IS NULL
-AND ($1::TEXT IS NULL OR shipping_address_id::TEXT ILIKE '%' || $1 || '%' OR alamat ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR shipping_address_id::TEXT ILIKE '%' || $1 || '%'
+        OR alamat ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetShippingAddressTrashed: Retrieves paginated list of trashed shipping addresses with search capability
 -- Purpose: Display deleted addresses in admin recycle bin
@@ -59,14 +94,31 @@ LIMIT $2 OFFSET $3;
 --   - Provides total_count for pagination calculations
 -- name: GetShippingAddressTrashed :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    shipping_address_id,
+    order_id,
+    alamat,
+    provinsi,
+    negara,
+    kota,
+    courier,
+    shipping_method,
+    shipping_cost,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM shipping_addresses
-WHERE deleted_at IS NOT NULL
-AND ($1::TEXT IS NULL OR shipping_address_id::TEXT ILIKE '%' || $1 || '%' OR alamat ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NOT NULL
+    AND (
+        $1::TEXT IS NULL
+        OR shipping_address_id::TEXT ILIKE '%' || $1 || '%'
+        OR alamat ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetShippingByID: Retrieves a single active shipping address by ID
 -- Mengambil satu alamat pengiriman aktif berdasarkan ID
@@ -80,10 +132,22 @@ LIMIT $2 OFFSET $3;
 --   - Only returns non-deleted (active) addresses
 --   - Hanya mengembalikan alamat yang tidak terhapus (aktif)
 -- name: GetShippingByID :one
-SELECT *
+SELECT
+    shipping_address_id,
+    order_id,
+    alamat,
+    provinsi,
+    negara,
+    kota,
+    courier,
+    shipping_method,
+    shipping_cost,
+    created_at,
+    updated_at
 FROM shipping_addresses
-WHERE shipping_address_id = $1
-AND deleted_at IS NULL;
+WHERE
+    shipping_address_id = $1
+    AND deleted_at IS NULL;
 
 -- GetShippingAddressByOrderID: Retrieves shipping address for a specific order
 -- Mengambil alamat pengiriman untuk pesanan tertentu
@@ -97,10 +161,22 @@ AND deleted_at IS NULL;
 --   - Used to display shipping info for completed orders
 --   - Digunakan untuk menampilkan info pengiriman pesanan selesai
 -- name: GetShippingAddressByOrderID :one
-SELECT *
+SELECT
+    shipping_address_id,
+    order_id,
+    alamat,
+    provinsi,
+    negara,
+    kota,
+    courier,
+    shipping_method,
+    shipping_cost,
+    created_at,
+    updated_at
 FROM shipping_addresses
-WHERE order_id = $1
-AND deleted_at IS NULL;
+WHERE
+    order_id = $1
+    AND deleted_at IS NULL;
 
 -- CreateShippingAddress: Creates a new shipping address record
 -- Membuat record alamat pengiriman baru
@@ -120,10 +196,39 @@ AND deleted_at IS NULL;
 --   - Stores all necessary shipping information for an order
 --   - Menyimpan semua informasi pengiriman yang diperlukan untuk pesanan
 -- name: CreateShippingAddress :one
-INSERT INTO shipping_addresses (
-    order_id, alamat, provinsi, negara, kota, courier, shipping_method, shipping_cost
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING *;
+INSERT INTO
+    shipping_addresses (
+        order_id,
+        alamat,
+        provinsi,
+        negara,
+        kota,
+        courier,
+        shipping_method,
+        shipping_cost
+    )
+VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8
+    )
+RETURNING
+    shipping_address_id,
+    order_id,
+    alamat,
+    provinsi,
+    negara,
+    kota,
+    courier,
+    shipping_method,
+    shipping_cost,
+    created_at,
+    updated_at;
 
 -- UpdateShippingAddress: Modifies an existing shipping address
 -- Memperbarui alamat pengiriman yang sudah ada
@@ -140,7 +245,7 @@ RETURNING *;
 --   - Secara otomatis memperbarui timestamp
 -- name: UpdateShippingAddress :one
 UPDATE shipping_addresses
-SET 
+SET
     alamat = $2,
     provinsi = $3,
     negara = $4,
@@ -149,9 +254,21 @@ SET
     shipping_method = $7,
     shipping_cost = $8,
     updated_at = CURRENT_TIMESTAMP
-WHERE shipping_address_id = $1
-AND deleted_at IS NULL
-RETURNING *;
+WHERE
+    shipping_address_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    shipping_address_id,
+    order_id,
+    alamat,
+    provinsi,
+    negara,
+    kota,
+    courier,
+    shipping_method,
+    shipping_cost,
+    created_at,
+    updated_at;
 
 -- TrashShippingAddress: Soft-deletes a shipping address
 -- Menghapus sementara alamat pengiriman (soft delete)
@@ -165,10 +282,24 @@ RETURNING *;
 --   - Menandai deleted_at untuk penghapusan sementara
 -- name: TrashShippingAddress :one
 UPDATE shipping_addresses
-SET deleted_at = CURRENT_TIMESTAMP
-WHERE shipping_address_id = $1
-AND deleted_at IS NULL
-RETURNING *;
+SET
+    deleted_at = CURRENT_TIMESTAMP
+WHERE
+    shipping_address_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    shipping_address_id,
+    order_id,
+    alamat,
+    provinsi,
+    negara,
+    kota,
+    courier,
+    shipping_method,
+    shipping_cost,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreShippingAddress: Recovers a soft-deleted address
 -- Memulihkan alamat pengiriman yang dihapus sementara
@@ -182,10 +313,24 @@ RETURNING *;
 --   - Membersihkan field deleted_at
 -- name: RestoreShippingAddress :one
 UPDATE shipping_addresses
-SET deleted_at = NULL
-WHERE shipping_address_id = $1
-AND deleted_at IS NOT NULL
-RETURNING *;
+SET
+    deleted_at = NULL
+WHERE
+    shipping_address_id = $1
+    AND deleted_at IS NOT NULL
+RETURNING
+    shipping_address_id,
+    order_id,
+    alamat,
+    provinsi,
+    negara,
+    kota,
+    courier,
+    shipping_method,
+    shipping_cost,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeleteShippingAddressPermanently: Permanently removes a trashed address
 -- Menghapus permanen alamat pengiriman yang sudah di-trash
@@ -200,7 +345,10 @@ RETURNING *;
 --   - Hanya bekerja pada alamat yang sudah di-trash
 --   - Penghapusan permanen tidak dapat dibatalkan
 -- name: DeleteShippingAddressPermanently :exec
-DELETE FROM shipping_addresses WHERE shipping_address_id = $1 AND deleted_at IS NOT NULL;
+DELETE FROM shipping_addresses
+WHERE
+    shipping_address_id = $1
+    AND deleted_at IS NOT NULL;
 
 -- RestoreAllShippingAddress: Recovers all trashed shipping addresses
 -- Memulihkan semua alamat pengiriman yang dihapus sementara
@@ -212,8 +360,10 @@ DELETE FROM shipping_addresses WHERE shipping_address_id = $1 AND deleted_at IS 
 --   - Operasi pemulihan massal level admin
 -- name: RestoreAllShippingAddress :exec
 UPDATE shipping_addresses
-SET deleted_at = NULL
-WHERE deleted_at IS NOT NULL;
+SET
+    deleted_at = NULL
+WHERE
+    deleted_at IS NOT NULL;
 
 -- DeleteAllPermanentShippingAddress: Permanently removes all trashed addresses
 -- Menghapus permanen semua alamat pengiriman yang di-trash
@@ -226,5 +376,4 @@ WHERE deleted_at IS NOT NULL;
 --   - Operasi penghapusan massal level admin
 --   - Tidak dapat dibatalkan
 -- name: DeleteAllPermanentShippingAddress :exec
-DELETE FROM shipping_addresses
-WHERE deleted_at IS NOT NULL;
+DELETE FROM shipping_addresses WHERE deleted_at IS NOT NULL;

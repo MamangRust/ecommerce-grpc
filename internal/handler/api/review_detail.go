@@ -1,18 +1,23 @@
 package api
 
 import (
+	reviewdetail_cache "ecommerce/internal/cache/api/review_detail"
 	"ecommerce/internal/domain/requests"
-	response_api "ecommerce/internal/mapper/response/api"
+	response_api "ecommerce/internal/mapper"
+	"fmt"
+
 	"ecommerce/internal/pb"
-	reviewdetail_errors "ecommerce/pkg/errors/review_detail"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/logger"
 	"ecommerce/pkg/upload_image"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -22,6 +27,8 @@ type reviewDetailHandleApi struct {
 	mapping       response_api.ReviewDetailResponseMapper
 	mappingReview response_api.ReviewResponseMapper
 	upload_image  upload_image.ImageUploads
+	apiHandler    errors.ApiHandler
+	cache         reviewdetail_cache.ReviewDetailMencache
 }
 
 func NewHandlerReviewDetail(
@@ -31,6 +38,8 @@ func NewHandlerReviewDetail(
 	mapping response_api.ReviewDetailResponseMapper,
 	mappingReview response_api.ReviewResponseMapper,
 	upload_image upload_image.ImageUploads,
+	apiHandler errors.ApiHandler,
+	cache reviewdetail_cache.ReviewDetailMencache,
 ) *reviewDetailHandleApi {
 	reviewDetailHandler := &reviewDetailHandleApi{
 		client:        client,
@@ -38,24 +47,59 @@ func NewHandlerReviewDetail(
 		mapping:       mapping,
 		mappingReview: mappingReview,
 		upload_image:  upload_image,
+		apiHandler:    apiHandler,
+		cache:         cache,
 	}
 
-	routercategory := router.Group("/api/review-detail")
+	routerReviewDetail := router.Group("/api/review-detail")
 
-	routercategory.GET("", reviewDetailHandler.FindAllReviewDetail)
-	routercategory.GET("/:id", reviewDetailHandler.FindById)
-	routercategory.GET("/active", reviewDetailHandler.FindByActive)
-	routercategory.GET("/trashed", reviewDetailHandler.FindByTrashed)
+	routerReviewDetail.GET(
+		"",
+		apiHandler.Handle("findAll", reviewDetailHandler.FindAllReviewDetail),
+	)
+	routerReviewDetail.GET(
+		"/:id",
+		apiHandler.Handle("findById", reviewDetailHandler.FindById),
+	)
+	routerReviewDetail.GET(
+		"/active",
+		apiHandler.Handle("findByActive", reviewDetailHandler.FindByActive),
+	)
+	routerReviewDetail.GET(
+		"/trashed",
+		apiHandler.Handle("findByTrashed", reviewDetailHandler.FindByTrashed),
+	)
 
-	routercategory.POST("/create", reviewDetailHandler.Create)
-	routercategory.POST("/update/:id", reviewDetailHandler.Update)
+	routerReviewDetail.POST(
+		"/create",
+		apiHandler.Handle("create", reviewDetailHandler.Create),
+	)
+	routerReviewDetail.POST(
+		"/update/:id",
+		apiHandler.Handle("update", reviewDetailHandler.Update),
+	)
 
-	routercategory.POST("/trashed/:id", reviewDetailHandler.TrashedMerchant)
-	routercategory.POST("/restore/:id", reviewDetailHandler.RestoreMerchant)
-	routercategory.DELETE("/permanent/:id", reviewDetailHandler.DeleteMerchantPermanent)
+	routerReviewDetail.POST(
+		"/trashed/:id",
+		apiHandler.Handle("trashed", reviewDetailHandler.TrashedMerchant),
+	)
+	routerReviewDetail.POST(
+		"/restore/:id",
+		apiHandler.Handle("restore", reviewDetailHandler.RestoreMerchant),
+	)
+	routerReviewDetail.DELETE(
+		"/permanent/:id",
+		apiHandler.Handle("deletePermanent", reviewDetailHandler.DeleteMerchantPermanent),
+	)
 
-	routercategory.POST("/restore/all", reviewDetailHandler.RestoreAllMerchant)
-	routercategory.POST("/permanent/all", reviewDetailHandler.DeleteAllMerchantPermanent)
+	routerReviewDetail.POST(
+		"/restore/all",
+		apiHandler.Handle("restoreAll", reviewDetailHandler.RestoreAllMerchant),
+	)
+	routerReviewDetail.POST(
+		"/permanent/all",
+		apiHandler.Handle("deleteAllPermanent", reviewDetailHandler.DeleteAllMerchantPermanent),
+	)
 
 	return reviewDetailHandler
 }
@@ -87,22 +131,33 @@ func (h *reviewDetailHandleApi) FindAllReviewDetail(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllReviewRequest{
+	req := &requests.FindAllReview{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetReviewDetailAllCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllReviewRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindAll(ctx, req)
-
+	res, err := h.client.FindAll(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch merchants", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedFindAllReviewDetails(c)
+		return h.handleGrpcError(err, "FindAllReview")
 	}
 
-	so := h.mapping.ToApiResponsePaginationReviewDetail(res)
+	apiResponse := h.mapping.ToApiResponsePaginationReviewDetail(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetReviewDetailAllCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -118,28 +173,31 @@ func (h *reviewDetailHandleApi) FindAllReviewDetail(c echo.Context) error {
 // @Router /api/review-detail/{id} [get]
 func (h *reviewDetailHandleApi) FindById(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
-
 	if err != nil {
-		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return reviewdetail_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
+
+	cachedData, found := h.cache.GetCachedReviewDetailCache(ctx, id)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	req := &pb.FindByIdReviewDetailRequest{
 		Id: int32(id),
 	}
 
 	res, err := h.client.FindById(ctx, req)
-
 	if err != nil {
-		h.logger.Error("Failed to fetch merchant details", zap.Error(err))
-		return reviewdetail_errors.ErrApiReviewDetailNotFound(c)
+		return h.handleGrpcError(err, "FindById")
 	}
 
-	so := h.mapping.ToApiResponseReviewDetail(res)
+	apiResponse := h.mapping.ToApiResponseReviewDetail(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetCachedReviewDetailCache(ctx, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -169,22 +227,33 @@ func (h *reviewDetailHandleApi) FindByActive(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllReviewRequest{
+	req := &requests.FindAllReview{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetReviewDetailActiveCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllReviewRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByActive(ctx, req)
-
+	res, err := h.client.FindByActive(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch active merchants", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedFindActiveReviewDetails(c)
+		return h.handleGrpcError(err, "FindByActive")
 	}
 
-	so := h.mapping.ToApiResponsePaginationReviewDetailDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationReviewDetailDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetReviewDetailActiveCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -212,22 +281,33 @@ func (h *reviewDetailHandleApi) FindByTrashed(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllReviewRequest{
+	req := &requests.FindAllReview{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetReviewDetailTrashedCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllReviewRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByTrashed(ctx, req)
-
+	res, err := h.client.FindByTrashed(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch archived merchants", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedFindTrashedReviewDetails(c)
+		return h.handleGrpcError(err, "FindByTrashed")
 	}
 
-	so := h.mapping.ToApiResponsePaginationReviewDetailDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationReviewDetailDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetReviewDetailTrashedCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -247,7 +327,7 @@ func (h *reviewDetailHandleApi) FindByTrashed(c echo.Context) error {
 func (h *reviewDetailHandleApi) Create(c echo.Context) error {
 	formData, err := h.parseReviewDetailForm(c)
 	if err != nil {
-		return reviewdetail_errors.ErrApiInvalidBody(c)
+		return h.handleGrpcError(err, "Create")
 	}
 
 	ctx := c.Request().Context()
@@ -261,8 +341,7 @@ func (h *reviewDetailHandleApi) Create(c echo.Context) error {
 
 	res, err := h.client.Create(ctx, req)
 	if err != nil {
-		h.logger.Error("Review detail creation failed", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedCreateReviewDetail(c)
+		return h.handleGrpcError(err, "Create")
 	}
 
 	return c.JSON(http.StatusOK, h.mapping.ToApiResponseReviewDetail(res))
@@ -288,13 +367,12 @@ func (h *reviewDetailHandleApi) Update(c echo.Context) error {
 	id := c.Param("id")
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
-		h.logger.Debug("Invalid id parameter", zap.Error(err))
-		return reviewdetail_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	formData, err := h.parseReviewDetailForm(c)
 	if err != nil {
-		return reviewdetail_errors.ErrApiInvalidBody(c)
+		return h.handleGrpcError(err, "Update")
 	}
 
 	ctx := c.Request().Context()
@@ -308,8 +386,7 @@ func (h *reviewDetailHandleApi) Update(c echo.Context) error {
 
 	res, err := h.client.Update(ctx, req)
 	if err != nil {
-		h.logger.Error("Review detail update failed", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedUpdateReviewDetail(c)
+		return h.handleGrpcError(err, "Update")
 	}
 
 	return c.JSON(http.StatusOK, h.mapping.ToApiResponseReviewDetail(res))
@@ -331,8 +408,7 @@ func (h *reviewDetailHandleApi) TrashedMerchant(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return reviewdetail_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -344,8 +420,7 @@ func (h *reviewDetailHandleApi) TrashedMerchant(c echo.Context) error {
 	res, err := h.client.TrashedReviewDetail(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to archive merchant", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedTrashedReviewDetail(c)
+		return h.handleGrpcError(err, "Trashed")
 	}
 
 	so := h.mapping.ToApiResponseReviewDetailDeleteAt(res)
@@ -369,8 +444,7 @@ func (h *reviewDetailHandleApi) RestoreMerchant(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return reviewdetail_errors.ErrApiInvalidId(c)
+		return h.handleGrpcError(err, "id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -382,8 +456,7 @@ func (h *reviewDetailHandleApi) RestoreMerchant(c echo.Context) error {
 	res, err := h.client.RestoreReviewDetail(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to restore merchant", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedRestoreReviewDetail(c)
+		return h.handleGrpcError(err, "Restore")
 	}
 
 	so := h.mapping.ToApiResponseReviewDetailDeleteAt(res)
@@ -407,8 +480,7 @@ func (h *reviewDetailHandleApi) DeleteMerchantPermanent(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return reviewdetail_errors.ErrApiInvalidId(c)
+		return h.handleGrpcError(err, "id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -420,8 +492,7 @@ func (h *reviewDetailHandleApi) DeleteMerchantPermanent(c echo.Context) error {
 	res, err := h.client.DeleteReviewDetailPermanent(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to delete merchant", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedDeleteReviewDetailPermanent(c)
+		return h.handleGrpcError(err, "Delete Review")
 	}
 
 	so := h.mappingReview.ToApiResponseReviewDelete(res)
@@ -447,8 +518,7 @@ func (h *reviewDetailHandleApi) RestoreAllMerchant(c echo.Context) error {
 	res, err := h.client.RestoreAllReviewDetail(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk merchant restoration failed", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedRestoreAllReviewDetail(c)
+		return h.handleGrpcError(err, "RestoreAll")
 	}
 
 	so := h.mappingReview.ToApiResponseReviewAll(res)
@@ -476,8 +546,7 @@ func (h *reviewDetailHandleApi) DeleteAllMerchantPermanent(c echo.Context) error
 	res, err := h.client.DeleteAllReviewDetailPermanent(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk merchant deletion failed", zap.Error(err))
-		return reviewdetail_errors.ErrApiFailedDeleteAllReviewDetailPermanent(c)
+		return h.handleGrpcError(err, "DeleteAll")
 	}
 
 	so := h.mappingReview.ToApiResponseReviewAll(res)
@@ -487,35 +556,116 @@ func (h *reviewDetailHandleApi) DeleteAllMerchantPermanent(c echo.Context) error
 	return c.JSON(http.StatusOK, so)
 }
 
-func (h *reviewDetailHandleApi) parseReviewDetailForm(c echo.Context) (requests.ReviewDetailFormData, error) {
+func (h *reviewDetailHandleApi) parseReviewDetailForm(
+	c echo.Context,
+) (requests.ReviewDetailFormData, error) {
+
 	var formData requests.ReviewDetailFormData
 	var err error
 
 	formData.ReviewID, err = strconv.Atoi(c.FormValue("review_id"))
 	if err != nil || formData.ReviewID <= 0 {
-		return formData, reviewdetail_errors.ErrApiInvalidReviewId(c)
+		return formData, errors.NewBadRequestError("review_id must be a valid positive integer")
 	}
 
 	formData.Type = strings.TrimSpace(c.FormValue("type"))
 	if formData.Type == "" {
-		return formData, reviewdetail_errors.ErrApiReviewDetailTypeRequired(c)
+		return formData, errors.NewBadRequestError("type is required")
 	}
 
 	formData.Caption = strings.TrimSpace(c.FormValue("caption"))
 	if formData.Caption == "" {
-		return formData, reviewdetail_errors.ErrApiReviewDetailCaptionRequired(c)
+		return formData, errors.NewBadRequestError("caption is required")
 	}
 
 	file, err := c.FormFile("url")
 	if err != nil {
-		return formData, reviewdetail_errors.ErrApiReviewDetailFileRequired(c)
+		return formData, errors.NewBadRequestError("url file is required")
 	}
 
 	uploadPath, err := h.upload_image.ProcessImageUpload(c, file)
 	if err != nil {
 		return formData, err
 	}
-	formData.Url = uploadPath
 
+	formData.Url = uploadPath
 	return formData, nil
+}
+
+func (h *reviewDetailHandleApi) handleGrpcError(err error, operation string) *errors.AppError {
+	st, ok := status.FromError(err)
+	if !ok {
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return errors.NewNotFoundError("Review Detail").WithInternal(err)
+
+	case codes.AlreadyExists:
+		return errors.NewConflictError("Review Detail already exists").WithInternal(err)
+
+	case codes.InvalidArgument:
+		return errors.NewBadRequestError(st.Message()).WithInternal(err)
+
+	case codes.PermissionDenied:
+		return errors.ErrForbidden.WithInternal(err)
+
+	case codes.Unauthenticated:
+		return errors.ErrUnauthorized.WithInternal(err)
+
+	case codes.ResourceExhausted:
+		return errors.ErrTooManyRequests.WithInternal(err)
+
+	case codes.Unavailable:
+		return errors.NewServiceUnavailableError("Review Detail service").WithInternal(err)
+
+	case codes.DeadlineExceeded:
+		return errors.ErrTimeout.WithInternal(err)
+
+	default:
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+}
+
+func (h *reviewDetailHandleApi) parseValidationErrors(err error) []errors.ValidationError {
+	var validationErrs []errors.ValidationError
+
+	if ve, ok := err.(validator.ValidationErrors); ok {
+		for _, fe := range ve {
+			validationErrs = append(validationErrs, errors.ValidationError{
+				Field:   fe.Field(),
+				Message: h.getValidationMessage(fe),
+			})
+		}
+		return validationErrs
+	}
+
+	return []errors.ValidationError{
+		{
+			Field:   "general",
+			Message: err.Error(),
+		},
+	}
+}
+
+func (h *reviewDetailHandleApi) getValidationMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return fmt.Sprintf("Must be at least %s", fe.Param())
+	case "max":
+		return fmt.Sprintf("Must be at most %s", fe.Param())
+	case "gte":
+		return fmt.Sprintf("Must be greater than or equal to %s", fe.Param())
+	case "lte":
+		return fmt.Sprintf("Must be less than or equal to %s", fe.Param())
+	case "oneof":
+		return fmt.Sprintf("Must be one of: %s", fe.Param())
+	default:
+		return fmt.Sprintf("Validation failed on '%s' tag", fe.Tag())
+	}
 }

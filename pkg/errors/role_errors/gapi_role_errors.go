@@ -1,15 +1,15 @@
 package role_errors
 
 import (
-	"ecommerce/internal/domain/response"
+	"ecommerce/pkg/errors"
 
 	"google.golang.org/grpc/codes"
 )
 
 var (
-	ErrGrpcRoleNotFound  = response.NewGrpcError("error", "Role not found", int(codes.NotFound))
-	ErrGrpcRoleInvalidId = response.NewGrpcError("error", "Invalid Role ID", int(codes.NotFound))
+	ErrGrpcRoleNotFound  = errors.NewGrpcError("Role not found", int(codes.NotFound))
+	ErrGrpcRoleInvalidId = errors.NewGrpcError("Invalid Role ID", int(codes.NotFound))
 
-	ErrGrpcValidateCreateRole = response.NewGrpcError("error", "validation failed: invalid create Role request", int(codes.InvalidArgument))
-	ErrGrpcValidateUpdateRole = response.NewGrpcError("error", "validation failed: invalid update Role request", int(codes.InvalidArgument))
+	ErrGrpcValidateCreateRole = errors.NewGrpcError("validation failed: invalid create Role request", int(codes.InvalidArgument))
+	ErrGrpcValidateUpdateRole = errors.NewGrpcError("validation failed: invalid update Role request", int(codes.InvalidArgument))
 )

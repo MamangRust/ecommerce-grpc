@@ -1,39 +1,49 @@
 package service
 
 import (
+	"context"
+	role_cache "ecommerce/internal/cache/role"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	response_service "ecommerce/internal/mapper/response/services"
+	"ecommerce/internal/errorhandler"
 	"ecommerce/internal/repository"
+	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/errors/role_errors"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/observability"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
 type roleService struct {
 	roleRepository repository.RoleRepository
 	logger         logger.LoggerInterface
-	mapping        response_service.RoleResponseMapper
+	observability  observability.TraceLoggerObservability
+	cache          role_cache.RoleMencache
 }
 
-func NewRoleService(roleRepository repository.RoleRepository, logger logger.LoggerInterface, mapping response_service.RoleResponseMapper) *roleService {
+type RoleServiceDeps struct {
+	RoleRepo      repository.RoleRepository
+	Observability observability.TraceLoggerObservability
+	Logger        logger.LoggerInterface
+	Cache         role_cache.RoleMencache
+}
+
+func NewRoleService(deps RoleServiceDeps) *roleService {
 	return &roleService{
-		roleRepository: roleRepository,
-		logger:         logger,
-		mapping:        mapping,
+		roleRepository: deps.RoleRepo,
+		logger:         deps.Logger,
+		observability:  deps.Observability,
+		cache:          deps.Cache,
 	}
 }
 
-func (s *roleService) FindAll(request *requests.FindAllRole) ([]*response.RoleResponse, *int, *response.ErrorResponse) {
-	page := request.Page
-	pageSize := request.PageSize
-	search := request.Search
+func (s *roleService) FindAll(ctx context.Context, req *requests.FindAllRole) ([]*db.GetRolesRow, *int, error) {
+	const method = "FindAll"
 
-	s.logger.Debug("Fetching role",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
 
 	if page <= 0 {
 		page = 1
@@ -42,72 +52,130 @@ func (s *roleService) FindAll(request *requests.FindAllRole) ([]*response.RoleRe
 		pageSize = 10
 	}
 
-	res, totalRecords, err := s.roleRepository.FindAllRoles(request)
-	if err != nil {
-		s.logger.Error("Failed to fetch role",
-			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-		return nil, nil, role_errors.ErrFailedFindAll
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetCachedRoles(ctx, req); found {
+		logSuccess("Successfully retrieved all role records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched role",
-		zap.Int("totalRecords", *totalRecords),
+	res, err := s.roleRepository.FindAllRoles(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetRolesRow](
+			s.logger,
+			role_errors.ErrFailedFindAll,
+			method,
+			span,
+
+			zap.Int("page", req.Page),
+			zap.Int("page_size", req.PageSize),
+			zap.String("search", req.Search),
+		)
+	}
+
+	var totalCount int
+
+	if len(res) > 0 {
+		totalCount = int(res[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedRoles(ctx, req, res, &totalCount)
+
+	logSuccess("Successfully fetched role",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	so := s.mapping.ToRolesResponse(res)
-
-	return so, totalRecords, nil
+	return res, &totalCount, nil
 }
 
-func (s *roleService) FindById(id int) (*response.RoleResponse, *response.ErrorResponse) {
-	s.logger.Debug("Fetching role by ID", zap.Int("id", id))
+func (s *roleService) FindById(ctx context.Context, id int) (*db.Role, error) {
+	const method = "FindById"
 
-	res, err := s.roleRepository.FindById(id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("id", id))
 
-	if err != nil {
-		s.logger.Error("Failed to fetch role record by ID", zap.Error(err))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, role_errors.ErrRoleNotFoundRes
+	if data, found := s.cache.GetCachedRoleById(ctx, id); found {
+		logSuccess("Successfully retrieved role from cache", zap.Int("id", id))
+
+		return data, nil
 	}
 
-	s.logger.Debug("Successfully fetched role", zap.Int("id", id))
-
-	so := s.mapping.ToRoleResponse(res)
-
-	return so, nil
-}
-
-func (s *roleService) FindByUserId(id int) ([]*response.RoleResponse, *response.ErrorResponse) {
-	s.logger.Debug("Fetching role by user ID", zap.Int("id", id))
-
-	res, err := s.roleRepository.FindByUserId(id)
-
+	res, err := s.roleRepository.FindById(ctx, id)
 	if err != nil {
-		s.logger.Error("Failed to fetch role record by ID", zap.Error(err))
+		status = "error"
+		return errorhandler.HandleError[*db.Role](
+			s.logger,
+			role_errors.ErrRoleNotFoundRes,
+			method,
+			span,
 
-		return nil, role_errors.ErrRoleNotFoundRes
+			zap.Int("role_id", id),
+		)
 	}
 
-	s.logger.Debug("Successfully fetched role by user ID", zap.Int("id", id))
+	s.cache.SetCachedRoleById(ctx, id, res)
 
-	so := s.mapping.ToRolesResponse(res)
+	logSuccess("Successfully fetched role", zap.Int("id", id))
 
-	return so, nil
+	return res, nil
 }
 
-func (s *roleService) FindByActive(request *requests.FindAllRole) ([]*response.RoleResponseDeleteAt, *int, *response.ErrorResponse) {
-	page := request.Page
-	pageSize := request.PageSize
-	search := request.Search
+func (s *roleService) FindByUserId(ctx context.Context, id int) ([]*db.Role, error) {
+	const method = "FindByUserId"
 
-	s.logger.Debug("Fetching active role",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("user_id", id))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetCachedRoleByUserId(ctx, id); found {
+		logSuccess("Successfully fetched role by user ID from cache", zap.Int("id", id))
+		return data, nil
+	}
+
+	res, err := s.roleRepository.FindByUserId(ctx, id)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[[]*db.Role](
+			s.logger,
+			role_errors.ErrRoleNotFoundRes,
+			method,
+			span,
+
+			zap.Int("user_id", id),
+		)
+	}
+
+	s.cache.SetCachedRoleByUserId(ctx, id, res)
+
+	logSuccess("Successfully fetched role by user ID", zap.Int("id", id))
+
+	return res, nil
+}
+
+func (s *roleService) FindByActiveRole(ctx context.Context, req *requests.FindAllRole) ([]*db.GetActiveRolesRow, *int, error) {
+	const method = "FindByActiveRole"
+
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
 
 	if page <= 0 {
 		page = 1
@@ -116,36 +184,53 @@ func (s *roleService) FindByActive(request *requests.FindAllRole) ([]*response.R
 		pageSize = 10
 	}
 
-	res, totalRecords, err := s.roleRepository.FindByActiveRole(request)
-	if err != nil {
-		s.logger.Error("Failed to fetch active role",
-			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-		return nil, nil, role_errors.ErrFailedFindActive
+	defer func() {
+		end(status)
+	}()
+
+	res, err := s.roleRepository.FindByActiveRole(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetActiveRolesRow](
+			s.logger,
+			role_errors.ErrFailedFindActive,
+			method,
+			span,
+
+			zap.Int("page", page),
+			zap.Int("page_size", pageSize),
+			zap.String("search", search),
+		)
+	}
+	var totalCount int
+
+	if len(res) > 0 {
+		totalCount = int(res[0].TotalCount)
+	} else {
+		totalCount = 0
 	}
 
-	s.logger.Debug("Successfully fetched active role",
-		zap.Int("totalRecords", *totalRecords),
+	s.cache.SetCachedRoleActive(ctx, req, res, &totalCount)
+
+	logSuccess("Successfully fetched active role",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	so := s.mapping.ToRolesResponseDeleteAt(res)
-
-	return so, totalRecords, nil
+	return res, &totalCount, nil
 }
 
-func (s *roleService) FindByTrashed(request *requests.FindAllRole) ([]*response.RoleResponseDeleteAt, *int, *response.ErrorResponse) {
-	page := request.Page
-	pageSize := request.PageSize
-	search := request.Search
+func (s *roleService) FindByTrashedRole(ctx context.Context, req *requests.FindAllRole) ([]*db.GetTrashedRolesRow, *int, error) {
+	const method = "FindByTrashedRole"
 
-	s.logger.Debug("Fetching trashed role",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
 
 	if page <= 0 {
 		page = 1
@@ -154,174 +239,271 @@ func (s *roleService) FindByTrashed(request *requests.FindAllRole) ([]*response.
 		pageSize = 10
 	}
 
-	res, totalRecords, err := s.roleRepository.FindByTrashedRole(request)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to fetch trashed role",
-			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, nil, role_errors.ErrFailedFindTrashed
+	if data, total, found := s.cache.GetCachedRoleTrashed(ctx, req); found {
+		logSuccess("Successfully fetched trashed role from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched trashed role",
-		zap.Int("totalRecords", *totalRecords),
+	res, err := s.roleRepository.FindByTrashedRole(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetTrashedRolesRow](
+			s.logger,
+			role_errors.ErrFailedFindTrashed,
+			method,
+			span,
+
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+			zap.String("search", search),
+		)
+	}
+
+	var totalCount int
+
+	if len(res) > 0 {
+		totalCount = int(res[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedRoleTrashed(ctx, req, res, &totalCount)
+
+	logSuccess("Successfully fetched trashed role",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	so := s.mapping.ToRolesResponseDeleteAt(res)
-
-	return so, totalRecords, nil
+	return res, &totalCount, nil
 }
 
-func (s *roleService) Create(request *requests.CreateRoleRequest) (*response.RoleResponse, *response.ErrorResponse) {
+func (s *roleService) CreateRole(ctx context.Context, request *requests.CreateRoleRequest) (*db.Role, error) {
+	const method = "CreateRole"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.String("roleName", request.Name))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Starting CreateRole process",
 		zap.String("roleName", request.Name),
 	)
 
-	res, err := s.roleRepository.CreateRole(request)
-
+	role, err := s.roleRepository.CreateRole(ctx, request)
 	if err != nil {
-		s.logger.Error("Failed to create role",
-			zap.String("roleName", request.Name),
-			zap.Error(err),
+		status = "error"
+		return errorhandler.HandleError[*db.Role](
+			s.logger,
+			role_errors.ErrFailedCreateRole,
+			method,
+			span,
+			zap.String("role_name", request.Name),
 		)
-
-		return nil, role_errors.ErrFailedCreateRole
 	}
 
-	so := s.mapping.ToRoleResponse(res)
-
-	s.logger.Debug("CreateRole process completed",
+	logSuccess("CreateRole process completed",
 		zap.String("roleName", request.Name),
-		zap.Int("roleID", res.ID),
+		zap.Int("roleID", int(role.RoleID)),
 	)
 
-	return so, nil
+	return role, nil
 }
 
-func (s *roleService) Update(request *requests.UpdateRoleRequest) (*response.RoleResponse, *response.ErrorResponse) {
+func (s *roleService) UpdateRole(ctx context.Context, request *requests.UpdateRoleRequest) (*db.Role, error) {
+	const method = "UpdateRole"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("roleID", *request.ID),
+		attribute.String("newRoleName", request.Name))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Starting UpdateRole process",
 		zap.Int("roleID", *request.ID),
 		zap.String("newRoleName", request.Name),
 	)
 
-	res, err := s.roleRepository.UpdateRole(request)
-
+	role, err := s.roleRepository.UpdateRole(ctx, request)
 	if err != nil {
-		s.logger.Error("Failed to update role",
-			zap.Int("roleID", *request.ID),
-			zap.String("newRoleName", request.Name),
-			zap.Error(err))
-
-		return nil, role_errors.ErrFailedUpdateRole
+		status = "error"
+		return errorhandler.HandleError[*db.Role](
+			s.logger,
+			role_errors.ErrFailedUpdateRole,
+			method,
+			span,
+			zap.Int("role_id", *request.ID),
+			zap.String("new_name", request.Name),
+		)
 	}
 
-	so := s.mapping.ToRoleResponse(res)
-
-	s.logger.Debug("UpdateRole process completed",
+	logSuccess("UpdateRole process completed",
 		zap.Int("roleID", *request.ID),
 		zap.String("newRoleName", request.Name),
 	)
 
-	return so, nil
+	return role, nil
 }
 
-func (s *roleService) Trashed(id int) (*response.RoleResponse, *response.ErrorResponse) {
+func (s *roleService) TrashedRole(ctx context.Context, id int) (*db.Role, error) {
+	const method = "TrashedRole"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("roleID", id))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Starting TrashedRole process",
 		zap.Int("roleID", id),
 	)
 
-	res, err := s.roleRepository.TrashedRole(id)
-
+	role, err := s.roleRepository.TrashedRole(ctx, id)
 	if err != nil {
-		s.logger.Error("Failed to move role to trash",
-			zap.Int("roleID", id),
-			zap.Error(err))
-
-		return nil, role_errors.ErrFailedTrashedRole
+		status = "error"
+		return errorhandler.HandleError[*db.Role](
+			s.logger,
+			role_errors.ErrFailedTrashedRole,
+			method,
+			span,
+			zap.Int("role_id", id),
+		)
 	}
 
-	so := s.mapping.ToRoleResponse(res)
-
-	s.logger.Debug("TrashedRole process completed",
+	logSuccess("TrashedRole process completed",
 		zap.Int("roleID", id),
 	)
 
-	return so, nil
+	return role, nil
 }
 
-func (s *roleService) Restore(id int) (*response.RoleResponse, *response.ErrorResponse) {
+func (s *roleService) RestoreRole(ctx context.Context, id int) (*db.Role, error) {
+	const method = "RestoreRole"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("roleID", id))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Starting RestoreRole process",
 		zap.Int("roleID", id),
 	)
 
-	res, err := s.roleRepository.RestoreRole(id)
-
+	role, err := s.roleRepository.RestoreRole(ctx, id)
 	if err != nil {
-		s.logger.Error("Failed to restore role", zap.Error(err))
-
-		return nil, role_errors.ErrFailedRestoreRole
+		status = "error"
+		return errorhandler.HandleError[*db.Role](
+			s.logger,
+			role_errors.ErrFailedRestoreRole,
+			method,
+			span,
+			zap.Int("role_id", id),
+		)
 	}
 
-	so := s.mapping.ToRoleResponse(res)
-
-	s.logger.Debug("RestoreRole process completed",
+	logSuccess("RestoreRole process completed",
 		zap.Int("roleID", id),
 	)
 
-	return so, nil
+	return role, nil
 }
 
-func (s *roleService) DeletePermanent(id int) (bool, *response.ErrorResponse) {
+func (s *roleService) DeleteRolePermanent(ctx context.Context, id int) (bool, error) {
+	const method = "DeleteRolePermanent"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("roleID", id))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Starting DeleteRolePermanent process",
 		zap.Int("roleID", id),
 	)
 
-	_, err := s.roleRepository.DeleteRolePermanent(id)
-
+	_, err := s.roleRepository.DeleteRolePermanent(ctx, id)
 	if err != nil {
-		s.logger.Error("Failed to delete role permanently",
-			zap.Int("roleID", id),
-			zap.Error(err),
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			role_errors.ErrFailedDeletePermanent,
+			method,
+			span,
+			zap.Int("role_id", id),
 		)
-
-		return false, role_errors.ErrFailedDeletePermanent
 	}
 
-	s.logger.Debug("DeleteRolePermanent process completed",
+	logSuccess("DeleteRolePermanent process completed",
 		zap.Int("roleID", id),
 	)
 
 	return true, nil
 }
 
-func (s *roleService) RestoreAll() (bool, *response.ErrorResponse) {
+func (s *roleService) RestoreAllRole(ctx context.Context) (bool, error) {
+	const method = "RestoreAllRole"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Restoring all roles")
 
-	_, err := s.roleRepository.RestoreAllRole()
-
+	_, err := s.roleRepository.RestoreAllRole(ctx)
 	if err != nil {
-		s.logger.Error("Failed to restore all roles", zap.Error(err))
-		return false, role_errors.ErrFailedRestoreAll
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			role_errors.ErrFailedRestoreAll,
+			method,
+			span,
+		)
 	}
 
-	s.logger.Debug("Successfully restored all roles")
+	logSuccess("Successfully restored all roles")
 	return true, nil
 }
 
-func (s *roleService) DeleteAllPermanent() (bool, *response.ErrorResponse) {
+func (s *roleService) DeleteAllRolePermanent(ctx context.Context) (bool, error) {
+	const method = "DeleteAllRolePermanent"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Permanently deleting all roles")
 
-	_, err := s.roleRepository.DeleteAllRolePermanent()
-
+	_, err := s.roleRepository.DeleteAllRolePermanent(ctx)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete all roles", zap.Error(err))
-		return false, role_errors.ErrFailedDeletePermanent
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			role_errors.ErrFailedDeletePermanent,
+			method,
+			span,
+		)
 	}
 
-	s.logger.Debug("Successfully deleted all roles permanently")
+	logSuccess("Successfully deleted all roles permanently")
 	return true, nil
 }

@@ -3,27 +3,25 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors"
 	orderitem_errors "ecommerce/pkg/errors/order_item_errors"
 	"math"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type orderItemHandleGrpc struct {
 	pb.UnimplementedOrderItemServiceServer
 	orderItemService service.OrderItemService
-	mapping          protomapper.OrderItemProtoMapper
 }
 
 func NewOrderItemHandleGrpc(
 	orderItemService service.OrderItemService,
-	mapping protomapper.OrderItemProtoMapper,
 ) *orderItemHandleGrpc {
 	return &orderItemHandleGrpc{
 		orderItemService: orderItemService,
-		mapping:          mapping,
 	}
 }
 
@@ -45,14 +43,25 @@ func (s *orderItemHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllOr
 		Search:   search,
 	}
 
-	orderItems, totalRecords, err := s.orderItemService.FindAllOrderItems(&reqService)
-
+	orderItems, totalRecords, err := s.orderItemService.FindAllOrderItems(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	var pbOrderItems []*pb.OrderItemResponse
+	for _, item := range orderItems {
+		pbOrderItems = append(pbOrderItems, &pb.OrderItemResponse{
+			Id:        int32(item.OrderItemID),
+			OrderId:   int32(item.OrderID),
+			ProductId: int32(item.ProductID),
+			Quantity:  int32(item.Quantity),
+			Price:     int32(item.Price),
+			CreatedAt: item.CreatedAt.Time.String(),
+			UpdatedAt: item.UpdatedAt.Time.String(),
+		})
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
-
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
@@ -60,8 +69,12 @@ func (s *orderItemHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllOr
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationOrderItem(paginationMeta, "success", "Successfully fetched order items", orderItems)
-	return so, nil
+	return &pb.ApiResponsePaginationOrderItem{
+		Status:     "success",
+		Message:    "Successfully fetched order items",
+		Data:       pbOrderItems,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *orderItemHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAllOrderItemRequest) (*pb.ApiResponsePaginationOrderItemDeleteAt, error) {
@@ -82,14 +95,32 @@ func (s *orderItemHandleGrpc) FindByActive(ctx context.Context, request *pb.Find
 		Search:   search,
 	}
 
-	orderItems, totalRecords, err := s.orderItemService.FindByActive(&reqService)
-
+	orderItems, totalRecords, err := s.orderItemService.FindByActive(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	var pbOrderItems []*pb.OrderItemResponseDeleteAt
+	for _, item := range orderItems {
+		var deletedAt string
+
+		if item.DeletedAt.Valid {
+			deletedAt = item.DeletedAt.Time.Format("2006-01-02")
+		}
+
+		pbOrderItems = append(pbOrderItems, &pb.OrderItemResponseDeleteAt{
+			Id:        int32(item.OrderItemID),
+			OrderId:   int32(item.OrderID),
+			ProductId: int32(item.ProductID),
+			Quantity:  int32(item.Quantity),
+			Price:     int32(item.Price),
+			CreatedAt: item.CreatedAt.Time.String(),
+			UpdatedAt: item.UpdatedAt.Time.String(),
+			DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+		})
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
-
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
@@ -97,8 +128,12 @@ func (s *orderItemHandleGrpc) FindByActive(ctx context.Context, request *pb.Find
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationOrderItemDeleteAt(paginationMeta, "success", "Successfully fetched active order items", orderItems)
-	return so, nil
+	return &pb.ApiResponsePaginationOrderItemDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched active order items",
+		Data:       pbOrderItems,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *orderItemHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAllOrderItemRequest) (*pb.ApiResponsePaginationOrderItemDeleteAt, error) {
@@ -119,14 +154,32 @@ func (s *orderItemHandleGrpc) FindByTrashed(ctx context.Context, request *pb.Fin
 		Search:   search,
 	}
 
-	orderItems, totalRecords, err := s.orderItemService.FindByTrashed(&reqService)
-
+	orderItems, totalRecords, err := s.orderItemService.FindByTrashed(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	var pbOrderItems []*pb.OrderItemResponseDeleteAt
+	for _, item := range orderItems {
+		var deletedAt string
+
+		if item.DeletedAt.Valid {
+			deletedAt = item.DeletedAt.Time.Format("2006-01-02")
+		}
+
+		pbOrderItems = append(pbOrderItems, &pb.OrderItemResponseDeleteAt{
+			Id:        int32(item.OrderItemID),
+			OrderId:   int32(item.OrderID),
+			ProductId: int32(item.ProductID),
+			Quantity:  int32(item.Quantity),
+			Price:     int32(item.Price),
+			CreatedAt: item.CreatedAt.Time.String(),
+			UpdatedAt: item.UpdatedAt.Time.String(),
+			DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+		})
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
-
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
@@ -134,8 +187,12 @@ func (s *orderItemHandleGrpc) FindByTrashed(ctx context.Context, request *pb.Fin
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationOrderItemDeleteAt(paginationMeta, "success", "Successfully fetched trashed order items", orderItems)
-	return so, nil
+	return &pb.ApiResponsePaginationOrderItemDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched trashed order items",
+		Data:       pbOrderItems,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *orderItemHandleGrpc) FindOrderItemByOrder(ctx context.Context, request *pb.FindByIdOrderItemRequest) (*pb.ApiResponsesOrderItem, error) {
@@ -145,12 +202,27 @@ func (s *orderItemHandleGrpc) FindOrderItemByOrder(ctx context.Context, request 
 		return nil, orderitem_errors.ErrGrpcInvalidID
 	}
 
-	orderItems, err := s.orderItemService.FindOrderItemByOrder(id)
-
+	orderItems, err := s.orderItemService.FindOrderItemByOrder(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponsesOrderItem("success", "Successfully fetched order items by order", orderItems)
-	return so, nil
+	var pbOrderItems []*pb.OrderItemResponse
+	for _, item := range orderItems {
+		pbOrderItems = append(pbOrderItems, &pb.OrderItemResponse{
+			Id:        int32(item.OrderItemID),
+			OrderId:   int32(item.OrderID),
+			ProductId: int32(item.ProductID),
+			Quantity:  int32(item.Quantity),
+			Price:     int32(item.Price),
+			CreatedAt: item.CreatedAt.Time.String(),
+			UpdatedAt: item.UpdatedAt.Time.String(),
+		})
+	}
+
+	return &pb.ApiResponsesOrderItem{
+		Status:  "success",
+		Message: "Successfully fetched order items by order",
+		Data:    pbOrderItems,
+	}, nil
 }

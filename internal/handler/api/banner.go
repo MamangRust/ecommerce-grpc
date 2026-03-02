@@ -1,23 +1,30 @@
 package api
 
 import (
+	banner_cache "ecommerce/internal/cache/api/banner"
 	"ecommerce/internal/domain/requests"
-	response_api "ecommerce/internal/mapper/response/api"
+	response_api "ecommerce/internal/mapper"
 	"ecommerce/internal/pb"
-	"ecommerce/pkg/errors/banner_errors"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/logger"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type bannerHandleApi struct {
-	client  pb.BannerServiceClient
-	logger  logger.LoggerInterface
-	mapping response_api.BannerResponseMapper
+	client     pb.BannerServiceClient
+	logger     logger.LoggerInterface
+	mapping    response_api.BannerResponseMapper
+	apiHandler errors.ApiHandler
+	cache      banner_cache.BannerMencache
 }
 
 func NewHandleBanner(
@@ -25,29 +32,33 @@ func NewHandleBanner(
 	client pb.BannerServiceClient,
 	logger logger.LoggerInterface,
 	mapping response_api.BannerResponseMapper,
+	apiHandler errors.ApiHandler,
+	cache banner_cache.BannerMencache,
 ) *bannerHandleApi {
 	bannerHandler := &bannerHandleApi{
-		client:  client,
-		logger:  logger,
-		mapping: mapping,
+		client:     client,
+		logger:     logger,
+		mapping:    mapping,
+		apiHandler: apiHandler,
+		cache:      cache,
 	}
 
-	routercategory := router.Group("/api/banner")
+	routerBanner := router.Group("/api/banner")
 
-	routercategory.GET("", bannerHandler.FindAllBanner)
-	routercategory.GET("/:id", bannerHandler.FindById)
-	routercategory.GET("/active", bannerHandler.FindByActive)
-	routercategory.GET("/trashed", bannerHandler.FindByTrashed)
+	routerBanner.GET("", apiHandler.Handle("findAll", bannerHandler.FindAllBanner))
+	routerBanner.GET("/:id", apiHandler.Handle("findById", bannerHandler.FindById))
+	routerBanner.GET("/active", apiHandler.Handle("findByActive", bannerHandler.FindByActive))
+	routerBanner.GET("/trashed", apiHandler.Handle("findByTrashed", bannerHandler.FindByTrashed))
 
-	routercategory.POST("/create", bannerHandler.Create)
-	routercategory.POST("/update/:id", bannerHandler.Update)
+	routerBanner.POST("/create", apiHandler.Handle("create", bannerHandler.Create))
+	routerBanner.POST("/update/:id", apiHandler.Handle("update", bannerHandler.Update))
 
-	routercategory.POST("/trashed/:id", bannerHandler.TrashedBanner)
-	routercategory.POST("/restore/:id", bannerHandler.RestoreBanner)
-	routercategory.DELETE("/permanent/:id", bannerHandler.DeleteBannerPermanent)
+	routerBanner.POST("/trashed/:id", apiHandler.Handle("trashed", bannerHandler.TrashedBanner))
+	routerBanner.POST("/restore/:id", apiHandler.Handle("restore", bannerHandler.RestoreBanner))
+	routerBanner.DELETE("/permanent/:id", apiHandler.Handle("deletePermanent", bannerHandler.DeleteBannerPermanent))
 
-	routercategory.POST("/restore/all", bannerHandler.RestoreAllBanner)
-	routercategory.POST("/permanent/all", bannerHandler.DeleteAllBannerPermanent)
+	routerBanner.POST("/restore/all", apiHandler.Handle("restoreAll", bannerHandler.RestoreAllBanner))
+	routerBanner.POST("/permanent/all", apiHandler.Handle("deleteAllPermanent", bannerHandler.DeleteAllBannerPermanent))
 
 	return bannerHandler
 }
@@ -79,22 +90,33 @@ func (h *bannerHandleApi) FindAllBanner(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllBannerRequest{
+	req := &requests.FindAllBanner{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetCachedBanners(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllBannerRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindAll(ctx, req)
-
+	res, err := h.client.FindAll(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch Banners", zap.Error(err))
-		return banner_errors.ErrApiFailedFindAllBanner(c)
+		return h.handleGrpcError(err, "FindAll")
 	}
 
-	so := h.mapping.ToApiResponsePaginationBanner(res)
+	apiResponse := h.mapping.ToApiResponsePaginationBanner(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetCachedBanners(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -112,8 +134,7 @@ func (h *bannerHandleApi) FindById(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid Banner ID format", zap.Error(err))
-		return banner_errors.ErrApiBannerInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -122,14 +143,21 @@ func (h *bannerHandleApi) FindById(c echo.Context) error {
 		Id: int32(id),
 	}
 
+	cachedData, found := h.cache.GetCachedBanner(ctx, id)
+	if found {
+		h.logger.Debug("Returning banner from cache", zap.Int("id", id))
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
 	res, err := h.client.FindById(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to fetch Banner details", zap.Error(err))
-		return banner_errors.ErrApiFailedFindById(c)
+		return h.handleGrpcError(err, "FindById")
 	}
 
 	so := h.mapping.ToApiResponseBanner(res)
+
+	h.cache.SetCachedBanner(ctx, so)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -151,32 +179,31 @@ func (h *bannerHandleApi) FindByActive(c echo.Context) error {
 	if err != nil || page <= 0 {
 		page = 1
 	}
-
 	pageSize, err := strconv.Atoi(c.QueryParam("page_size"))
 	if err != nil || pageSize <= 0 {
 		pageSize = 10
 	}
-
 	search := c.QueryParam("search")
 
 	ctx := c.Request().Context()
+	req := &requests.FindAllBanner{Page: page, PageSize: pageSize, Search: search}
 
-	req := &pb.FindAllBannerRequest{
-		Page:     int32(page),
-		PageSize: int32(pageSize),
-		Search:   search,
+	cachedData, found := h.cache.GetCachedActiveBanners(ctx, req)
+	if found {
+		h.logger.Debug("Returning active banners from cache")
+		return c.JSON(http.StatusOK, cachedData)
 	}
 
-	res, err := h.client.FindByActive(ctx, req)
-
+	grpcReq := &pb.FindAllBannerRequest{Page: int32(page), PageSize: int32(pageSize), Search: search}
+	res, err := h.client.FindByActive(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch active Banners", zap.Error(err))
-		return banner_errors.ErrApiFailedFindByActive(c)
+		return h.handleGrpcError(err, "FindByActive")
 	}
 
-	so := h.mapping.ToApiResponsePaginationBannerDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationBannerDeleteAt(res)
+	h.cache.SetCachedActiveBanners(ctx, req, apiResponse)
 
-	return c.JSON(http.StatusOK, so)
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -196,32 +223,31 @@ func (h *bannerHandleApi) FindByTrashed(c echo.Context) error {
 	if err != nil || page <= 0 {
 		page = 1
 	}
-
 	pageSize, err := strconv.Atoi(c.QueryParam("page_size"))
 	if err != nil || pageSize <= 0 {
 		pageSize = 10
 	}
-
 	search := c.QueryParam("search")
 
 	ctx := c.Request().Context()
+	req := &requests.FindAllBanner{Page: page, PageSize: pageSize, Search: search}
 
-	req := &pb.FindAllBannerRequest{
-		Page:     int32(page),
-		PageSize: int32(pageSize),
-		Search:   search,
+	cachedData, found := h.cache.GetCachedTrashedBanners(ctx, req)
+	if found {
+		h.logger.Debug("Returning trashed banners from cache")
+		return c.JSON(http.StatusOK, cachedData)
 	}
 
-	res, err := h.client.FindByTrashed(ctx, req)
-
+	grpcReq := &pb.FindAllBannerRequest{Page: int32(page), PageSize: int32(pageSize), Search: search}
+	res, err := h.client.FindByTrashed(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch trashed Banners", zap.Error(err))
-		return banner_errors.ErrApiFailedFindByTrashed(c)
+		return h.handleGrpcError(err, "FindByTrashed")
 	}
 
-	so := h.mapping.ToApiResponsePaginationBannerDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationBannerDeleteAt(res)
+	h.cache.SetCachedTrashedBanners(ctx, req, apiResponse)
 
-	return c.JSON(http.StatusOK, so)
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -240,13 +266,12 @@ func (h *bannerHandleApi) Create(c echo.Context) error {
 	var body requests.CreateBannerRequest
 
 	if err := c.Bind(&body); err != nil {
-		h.logger.Debug("Invalid request format", zap.Error(err))
-		return banner_errors.ErrApiBindCreateBanner(c)
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
 	}
 
 	if err := body.Validate(); err != nil {
-		h.logger.Debug("Validation failed", zap.Error(err))
-		return banner_errors.ErrApiValidateCreateBanner(c)
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
@@ -263,10 +288,13 @@ func (h *bannerHandleApi) Create(c echo.Context) error {
 	res, err := h.client.Create(ctx, req)
 	if err != nil {
 		h.logger.Error("Banner creation failed", zap.Error(err))
-		return banner_errors.ErrApiFailedCreateBanner(c)
+		return err
 	}
 
 	so := h.mapping.ToApiResponseBanner(res)
+
+	h.cache.SetCachedBanner(ctx, so)
+
 	return c.JSON(http.StatusOK, so)
 }
 
@@ -287,19 +315,18 @@ func (h *bannerHandleApi) Update(c echo.Context) error {
 	id := c.Param("id")
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
-		h.logger.Debug("Invalid id parameter", zap.Error(err))
-		return banner_errors.ErrApiBannerInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	var body requests.UpdateBannerRequest
+
 	if err := c.Bind(&body); err != nil {
-		h.logger.Debug("Invalid request format", zap.Error(err))
-		return banner_errors.ErrApiBindUpdateBanner(c)
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
 	}
 
 	if err := body.Validate(); err != nil {
-		h.logger.Debug("Validation failed", zap.Error(err))
-		return banner_errors.ErrApiValidateCreateBanner(c)
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
@@ -317,10 +344,15 @@ func (h *bannerHandleApi) Update(c echo.Context) error {
 	res, err := h.client.Update(ctx, req)
 	if err != nil {
 		h.logger.Error("Banner update failed", zap.Error(err))
-		return banner_errors.ErrApiFailedUpdateBanner(c)
+		return err
 	}
 
 	so := h.mapping.ToApiResponseBanner(res)
+
+	h.cache.DeleteBannerCache(ctx, idInt)
+
+	h.cache.SetCachedBanner(ctx, so)
+
 	return c.JSON(http.StatusOK, so)
 }
 
@@ -340,8 +372,7 @@ func (h *bannerHandleApi) TrashedBanner(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid banner ID format", zap.Error(err))
-		return banner_errors.ErrApiBannerInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -353,11 +384,12 @@ func (h *bannerHandleApi) TrashedBanner(c echo.Context) error {
 	res, err := h.client.TrashedBanner(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to archive banner", zap.Error(err))
-		return banner_errors.ErrApiFailedTrashedBanner(c)
+		return h.handleGrpcError(err, "Trashed")
 	}
 
 	so := h.mapping.ToApiResponseBannerDeleteAt(res)
+
+	h.cache.DeleteBannerCache(ctx, id)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -378,8 +410,7 @@ func (h *bannerHandleApi) RestoreBanner(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid Banner ID format", zap.Error(err))
-		return banner_errors.ErrApiBannerInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -391,11 +422,12 @@ func (h *bannerHandleApi) RestoreBanner(c echo.Context) error {
 	res, err := h.client.RestoreBanner(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to restore Banner", zap.Error(err))
-		return banner_errors.ErrApiFailedRestoreBanner(c)
+		return h.handleGrpcError(err, "Restore")
 	}
 
 	so := h.mapping.ToApiResponseBannerDeleteAt(res)
+
+	h.cache.DeleteBannerCache(ctx, id)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -416,8 +448,7 @@ func (h *bannerHandleApi) DeleteBannerPermanent(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid Banner ID format", zap.Error(err))
-		return banner_errors.ErrApiBannerInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -429,11 +460,12 @@ func (h *bannerHandleApi) DeleteBannerPermanent(c echo.Context) error {
 	res, err := h.client.DeleteBannerPermanent(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to delete Banner", zap.Error(err))
-		return banner_errors.ErrApiFailedDeletePermanent(c)
+		return h.handleGrpcError(err, "DeletePermanent")
 	}
 
 	so := h.mapping.ToApiResponseBannerDelete(res)
+
+	h.cache.DeleteBannerCache(ctx, id)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -456,8 +488,7 @@ func (h *bannerHandleApi) RestoreAllBanner(c echo.Context) error {
 	res, err := h.client.RestoreAllBanner(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk Banner restoration failed", zap.Error(err))
-		return banner_errors.ErrApiFailedRestoreAllBanner(c)
+		return h.handleGrpcError(err, "RestoreAll")
 	}
 
 	so := h.mapping.ToApiResponseBannerAll(res)
@@ -485,8 +516,7 @@ func (h *bannerHandleApi) DeleteAllBannerPermanent(c echo.Context) error {
 	res, err := h.client.DeleteAllBannerPermanent(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk banner deletion failed", zap.Error(err))
-		return banner_errors.ErrApiFailedDeleteAllPermanent(c)
+		return h.handleGrpcError(err, "DeleteAll")
 	}
 
 	so := h.mapping.ToApiResponseBannerAll(res)
@@ -494,4 +524,82 @@ func (h *bannerHandleApi) DeleteAllBannerPermanent(c echo.Context) error {
 	h.logger.Debug("Successfully deleted all banner permanently")
 
 	return c.JSON(http.StatusOK, so)
+}
+
+func (h *bannerHandleApi) handleGrpcError(err error, operation string) *errors.AppError {
+	st, ok := status.FromError(err)
+	if !ok {
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return errors.NewNotFoundError("Banner").WithInternal(err)
+
+	case codes.AlreadyExists:
+		return errors.NewConflictError("Banner already exists").WithInternal(err)
+
+	case codes.InvalidArgument:
+		return errors.NewBadRequestError(st.Message()).WithInternal(err)
+
+	case codes.PermissionDenied:
+		return errors.ErrForbidden.WithInternal(err)
+
+	case codes.Unauthenticated:
+		return errors.ErrUnauthorized.WithInternal(err)
+
+	case codes.ResourceExhausted:
+		return errors.ErrTooManyRequests.WithInternal(err)
+
+	case codes.Unavailable:
+		return errors.NewServiceUnavailableError("Banner Address service").WithInternal(err)
+
+	case codes.DeadlineExceeded:
+		return errors.ErrTimeout.WithInternal(err)
+
+	default:
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+}
+
+func (h *bannerHandleApi) parseValidationErrors(err error) []errors.ValidationError {
+	var validationErrs []errors.ValidationError
+
+	if ve, ok := err.(validator.ValidationErrors); ok {
+		for _, fe := range ve {
+			validationErrs = append(validationErrs, errors.ValidationError{
+				Field:   fe.Field(),
+				Message: h.getValidationMessage(fe),
+			})
+		}
+		return validationErrs
+	}
+
+	return []errors.ValidationError{
+		{
+			Field:   "general",
+			Message: err.Error(),
+		},
+	}
+}
+
+func (h *bannerHandleApi) getValidationMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return fmt.Sprintf("Must be at least %s", fe.Param())
+	case "max":
+		return fmt.Sprintf("Must be at most %s", fe.Param())
+	case "gte":
+		return fmt.Sprintf("Must be greater than or equal to %s", fe.Param())
+	case "lte":
+		return fmt.Sprintf("Must be less than or equal to %s", fe.Param())
+	case "oneof":
+		return fmt.Sprintf("Must be one of: %s", fe.Param())
+	default:
+		return fmt.Sprintf("Validation failed on '%s' tag", fe.Tag())
+	}
 }

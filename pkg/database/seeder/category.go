@@ -2,7 +2,6 @@ package seeder
 
 import (
 	"context"
-	"database/sql"
 	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/logger"
 
@@ -27,61 +26,65 @@ func (r *categorySeeder) Seed() error {
 	categories := []db.CreateCategoryParams{
 		{
 			Name:          "Elektronik",
-			Description:   sql.NullString{String: "Produk elektronik seperti smartphone, laptop, dan aksesori elektronik lainnya.", Valid: true},
-			SlugCategory:  sql.NullString{String: "elektronik", Valid: true},
-			ImageCategory: sql.NullString{String: "elektronik.jpg", Valid: true},
+			Description:   strPtr("Produk elektronik seperti smartphone, laptop, dan aksesori elektronik lainnya."),
+			SlugCategory:  strPtr("elektronik"),
+			ImageCategory: strPtr("elektronik.jpg"),
 		},
 		{
 			Name:          "Kesehatan & Kecantikan",
-			Description:   sql.NullString{String: "Produk perawatan tubuh, skincare, dan suplemen kesehatan.", Valid: true},
-			SlugCategory:  sql.NullString{String: "kesehatan-kecantikan", Valid: true},
-			ImageCategory: sql.NullString{String: "kesehatan.jpg", Valid: true},
+			Description:   strPtr("Produk perawatan tubuh, skincare, dan suplemen kesehatan."),
+			SlugCategory:  strPtr("kesehatan-kecantikan"),
+			ImageCategory: strPtr("kesehatan.jpg"),
 		},
 		{
 			Name:          "Peralatan Rumah Tangga",
-			Description:   sql.NullString{String: "Peralatan dapur, perlengkapan rumah, dan furnitur.", Valid: true},
-			SlugCategory:  sql.NullString{String: "peralatan-rumah", Valid: true},
-			ImageCategory: sql.NullString{String: "rumah.jpg", Valid: true},
+			Description:   strPtr("Peralatan dapur, perlengkapan rumah, dan furnitur."),
+			SlugCategory:  strPtr("peralatan-rumah"),
+			ImageCategory: strPtr("rumah.jpg"),
 		},
 		{
 			Name:          "Ibu & Bayi",
-			Description:   sql.NullString{String: "Produk khusus untuk ibu hamil, menyusui, dan bayi.", Valid: true},
-			SlugCategory:  sql.NullString{String: "ibu-bayi", Valid: true},
-			ImageCategory: sql.NullString{String: "ibu-bayi.jpg", Valid: true},
+			Description:   strPtr("Produk khusus untuk ibu hamil, menyusui, dan bayi."),
+			SlugCategory:  strPtr("ibu-bayi"),
+			ImageCategory: strPtr("ibu-bayi.jpg"),
 		},
 		{
 			Name:          "Olahraga & Outdoor",
-			Description:   sql.NullString{String: "Perlengkapan olahraga, fitness, dan kegiatan luar ruangan.", Valid: true},
-			SlugCategory:  sql.NullString{String: "olahraga-outdoor", Valid: true},
-			ImageCategory: sql.NullString{String: "olahraga.jpg", Valid: true},
+			Description:   strPtr("Perlengkapan olahraga, fitness, dan kegiatan luar ruangan."),
+			SlugCategory:  strPtr("olahraga-outdoor"),
+			ImageCategory: strPtr("olahraga.jpg"),
 		},
 		{
 			Name:          "Makanan & Minuman",
-			Description:   sql.NullString{String: "Makanan ringan, minuman, bahan makanan segar dan kemasan.", Valid: true},
-			SlugCategory:  sql.NullString{String: "makanan-minuman", Valid: true},
-			ImageCategory: sql.NullString{String: "makanan.jpg", Valid: true},
+			Description:   strPtr("Makanan ringan, minuman, bahan makanan segar dan kemasan."),
+			SlugCategory:  strPtr("makanan-minuman"),
+			ImageCategory: strPtr("makanan.jpg"),
 		},
 		{
 			Name:          "Gaming & Console",
-			Description:   sql.NullString{String: "Konsol game, aksesori, dan game terbaru dari berbagai platform.", Valid: true},
-			SlugCategory:  sql.NullString{String: "gaming-console", Valid: true},
-			ImageCategory: sql.NullString{String: "gaming.jpg", Valid: true},
+			Description:   strPtr("Konsol game, aksesori, dan game terbaru dari berbagai platform."),
+			SlugCategory:  strPtr("gaming-console"),
+			ImageCategory: strPtr("gaming.jpg"),
 		},
 		{
 			Name:          "Perlengkapan Otomotif",
-			Description:   sql.NullString{String: "Aksesori mobil dan motor, oli, serta sparepart kendaraan.", Valid: true},
-			SlugCategory:  sql.NullString{String: "otomotif", Valid: true},
-			ImageCategory: sql.NullString{String: "otomotif.jpg", Valid: true},
+			Description:   strPtr("Aksesori mobil dan motor, oli, serta sparepart kendaraan."),
+			SlugCategory:  strPtr("otomotif"),
+			ImageCategory: strPtr("otomotif.jpg"),
 		},
 	}
 
 	for _, category := range categories {
 		if _, err := r.db.CreateCategory(r.ctx, category); err != nil {
-			r.logger.Error("Failed to insert category", zap.Error(err))
+			r.logger.Error("failed to insert category", zap.Error(err))
 			return err
 		}
 	}
 
-	r.logger.Info("Successfully seeded 10 categories")
+	r.logger.Info("successfully seeded categories")
 	return nil
+}
+
+func strPtr(v string) *string {
+	return &v
 }

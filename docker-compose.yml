@@ -33,7 +33,9 @@ services:
     networks:
       - app_network
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+
   server:
     build:
       context: .
@@ -47,6 +49,8 @@ services:
     networks:
       - app_network
     depends_on:
+      redis_server:
+        condition: service_started
       postgres:
         condition: service_healthy
       migrate:
@@ -69,11 +73,172 @@ services:
     depends_on:
       server:
         condition: service_started
+      redis_client:
+        condition: service_started
     environment:
       - APP_ENV=docker
+  
+  pyroscope:
+    image: grafana/pyroscope:latest
+    ports:
+    - 4040:4040
+    networks:
+      - app_network
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+    - GF_PLUGINS_PREINSTALL_SYNC=grafana-pyroscope-app
+    - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+    - grafana_data:/var/lib/grafana
+    - ./grafana-provisioning:/etc/grafana/provisioning
+    ports:
+    - 3000:3000
+    networks:
+      - app_network
+
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger-payment-tonic_debug
+    ports:
+      - "16686:16686"
+      - "14250:14250"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter-tonic_debug
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/:/host:ro,rslave'
+    networks:
+      - app_network
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus-payment-tonic_debug
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "13133:13133"
+      - "8889:8889"
+    volumes:
+      - ./observability/otel-collector.yaml:/etc/otel-collector-config.yaml:ro
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager_debug
+    volumes:
+      - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    ports:
+      - "9093:9093"
+    networks:
+      - app_network
+
+  loki:
+    container_name: loki_debug
+    image: grafana/loki:3.5.8
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./observability/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - app_network
+
+  redis_server:
+    image: redis:7.4
+    container_name: redis_server
+    command: ["redis-server", "--requirepass", "dragon_knight"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_server_data:/data
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  redis_client:
+    image: redis:7.4
+    container_name: redis_client
+    command: ["redis-server", "--requirepass", "dragon_knight"]
+    ports:
+      - "6380:6379" 
+    volumes:
+      - redis_client_data:/data
+    restart: unless-stopped
+    networks:
+      - app_network
+
+  
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: pgbouncer_debug
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: DRAGON
+      DB_PASSWORD: DRAGON
+      DB_NAME: ECOMMERCE
+
+      AUTH_TYPE: scram-sha-256
+
+      POOL_MODE: session
+      MAX_CLIENT_CONN: 550
+      DEFAULT_POOL_SIZE: 15
+      MIN_POOL_SIZE: 5
+      RESERVE_POOL_SIZE: 5
+      RESERVE_POOL_TIMEOUT: 5
+      SERVER_RESET_QUERY: DISCARD ALL
+
+      ADMIN_USERS: postgres
+      STATS_USERS: postgres
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+    healthcheck:
+      test: "pg_isready -h postgres -p 5432 -U postgres"
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
+  redis_server_data:
+  redis_client_data:
+  loki_data:
+  grafana_data:
 
 networks:
   app_network:

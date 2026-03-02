@@ -2,7 +2,6 @@ package seeder
 
 import (
 	"context"
-	"database/sql"
 	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/logger"
 
@@ -46,7 +45,7 @@ func (r *reviewSeeder) Seed() error {
 			ReviewID: createdReview.ReviewID,
 			Type:     "photo",
 			Url:      "https://example.com/review_" + review.Name + ".jpg",
-			Caption:  sql.NullString{String: "Foto review oleh " + review.Name, Valid: true},
+			Caption:  strPtr("Foto review oleh "),
 		})
 		if err != nil {
 			r.logger.Error("failed to create review detail", zap.Error(err))

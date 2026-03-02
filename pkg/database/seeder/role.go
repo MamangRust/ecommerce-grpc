@@ -24,7 +24,7 @@ func NewRoleSeeder(db *db.Queries, ctx context.Context, logger logger.LoggerInte
 }
 
 func (r *roleSeeder) Seed() error {
-	randomRoles := []string{"Cashier", "Manager", "Admin", "Supplier"}
+	randomRoles := []string{"ROLE_CASHIER", "ROLE_MANAGER", "ROLE_ADMIN", "ROLE_SUPPLIER"}
 
 	totalRoles := len(randomRoles)
 

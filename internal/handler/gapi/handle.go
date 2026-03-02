@@ -1,14 +1,8 @@
 package gapi
 
 import (
-	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/service"
 )
-
-type Deps struct {
-	Service service.Service
-	Mapper  protomapper.ProtoMapper
-}
 
 type Handler struct {
 	Auth             AuthHandleGrpc
@@ -32,26 +26,26 @@ type Handler struct {
 	ReviewDetail     ReviewDetailHandleGrpc
 }
 
-func NewHandler(deps Deps) *Handler {
+func NewHandler(service *service.Service) *Handler {
 	return &Handler{
-		Auth:             NewAuthHandleGrpc(deps.Service.Auth, deps.Mapper.AuthProtoMapper),
-		Role:             NewRoleHandleGrpc(deps.Service.Role, deps.Mapper.RoleProtoMapper),
-		User:             NewUserHandleGrpc(deps.Service.User, deps.Mapper.UserProtoMapper),
-		Category:         NewCategoryHandleGrpc(deps.Service.Category, deps.Mapper.CategoryProtoMapper),
-		Merchant:         NewMerchantHandleGrpc(deps.Service.Merchant, deps.Mapper.MerchantProtoMapper),
-		OrderItem:        NewOrderItemHandleGrpc(deps.Service.OrderItem, deps.Mapper.OrderItemProtoMapper),
-		Order:            NewOrderHandleGrpc(deps.Service.Order, deps.Mapper.OrderProtoMapper),
-		Product:          NewProductHandleGrpc(deps.Service.Product, deps.Mapper.ProductProtoMapper),
-		Transaction:      NewTransactionHandleGrpc(deps.Service.Transaction, deps.Mapper.TransactionProtoMapper),
-		Review:           NewReviewHandleGrpc(deps.Service.Review, deps.Mapper.ReviewProtoMapper),
-		Shipping:         NewShippingAddressHandleGrpc(deps.Service.Shipping, deps.Mapper.ShippingProtoMapper),
-		Slider:           NewSliderHandleGrpc(deps.Service.Slider, deps.Mapper.SliderProtoMapper),
-		Cart:             NewCartHandleGrpc(deps.Service.Cart, deps.Mapper.CartProtoMapper),
-		Banner:           NewBannerHaandleGrpc(deps.Service.Banner, deps.Mapper.BannerProtoMapper),
-		MerchantAward:    NewMerchantAwardHandleGrpc(deps.Service.MerchantAward, deps.Mapper.MerchantAwardProtoMapper, deps.Mapper.MerchantProtoMapper),
-		MerchantBusiness: NewMerchantBusinessHandleGrpc(deps.Service.MerchantBusiness, deps.Mapper.MerchantBusinessProtoMapper, deps.Mapper.MerchantProtoMapper),
-		MerchantDetail:   NewMerchantDetailHandleGrpc(deps.Service.MerchantDetail, deps.Mapper.MerchantDetailProtoMapper, deps.Mapper.MerchantProtoMapper),
-		MerchantPolicies: NewMerchantPolicyHandleGrpc(deps.Service.MerchantPolicies, deps.Mapper.MerchantPolicyProtoMapper, deps.Mapper.MerchantProtoMapper),
-		ReviewDetail:     NewReviewDetailHandleGrpc(deps.Service.ReviewDetail, deps.Mapper.ReviewDetailProtoMapper, deps.Mapper.ReviewProtoMapper),
+		Auth:             NewAuthHandleGrpc(service.Auth),
+		Role:             NewRoleHandleGrpc(service.Role),
+		User:             NewUserHandleGrpc(service.User),
+		Category:         NewCategoryHandleGrpc(service.Category),
+		Merchant:         NewMerchantHandleGrpc(service.Merchant),
+		OrderItem:        NewOrderItemHandleGrpc(service.OrderItem),
+		Order:            NewOrderHandleGrpc(service.Order),
+		Product:          NewProductHandleGrpc(service.Product),
+		Transaction:      NewTransactionHandleGrpc(service.Transaction),
+		Review:           NewReviewHandleGrpc(service.Review),
+		Shipping:         NewShippingAddressHandleGrpc(service.Shipping),
+		Slider:           NewSliderHandleGrpc(service.Slider),
+		Cart:             NewCartHandleGrpc(service.Cart),
+		Banner:           NewBannerHandleGrpc(service.Banner),
+		MerchantAward:    NewMerchantAwardHandleGrpc(service.MerchantAward),
+		MerchantBusiness: NewMerchantBusinessHandleGrpc(service.MerchantBusiness),
+		MerchantDetail:   NewMerchantDetailHandleGrpc(service.MerchantDetail),
+		MerchantPolicies: NewMerchantPolicyHandleGrpc(service.MerchantPolicies),
+		ReviewDetail:     NewReviewDetailHandleGrpc(service.ReviewDetail),
 	}
 }

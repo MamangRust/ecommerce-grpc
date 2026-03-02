@@ -2,33 +2,24 @@ package repository
 
 import (
 	"context"
-	"ecommerce/internal/domain/record"
 	"ecommerce/internal/domain/requests"
-	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/errors/cart_errors"
-	"log"
 )
 
 type cartRepository struct {
-	db      *db.Queries
-	ctx     context.Context
-	mapping recordmapper.CartRecordMapping
+	db *db.Queries
 }
 
 func NewCartRepository(
 	db *db.Queries,
-	ctx context.Context,
-	mapping recordmapper.CartRecordMapping,
 ) *cartRepository {
 	return &cartRepository{
-		db:      db,
-		ctx:     ctx,
-		mapping: mapping,
+		db: db,
 	}
 }
 
-func (r *cartRepository) FindCarts(req *requests.FindAllCarts) ([]*record.CartRecord, *int, error) {
+func (r *cartRepository) FindCarts(ctx context.Context, req *requests.FindAllCarts) ([]*db.GetCartsRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetCartsParams{
@@ -38,26 +29,17 @@ func (r *cartRepository) FindCarts(req *requests.FindAllCarts) ([]*record.CartRe
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetCarts(r.ctx, reqDb)
+	res, err := r.db.GetCarts(ctx, reqDb)
 
 	if err != nil {
-		log.Fatal(err)
-		return nil, nil, cart_errors.ErrFindAllCarts
+		return nil, cart_errors.ErrFindAllCarts
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToCartsRecordPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *cartRepository) CreateCart(req *requests.CartCreateRecord) (*record.CartRecord, error) {
-	res, err := r.db.CreateCart(r.ctx, db.CreateCartParams{
+func (r *cartRepository) CreateCart(ctx context.Context, req *requests.CartCreateRecord) (*db.Cart, error) {
+	res, err := r.db.CreateCart(ctx, db.CreateCartParams{
 		UserID:    int32(req.UserID),
 		ProductID: int32(req.ProductID),
 		Name:      req.Name,
@@ -71,11 +53,11 @@ func (r *cartRepository) CreateCart(req *requests.CartCreateRecord) (*record.Car
 		return nil, cart_errors.ErrCreateCart
 	}
 
-	return r.mapping.ToCartRecord(res), nil
+	return res, nil
 }
 
-func (r *cartRepository) DeletePermanent(cart_id int) (bool, error) {
-	err := r.db.DeleteCart(r.ctx, int32(cart_id))
+func (r *cartRepository) DeletePermanent(ctx context.Context, cart_id int) (bool, error) {
+	err := r.db.DeleteCart(ctx, int32(cart_id))
 
 	if err != nil {
 		return false, cart_errors.ErrDeleteCartPermanent
@@ -84,14 +66,14 @@ func (r *cartRepository) DeletePermanent(cart_id int) (bool, error) {
 	return true, nil
 }
 
-func (r *cartRepository) DeleteAllPermanently(req *requests.DeleteCartRequest) (bool, error) {
+func (r *cartRepository) DeleteAllPermanently(ctx context.Context, req *requests.DeleteCartRequest) (bool, error) {
 	cartIDs := make([]int32, len(req.CartIds))
 
 	for i, id := range req.CartIds {
 		cartIDs[i] = int32(id)
 	}
 
-	err := r.db.DeleteAllCart(r.ctx, cartIDs)
+	err := r.db.DeleteAllCart(ctx, cartIDs)
 
 	if err != nil {
 		return false, cart_errors.ErrDeleteAllCarts

@@ -14,14 +14,26 @@
 --   - Uses window function COUNT(*) OVER() for efficient total count
 -- name: GetUsers :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    user_id,
+    firstname,
+    lastname,
+    email,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
 FROM users
-WHERE deleted_at IS NULL
-  AND ($1::TEXT IS NULL OR firstname ILIKE '%' || $1 || '%' OR lastname ILIKE '%' || $1 || '%' OR email ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR firstname ILIKE '%' || $1 || '%'
+        OR lastname ILIKE '%' || $1 || '%'
+        OR email ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetUsersActive: Retrieves paginated list of active users (identical to GetUsers)
 -- Purpose: Maintains consistent API pattern with other active/trashed endpoints
@@ -37,15 +49,27 @@ LIMIT $2 OFFSET $3;
 -- Note: Could be consolidated with GetUsers if duplicate functionality is undesired
 -- name: GetUsersActive :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    user_id,
+    firstname,
+    lastname,
+    email,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM users
-WHERE deleted_at IS NULL
-  AND ($1::TEXT IS NULL OR firstname ILIKE '%' || $1 || '%' OR lastname ILIKE '%' || $1 || '%' OR email ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR firstname ILIKE '%' || $1 || '%'
+        OR lastname ILIKE '%' || $1 || '%'
+        OR email ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetUserTrashed: Retrieves paginated list of soft-deleted users
 -- Purpose: View and manage deleted users for potential restoration
@@ -63,15 +87,27 @@ LIMIT $2 OFFSET $3;
 --   - Includes total_count for pagination in trash management UI
 -- name: GetUserTrashed :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    user_id,
+    firstname,
+    lastname,
+    email,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM users
-WHERE deleted_at IS NOT NULL
-  AND ($1::TEXT IS NULL OR firstname ILIKE '%' || $1 || '%' OR lastname ILIKE '%' || $1 || '%' OR email ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NOT NULL
+    AND (
+        $1::TEXT IS NULL
+        OR firstname ILIKE '%' || $1 || '%'
+        OR lastname ILIKE '%' || $1 || '%'
+        OR email ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetUserByID: Retrieves active user by ID
 -- Purpose: Fetch specific user details
@@ -83,8 +119,31 @@ LIMIT $2 OFFSET $3;
 --   - Used for user profile viewing/editing
 --   - Primary lookup for user management
 -- name: GetUserByID :one
-SELECT * FROM users WHERE user_id = $1 AND deleted_at IS NULL;
+SELECT
+    user_id,
+    firstname,
+    lastname,
+    email,
+    created_at,
+    updated_at
+FROM users
+WHERE
+    user_id = $1
+    AND deleted_at IS NULL;
 
+-- name: GetUserByIDWithPassword :one
+SELECT
+    user_id,
+    firstname,
+    lastname,
+    email,
+    password,
+    created_at,
+    updated_at
+FROM users
+WHERE
+    user_id = $1
+    AND deleted_at IS NULL;
 
 -- GetUserByEmail: Retrieves active user by email
 -- Purpose: Lookup user by email address (for authentication)
@@ -97,9 +156,18 @@ SELECT * FROM users WHERE user_id = $1 AND deleted_at IS NULL;
 --   - Used during login/authentication flows
 --   - Helps prevent duplicate accounts
 -- name: GetUserByEmail :one
-SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL;
+SELECT user_id, email
+FROM users
+WHERE
+    email = $1
+    AND deleted_at IS NULL;
 
-
+-- name: GetUserByEmailWithPassword :one
+SELECT user_id, email, password
+FROM users
+WHERE
+    email = $1
+    AND deleted_at IS NULL;
 
 -- CreateUser: Creates a new user account
 -- Purpose: Register a new user in the system
@@ -131,8 +199,14 @@ VALUES (
         $4,
         current_timestamp,
         current_timestamp
-    ) RETURNING *;
-
+    )
+RETURNING
+    user_id,
+    firstname,
+    lastname,
+    email,
+    created_at,
+    updated_at;
 
 -- UpdateUser: Modifies user account information
 -- Purpose: Update user profile details
@@ -159,9 +233,13 @@ SET
 WHERE
     user_id = $1
     AND deleted_at IS NULL
-    RETURNING *;
-
-
+RETURNING
+    user_id,
+    firstname,
+    lastname,
+    email,
+    created_at,
+    updated_at;
 
 -- TrashUser: Soft-deletes a user account
 -- Purpose: Deactivate user without permanent deletion
@@ -180,7 +258,14 @@ SET
 WHERE
     user_id = $1
     AND deleted_at IS NULL
-    RETURNING *;
+RETURNING
+    user_id,
+    firstname,
+    lastname,
+    email,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreUser: Recovers a soft-deleted user
 -- Purpose: Reactivate a previously deactivated user
@@ -199,8 +284,14 @@ SET
 WHERE
     user_id = $1
     AND deleted_at IS NOT NULL
-    RETURNING *;
-
+RETURNING
+    user_id,
+    firstname,
+    lastname,
+    email,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeleteUserPermanently: Hard-deletes a user account
 -- Purpose: Completely remove user from database
@@ -213,7 +304,6 @@ WHERE
 --   - Should trigger cleanup of related records
 -- name: DeleteUserPermanently :exec
 DELETE FROM users WHERE user_id = $1 AND deleted_at IS NOT NULL;
-
 
 -- RestoreAllUsers: Mass restoration of deleted users
 -- Purpose: Recover all trashed users at once
@@ -229,7 +319,6 @@ SET
 WHERE
     deleted_at IS NOT NULL;
 
-
 -- DeleteAllPermanentUsers: Purges all trashed users
 -- Purpose: Clean up all soft-deleted user records
 -- Business Logic:
@@ -238,6 +327,4 @@ WHERE
 --   - Typically used during database maintenance
 --   - Should be restricted to admin users
 -- name: DeleteAllPermanentUsers :exec
-DELETE FROM users
-WHERE
-    deleted_at IS NOT NULL;
+DELETE FROM users WHERE deleted_at IS NOT NULL;

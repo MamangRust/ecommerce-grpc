@@ -43,7 +43,7 @@ func main() {
 	}
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
-		viper.GetString("DB_HOST"),
+		viper.GetString("DB_HOST_MIGRATE"),
 		viper.GetString("DB_PORT"),
 		viper.GetString("DB_USERNAME"),
 		viper.GetString("DB_NAME"),

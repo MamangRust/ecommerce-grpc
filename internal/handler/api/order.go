@@ -1,23 +1,31 @@
 package api
 
 import (
+	order_cache "ecommerce/internal/cache/api/order"
 	"ecommerce/internal/domain/requests"
-	response_api "ecommerce/internal/mapper/response/api"
+	response_api "ecommerce/internal/mapper"
+	"fmt"
+
 	"ecommerce/internal/pb"
-	"ecommerce/pkg/errors/order_errors"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/logger"
 	"net/http"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type orderHandleApi struct {
-	client  pb.OrderServiceClient
-	logger  logger.LoggerInterface
-	mapping response_api.OrderResponseMapper
+	client     pb.OrderServiceClient
+	logger     logger.LoggerInterface
+	mapping    response_api.OrderResponseMapper
+	apiHandler errors.ApiHandler
+	cache      order_cache.OrderMencache
 }
 
 func NewHandlerOrder(
@@ -25,39 +33,43 @@ func NewHandlerOrder(
 	client pb.OrderServiceClient,
 	logger logger.LoggerInterface,
 	mapping response_api.OrderResponseMapper,
+	apiHandler errors.ApiHandler,
+	cache order_cache.OrderMencache,
 ) *orderHandleApi {
 	orderHandler := &orderHandleApi{
-		client:  client,
-		logger:  logger,
-		mapping: mapping,
+		client:     client,
+		logger:     logger,
+		mapping:    mapping,
+		apiHandler: apiHandler,
+		cache:      cache,
 	}
 
 	routerOrder := router.Group("/api/order")
 
-	routerOrder.GET("", orderHandler.FindAllOrders)
-	routerOrder.GET("/:id", orderHandler.FindById)
-	routerOrder.GET("/active", orderHandler.FindByActive)
-	routerOrder.GET("/trashed", orderHandler.FindByTrashed)
+	routerOrder.GET("", apiHandler.Handle("findAll", orderHandler.FindAllOrders))
+	routerOrder.GET("/:id", apiHandler.Handle("findById", orderHandler.FindById))
+	routerOrder.GET("/active", apiHandler.Handle("findByActive", orderHandler.FindByActive))
+	routerOrder.GET("/trashed", apiHandler.Handle("findByTrashed", orderHandler.FindByTrashed))
 
-	routerOrder.GET("/monthly-total-revenue", orderHandler.FindMonthlyTotalRevenue)
-	routerOrder.GET("/yearly-total-revenue", orderHandler.FindYearlyTotalRevenue)
-	routerOrder.GET("/merchant/monthly-total-revenue", orderHandler.FindMonthlyTotalRevenueByMerchant)
-	routerOrder.GET("/merchant/yearly-total-revenue", orderHandler.FindYearlyTotalRevenueByMerchant)
+	routerOrder.GET("/monthly-total-revenue", apiHandler.Handle("findMonthlyTotalRevenue", orderHandler.FindMonthlyTotalRevenue))
+	routerOrder.GET("/yearly-total-revenue", apiHandler.Handle("findYearlyTotalRevenue", orderHandler.FindYearlyTotalRevenue))
+	routerOrder.GET("/merchant/monthly-total-revenue", apiHandler.Handle("findMonthlyTotalRevenueByMerchant", orderHandler.FindMonthlyTotalRevenueByMerchant))
+	routerOrder.GET("/merchant/yearly-total-revenue", apiHandler.Handle("findYearlyTotalRevenueByMerchant", orderHandler.FindYearlyTotalRevenueByMerchant))
 
-	routerOrder.GET("/monthly-revenue", orderHandler.FindMonthlyRevenue)
-	routerOrder.GET("/yearly-revenue", orderHandler.FindYearlyRevenue)
-	routerOrder.GET("/merchant/monthly-revenue", orderHandler.FindMonthlyRevenueByMerchant)
-	routerOrder.GET("/merchant/yearly-revenue", orderHandler.FindYearlyRevenueByMerchant)
+	routerOrder.GET("/monthly-revenue", apiHandler.Handle("findMonthlyRevenue", orderHandler.FindMonthlyRevenue))
+	routerOrder.GET("/yearly-revenue", apiHandler.Handle("findYearlyRevenue", orderHandler.FindYearlyRevenue))
+	routerOrder.GET("/merchant/monthly-revenue", apiHandler.Handle("findMonthlyRevenueByMerchant", orderHandler.FindMonthlyRevenueByMerchant))
+	routerOrder.GET("/merchant/yearly-revenue", apiHandler.Handle("findYearlyRevenueByMerchant", orderHandler.FindYearlyRevenueByMerchant))
 
-	routerOrder.POST("/create", orderHandler.Create)
-	routerOrder.POST("/update/:id", orderHandler.Update)
+	routerOrder.POST("/create", apiHandler.Handle("create", orderHandler.Create))
+	routerOrder.POST("/update/:id", apiHandler.Handle("update", orderHandler.Update))
 
-	routerOrder.POST("/trashed/:id", orderHandler.TrashedOrder)
-	routerOrder.POST("/restore/:id", orderHandler.RestoreOrder)
-	routerOrder.DELETE("/permanent/:id", orderHandler.DeleteOrderPermanent)
+	routerOrder.POST("/trashed/:id", apiHandler.Handle("trashed", orderHandler.TrashedOrder))
+	routerOrder.POST("/restore/:id", apiHandler.Handle("restore", orderHandler.RestoreOrder))
+	routerOrder.DELETE("/permanent/:id", apiHandler.Handle("deletePermanent", orderHandler.DeleteOrderPermanent))
 
-	routerOrder.POST("/restore/all", orderHandler.RestoreAllOrder)
-	routerOrder.POST("/permanent/all", orderHandler.DeleteAllOrderPermanent)
+	routerOrder.POST("/restore/all", apiHandler.Handle("restoreAll", orderHandler.RestoreAllOrder))
+	routerOrder.POST("/permanent/all", apiHandler.Handle("deleteAllPermanent", orderHandler.DeleteAllOrderPermanent))
 
 	return orderHandler
 }
@@ -89,22 +101,33 @@ func (h *orderHandleApi) FindAllOrders(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllOrderRequest{
+	req := &requests.FindAllOrder{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetOrderAllCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllOrderRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindAll(ctx, req)
-
+	res, err := h.client.FindAll(ctx, grpcReq)
 	if err != nil {
-		h.logger.Debug("Failed to retrieve order data", zap.Error(err))
-		return order_errors.ErrApiOrderFailedFindAll(c)
+		return h.handleGrpcError(err, "FindAll")
 	}
 
-	so := h.mapping.ToApiResponsePaginationOrder(res)
+	apiResponse := h.mapping.ToApiResponsePaginationOrder(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetOrderAllCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -120,28 +143,31 @@ func (h *orderHandleApi) FindAllOrders(c echo.Context) error {
 // @Router /api/order/{id} [get]
 func (h *orderHandleApi) FindById(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
-
 	if err != nil {
-		h.logger.Debug("Invalid order ID", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
+
+	cachedData, found := h.cache.GetCachedOrderCache(ctx, id)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	req := &pb.FindByIdOrderRequest{
 		Id: int32(id),
 	}
 
 	res, err := h.client.FindById(ctx, req)
-
 	if err != nil {
-		h.logger.Debug("Failed to retrieve order data", zap.Error(err))
-		return order_errors.ErrApiOrderFailedFindById(c)
+		return h.handleGrpcError(err, "FindById")
 	}
 
-	so := h.mapping.ToApiResponseOrder(res)
+	apiResponse := h.mapping.ToApiResponseOrder(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetCachedOrderCache(ctx, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -171,21 +197,33 @@ func (h *orderHandleApi) FindByActive(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllOrderRequest{
+	req := &requests.FindAllOrder{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetOrderActiveCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllOrderRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByActive(ctx, req)
+	res, err := h.client.FindByActive(ctx, grpcReq)
 	if err != nil {
-		h.logger.Debug("Failed to retrieve active order data", zap.Error(err))
-		return order_errors.ErrApiOrderFailedFindByActive(c)
+		return h.handleGrpcError(err, "FindByActive")
 	}
 
-	so := h.mapping.ToApiResponsePaginationOrderDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationOrderDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetOrderActiveCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -215,22 +253,33 @@ func (h *orderHandleApi) FindByTrashed(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllOrderRequest{
+	req := &requests.FindAllOrder{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetOrderTrashedCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllOrderRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByTrashed(ctx, req)
-
+	res, err := h.client.FindByTrashed(ctx, grpcReq)
 	if err != nil {
-		h.logger.Debug("Failed to retrieve trashed order data", zap.Error(err))
-		return order_errors.ErrApiOrderFailedFindByTrashed(c)
+		return h.handleGrpcError(err, "FindByTrashed")
 	}
 
-	so := h.mapping.ToApiResponsePaginationOrderDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationOrderDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetOrderTrashedCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // FindMonthlyTotalRevenue retrieves monthly revenue statistics
@@ -249,26 +298,29 @@ func (h *orderHandleApi) FindByTrashed(c echo.Context) error {
 // @Router /api/order/monthly-total-revenue [get]
 func (h *orderHandleApi) FindMonthlyTotalRevenue(c echo.Context) error {
 	yearStr := c.QueryParam("year")
-
-	year, err := strconv.Atoi(yearStr)
-
-	if err != nil {
-		h.logger.Debug("Invalid year parameter", zap.Error(err))
-
-		return order_errors.ErrApiOrderInvalidYear(c)
-	}
-
 	monthStr := c.QueryParam("month")
 
-	month, err := strconv.Atoi(monthStr)
-
+	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		h.logger.Debug("Invalid month parameter", zap.Error(err))
+		return errors.NewBadRequestError("year is required")
+	}
 
-		return order_errors.ErrApiOrderInvalidMonth(c)
+	month, err := strconv.Atoi(monthStr)
+	if err != nil {
+		return errors.NewBadRequestError("month is required")
 	}
 
 	ctx := c.Request().Context()
+
+	req := &requests.MonthTotalRevenue{
+		Month: month,
+		Year:  year,
+	}
+
+	cachedData, found := h.cache.GetMonthlyTotalRevenueCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	res, err := h.client.FindMonthlyTotalRevenue(ctx, &pb.FindYearMonthTotalRevenue{
 		Year:  int32(year),
@@ -276,14 +328,14 @@ func (h *orderHandleApi) FindMonthlyTotalRevenue(c echo.Context) error {
 	})
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve monthly order revenue", zap.Error(err))
-
-		return order_errors.ErrApiOrderFailedFindMonthlyTotalRevenue(c)
+		return h.handleGrpcError(err, "FindMonthlyTotalRevenue")
 	}
 
-	so := h.mapping.ToApiResponseMonthlyTotalRevenue(res)
+	apiResponse := h.mapping.ToApiResponseMonthlyTotalRevenue(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetMonthlyTotalRevenueCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // FindYearlyTotalRevenue retrieves yearly revenue statistics
@@ -303,27 +355,30 @@ func (h *orderHandleApi) FindYearlyTotalRevenue(c echo.Context) error {
 	yearStr := c.QueryParam("year")
 
 	year, err := strconv.Atoi(yearStr)
-
 	if err != nil {
-		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidYear(c)
+		return errors.NewBadRequestError("year is required")
 	}
 
 	ctx := c.Request().Context()
+
+	cachedData, found := h.cache.GetYearlyTotalRevenueCache(ctx, year)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	res, err := h.client.FindYearlyTotalRevenue(ctx, &pb.FindYearTotalRevenue{
 		Year: int32(year),
 	})
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve yearly order revenue", zap.Error(err))
-
-		return order_errors.ErrApiOrderFailedFindYearlyTotalRevenue(c)
+		return h.handleGrpcError(err, "FindYearlyTotalRevenue")
 	}
 
-	so := h.mapping.ToApiResponseYearlyTotalRevenue(res)
+	apiResponse := h.mapping.ToApiResponseYearlyTotalRevenue(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetYearlyTotalRevenueCache(ctx, year, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // FindMonthlyTotalRevenueByMerchant retrieves monthly revenue statistics
@@ -342,33 +397,36 @@ func (h *orderHandleApi) FindYearlyTotalRevenue(c echo.Context) error {
 // @Router /api/order/merchant/monthly-total-revenue [get]
 func (h *orderHandleApi) FindMonthlyTotalRevenueByMerchant(c echo.Context) error {
 	yearStr := c.QueryParam("year")
-
-	year, err := strconv.Atoi(yearStr)
-
-	if err != nil {
-		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidYear(c)
-	}
-
 	monthStr := c.QueryParam("month")
-
-	month, err := strconv.Atoi(monthStr)
-
-	if err != nil {
-		h.logger.Debug("Invalid month parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidMonth(c)
-	}
-
 	merchantStr := c.QueryParam("merchant_id")
 
-	merchant, err := strconv.Atoi(merchantStr)
-
+	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidMerchantId(c)
+		return errors.NewBadRequestError("year is required")
+	}
+
+	month, err := strconv.Atoi(monthStr)
+	if err != nil {
+		return errors.NewBadRequestError("month is required")
+	}
+
+	merchant, err := strconv.Atoi(merchantStr)
+	if err != nil {
+		return errors.NewBadRequestError("merchant_id is required")
 	}
 
 	ctx := c.Request().Context()
+
+	req := &requests.MonthTotalRevenueMerchant{
+		MerchantID: merchant,
+		Month:      month,
+		Year:       year,
+	}
+
+	cachedData, found := h.cache.GetMonthlyTotalRevenueByMerchantCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	res, err := h.client.FindMonthlyTotalRevenueByMerchant(ctx, &pb.FindYearMonthTotalRevenueByMerchant{
 		Year:       int32(year),
@@ -377,13 +435,14 @@ func (h *orderHandleApi) FindMonthlyTotalRevenueByMerchant(c echo.Context) error
 	})
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve monthly order revenue", zap.Error(err))
-		return order_errors.ErrApiOrderFailedFindMonthlyTotalRevenueByMerchant(c)
+		return h.handleGrpcError(err, "FindMonthlyTotalRevenueByMerchant")
 	}
 
-	so := h.mapping.ToApiResponseMonthlyTotalRevenue(res)
+	apiResponse := h.mapping.ToApiResponseMonthlyTotalRevenue(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetMonthlyTotalRevenueByMerchantCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // FindYearlyTotalRevenueByMerchant retrieves yearly revenue statistics
@@ -401,23 +460,28 @@ func (h *orderHandleApi) FindMonthlyTotalRevenueByMerchant(c echo.Context) error
 // @Router /api/order/merchant/yearly-total-revenue [get]
 func (h *orderHandleApi) FindYearlyTotalRevenueByMerchant(c echo.Context) error {
 	yearStr := c.QueryParam("year")
-
-	year, err := strconv.Atoi(yearStr)
-
-	if err != nil {
-		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidYear(c)
-	}
-
 	merchantStr := c.QueryParam("merchant_id")
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		return errors.NewBadRequestError("year is required")
+	}
 
 	merchant, err := strconv.Atoi(merchantStr)
 	if err != nil {
-		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidMerchantId(c)
+		return errors.NewBadRequestError("merchant_id is required")
 	}
 
 	ctx := c.Request().Context()
+
+	req := &requests.YearTotalRevenueMerchant{
+		MerchantID: merchant,
+		Year:       year,
+	}
+
+	cachedData, found := h.cache.GetYearlyTotalRevenueByMerchantCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	res, err := h.client.FindYearlyTotalRevenueByMerchant(ctx, &pb.FindYearTotalRevenueByMerchant{
 		Year:       int32(year),
@@ -425,14 +489,14 @@ func (h *orderHandleApi) FindYearlyTotalRevenueByMerchant(c echo.Context) error 
 	})
 
 	if err != nil {
-		h.logger.Debug("Failed to retrieve yearly order revenue", zap.Error(err))
-
-		return order_errors.ErrApiOrderFailedFindYearlyTotalRevenueByMerchant(c)
+		return h.handleGrpcError(err, "FindYearlyTotalRevenueByMerchant")
 	}
 
-	so := h.mapping.ToApiResponseYearlyTotalRevenue(res)
+	apiResponse := h.mapping.ToApiResponseYearlyTotalRevenue(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetYearlyTotalRevenueByMerchantCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // FindMonthlyRevenue retrieves monthly revenue statistics
@@ -450,25 +514,31 @@ func (h *orderHandleApi) FindYearlyTotalRevenueByMerchant(c echo.Context) error 
 // @Router /api/order/monthly-revenue [get]
 func (h *orderHandleApi) FindMonthlyRevenue(c echo.Context) error {
 	yearStr := c.QueryParam("year")
+
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidYear(c)
+		return errors.NewBadRequestError("year is required")
 	}
 
 	ctx := c.Request().Context()
+
+	cachedData, found := h.cache.GetMonthlyOrderCache(ctx, year)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	res, err := h.client.FindMonthlyRevenue(ctx, &pb.FindYearOrder{
 		Year: int32(year),
 	})
 	if err != nil {
-		h.logger.Debug("Failed to retrieve monthly order revenue", zap.Error(err))
-		return order_errors.ErrApiOrderFailedFindMonthlyRevenue(c)
+		return h.handleGrpcError(err, "FindMonthlyRevenue")
 	}
 
-	so := h.mapping.ToApiResponseMonthlyOrder(res)
+	apiResponse := h.mapping.ToApiResponseMonthlyOrder(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetMonthlyOrderCache(ctx, year, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // FindYearlyRevenue retrieves yearly revenue statistics
@@ -486,25 +556,31 @@ func (h *orderHandleApi) FindMonthlyRevenue(c echo.Context) error {
 // @Router /api/order/yearly-revenue [get]
 func (h *orderHandleApi) FindYearlyRevenue(c echo.Context) error {
 	yearStr := c.QueryParam("year")
+
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidYear(c)
+		return errors.NewBadRequestError("year is required")
 	}
 
 	ctx := c.Request().Context()
+
+	cachedData, found := h.cache.GetYearlyOrderCache(ctx, year)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	res, err := h.client.FindYearlyRevenue(ctx, &pb.FindYearOrder{
 		Year: int32(year),
 	})
 	if err != nil {
-		h.logger.Debug("Failed to retrieve yearly order revenue", zap.Error(err))
-		return order_errors.ErrApiOrderFailedFindYearlyRevenue(c)
+		return h.handleGrpcError(err, "FindYearlyRevenue")
 	}
 
-	so := h.mapping.ToApiResponseYearlyOrder(res)
+	apiResponse := h.mapping.ToApiResponseYearlyOrder(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetYearlyOrderCache(ctx, year, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // FindMonthlyRevenueByMerchant retrieves monthly revenue by merchant
@@ -528,31 +604,40 @@ func (h *orderHandleApi) FindMonthlyRevenueByMerchant(c echo.Context) error {
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidYear(c)
+		return errors.NewBadRequestError("year is required")
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
-
 	if err != nil {
-		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidMerchantId(c)
+		return errors.NewBadRequestError("merchant_id is required")
 	}
 
 	ctx := c.Request().Context()
+
+	req := &requests.MonthOrderMerchant{
+		MerchantID: merchant_id,
+		Year:       year,
+	}
+
+	cachedData, found := h.cache.GetMonthlyOrderByMerchantCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	res, err := h.client.FindMonthlyRevenueByMerchant(ctx, &pb.FindYearOrderByMerchant{
 		Year:       int32(year),
 		MerchantId: int32(merchant_id),
 	})
+
 	if err != nil {
-		h.logger.Debug("Failed to retrieve monthly order revenue", zap.Error(err))
-		return order_errors.ErrApiOrderFailedFindMonthlyRevenueByMerchant(c)
+		return h.handleGrpcError(err, "FindMonthlyRevenueByMerchant")
 	}
 
-	so := h.mapping.ToApiResponseMonthlyOrder(res)
+	apiResponse := h.mapping.ToApiResponseMonthlyOrder(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetMonthlyOrderByMerchantCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // FindYearlyRevenueByMerchant retrieves yearly revenue by merchant
@@ -572,36 +657,44 @@ func (h *orderHandleApi) FindMonthlyRevenueByMerchant(c echo.Context) error {
 // @Router /api/order/merchant/yearly-revenue [get]
 func (h *orderHandleApi) FindYearlyRevenueByMerchant(c echo.Context) error {
 	yearStr := c.QueryParam("year")
-	year, err := strconv.Atoi(yearStr)
-
 	merchantIdStr := c.QueryParam("merchant_id")
 
+	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		h.logger.Debug("Invalid year parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidYear(c)
+		return errors.NewBadRequestError("year is required")
 	}
 
 	merchant_id, err := strconv.Atoi(merchantIdStr)
-
 	if err != nil {
-		h.logger.Debug("Invalid merchant id parameter", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidMerchantId(c)
+		return errors.NewBadRequestError("merchant_id is required")
 	}
 
 	ctx := c.Request().Context()
+
+	req := &requests.YearOrderMerchant{
+		MerchantID: merchant_id,
+		Year:       year,
+	}
+
+	cachedData, found := h.cache.GetYearlyOrderByMerchantCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	res, err := h.client.FindYearlyRevenueByMerchant(ctx, &pb.FindYearOrderByMerchant{
 		Year:       int32(year),
 		MerchantId: int32(merchant_id),
 	})
+
 	if err != nil {
-		h.logger.Debug("Failed to retrieve yearly order revenue", zap.Error(err))
-		return order_errors.ErrApiOrderFailedFindYearlyRevenueByMerchant(c)
+		return h.handleGrpcError(err, "FindYearlyRevenueByMerchant")
 	}
 
-	so := h.mapping.ToApiResponseYearlyOrder(res)
+	apiResponse := h.mapping.ToApiResponseYearlyOrder(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetYearlyOrderByMerchantCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -616,39 +709,36 @@ func (h *orderHandleApi) FindYearlyRevenueByMerchant(c echo.Context) error {
 // @Failure 500 {object} response.ErrorResponse "Failed to create order"
 // @Router /api/order/create [post]
 func (h *orderHandleApi) Create(c echo.Context) error {
-	var req requests.CreateOrderRequest
+	var body requests.CreateOrderRequest
 
-	if err := c.Bind(&req); err != nil {
-		h.logger.Debug("Invalid request format", zap.Error(err))
-
-		return order_errors.ErrApiBindCreateOrder(c)
+	if err := c.Bind(&body); err != nil {
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
 	}
 
-	if err := req.Validate(); err != nil {
-		h.logger.Debug("Validation failed", zap.Error(err))
-
-		return order_errors.ErrApiValidateCreateOrder(c)
+	if err := body.Validate(); err != nil {
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
 
 	grpcReq := &pb.CreateOrderRequest{
-		MerchantId: int32(req.MerchantID),
-		UserId:     int32(req.UserID),
-		TotalPrice: int32(req.TotalPrice),
+		MerchantId: int32(body.MerchantID),
+		UserId:     int32(body.UserID),
+		TotalPrice: int32(body.TotalPrice),
 		Items:      []*pb.CreateOrderItemRequest{},
 		Shipping: &pb.CreateShippingAddressRequest{
-			Alamat:         req.ShippingAddress.Alamat,
-			Provinsi:       req.ShippingAddress.Provinsi,
-			Kota:           req.ShippingAddress.Kota,
-			Courier:        req.ShippingAddress.Courier,
-			ShippingMethod: req.ShippingAddress.ShippingMethod,
-			ShippingCost:   int32(req.ShippingAddress.ShippingCost),
-			Negara:         req.ShippingAddress.Negara,
+			Alamat:         body.ShippingAddress.Alamat,
+			Provinsi:       body.ShippingAddress.Provinsi,
+			Kota:           body.ShippingAddress.Kota,
+			Courier:        body.ShippingAddress.Courier,
+			ShippingMethod: body.ShippingAddress.ShippingMethod,
+			ShippingCost:   int32(body.ShippingAddress.ShippingCost),
+			Negara:         body.ShippingAddress.Negara,
 		},
 	}
 
-	for _, item := range req.Items {
+	for _, item := range body.Items {
 		grpcReq.Items = append(grpcReq.Items, &pb.CreateOrderItemRequest{
 			ProductId: int32(item.ProductID),
 			Quantity:  int32(item.Quantity),
@@ -661,11 +751,14 @@ func (h *orderHandleApi) Create(c echo.Context) error {
 	res, err := h.client.Create(ctx, grpcReq)
 
 	if err != nil {
-		h.logger.Error("Order creation failed", zap.Error(err))
-		return order_errors.ErrApiOrderFailedCreate(c)
+		return h.handleGrpcError(err, "Create")
 	}
 
-	return c.JSON(http.StatusOK, res)
+	so := h.mapping.ToApiResponseOrder(res)
+
+	h.cache.SetCachedOrderCache(ctx, so)
+
+	return c.JSON(http.StatusOK, so)
 }
 
 // @Security Bearer
@@ -686,43 +779,40 @@ func (h *orderHandleApi) Update(c echo.Context) error {
 	idInt, err := strconv.Atoi(id)
 
 	if err != nil {
-		h.logger.Debug("Invalid id parameter", zap.Error(err))
-
-		return order_errors.ErrApiOrderInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
-	var req requests.UpdateOrderRequest
+	var body requests.UpdateOrderRequest
 
-	if err := c.Bind(&req); err != nil {
-		h.logger.Debug("Invalid request format", zap.Error(err))
-		return order_errors.ErrApiBindUpdateOrder(c)
+	if err := c.Bind(&body); err != nil {
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
 	}
 
-	if err := req.Validate(); err != nil {
-		h.logger.Debug("Validation failed", zap.Error(err))
-		return order_errors.ErrApiValidateUpdateOrder(c)
+	if err := body.Validate(); err != nil {
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
 
 	grpcReq := &pb.UpdateOrderRequest{
 		OrderId:    int32(idInt),
-		UserId:     int32(req.UserID),
-		TotalPrice: int32(req.TotalPrice),
+		UserId:     int32(body.UserID),
+		TotalPrice: int32(body.TotalPrice),
 		Items:      []*pb.UpdateOrderItemRequest{},
 		Shipping: &pb.UpdateShippingAddressRequest{
-			ShippingId:     int32(*req.ShippingAddress.ShippingID),
-			Alamat:         req.ShippingAddress.Alamat,
-			Provinsi:       req.ShippingAddress.Provinsi,
-			Kota:           req.ShippingAddress.Kota,
-			Courier:        req.ShippingAddress.Courier,
-			ShippingMethod: req.ShippingAddress.ShippingMethod,
-			ShippingCost:   int32(req.ShippingAddress.ShippingCost),
-			Negara:         req.ShippingAddress.Negara,
+			ShippingId:     int32(*body.ShippingAddress.ShippingID),
+			Alamat:         body.ShippingAddress.Alamat,
+			Provinsi:       body.ShippingAddress.Provinsi,
+			Kota:           body.ShippingAddress.Kota,
+			Courier:        body.ShippingAddress.Courier,
+			ShippingMethod: body.ShippingAddress.ShippingMethod,
+			ShippingCost:   int32(body.ShippingAddress.ShippingCost),
+			Negara:         body.ShippingAddress.Negara,
 		},
 	}
 
-	for _, item := range req.Items {
+	for _, item := range body.Items {
 		grpcReq.Items = append(grpcReq.Items, &pb.UpdateOrderItemRequest{
 			OrderItemId: int32(item.OrderItemID),
 			ProductId:   int32(item.ProductID),
@@ -734,11 +824,15 @@ func (h *orderHandleApi) Update(c echo.Context) error {
 	res, err := h.client.Update(ctx, grpcReq)
 
 	if err != nil {
-		h.logger.Debug("Failed to update order", zap.Error(err))
-		return order_errors.ErrApiOrderFailedUpdate(c)
+		return h.handleGrpcError(err, "Update")
 	}
 
-	return c.JSON(http.StatusOK, res)
+	so := h.mapping.ToApiResponseOrder(res)
+
+	h.cache.DeleteOrderCache(ctx, idInt)
+	h.cache.SetCachedOrderCache(ctx, so)
+
+	return c.JSON(http.StatusOK, so)
 }
 
 // @Security Bearer
@@ -757,8 +851,7 @@ func (h *orderHandleApi) TrashedOrder(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid order ID format", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -770,11 +863,12 @@ func (h *orderHandleApi) TrashedOrder(c echo.Context) error {
 	res, err := h.client.TrashedOrder(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to archive order", zap.Error(err))
-		return order_errors.ErrApiOrderFailedTrashed(c)
+		return h.handleGrpcError(err, "TrashedOrder")
 	}
 
 	so := h.mapping.ToApiResponseOrderDeleteAt(res)
+
+	h.cache.DeleteOrderCache(ctx, id)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -795,8 +889,7 @@ func (h *orderHandleApi) RestoreOrder(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid order ID format", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -808,11 +901,12 @@ func (h *orderHandleApi) RestoreOrder(c echo.Context) error {
 	res, err := h.client.RestoreOrder(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to restore order", zap.Error(err))
-		return order_errors.ErrApiOrderFailedRestore(c)
+		return h.handleGrpcError(err, "Restore")
 	}
 
 	so := h.mapping.ToApiResponseOrderDeleteAt(res)
+
+	h.cache.DeleteOrderCache(ctx, id)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -833,8 +927,7 @@ func (h *orderHandleApi) DeleteOrderPermanent(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid order ID format", zap.Error(err))
-		return order_errors.ErrApiOrderInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -846,11 +939,12 @@ func (h *orderHandleApi) DeleteOrderPermanent(c echo.Context) error {
 	res, err := h.client.DeleteOrderPermanent(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to delete order", zap.Error(err))
-		return order_errors.ErrApiOrderFailedDeletePermanent(c)
+		return h.handleGrpcError(err, "DeletePermanent")
 	}
 
 	so := h.mapping.ToApiResponseOrderDelete(res)
+
+	h.cache.DeleteOrderCache(ctx, id)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -871,8 +965,7 @@ func (h *orderHandleApi) RestoreAllOrder(c echo.Context) error {
 	res, err := h.client.RestoreAllOrder(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk orders restoration failed", zap.Error(err))
-		return order_errors.ErrApiOrderFailedRestoreAll(c)
+		return h.handleGrpcError(err, "RestoreAll")
 	}
 
 	so := h.mapping.ToApiResponseOrderAll(res)
@@ -898,8 +991,7 @@ func (h *orderHandleApi) DeleteAllOrderPermanent(c echo.Context) error {
 	res, err := h.client.DeleteAllOrderPermanent(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk order deletion failed", zap.Error(err))
-		return order_errors.ErrApiOrderFailedDeleteAllPermanent(c)
+		return h.handleGrpcError(err, "DeleteAll")
 	}
 
 	so := h.mapping.ToApiResponseOrderAll(res)
@@ -907,4 +999,82 @@ func (h *orderHandleApi) DeleteAllOrderPermanent(c echo.Context) error {
 	h.logger.Debug("Successfully deleted all orders permanently")
 
 	return c.JSON(http.StatusOK, so)
+}
+
+func (h *orderHandleApi) handleGrpcError(err error, operation string) *errors.AppError {
+	st, ok := status.FromError(err)
+	if !ok {
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return errors.NewNotFoundError("Order").WithInternal(err)
+
+	case codes.AlreadyExists:
+		return errors.NewConflictError("Order already exists").WithInternal(err)
+
+	case codes.InvalidArgument:
+		return errors.NewBadRequestError(st.Message()).WithInternal(err)
+
+	case codes.PermissionDenied:
+		return errors.ErrForbidden.WithInternal(err)
+
+	case codes.Unauthenticated:
+		return errors.ErrUnauthorized.WithInternal(err)
+
+	case codes.ResourceExhausted:
+		return errors.ErrTooManyRequests.WithInternal(err)
+
+	case codes.Unavailable:
+		return errors.NewServiceUnavailableError("Order service").WithInternal(err)
+
+	case codes.DeadlineExceeded:
+		return errors.ErrTimeout.WithInternal(err)
+
+	default:
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+}
+
+func (h *orderHandleApi) parseValidationErrors(err error) []errors.ValidationError {
+	var validationErrs []errors.ValidationError
+
+	if ve, ok := err.(validator.ValidationErrors); ok {
+		for _, fe := range ve {
+			validationErrs = append(validationErrs, errors.ValidationError{
+				Field:   fe.Field(),
+				Message: h.getValidationMessage(fe),
+			})
+		}
+		return validationErrs
+	}
+
+	return []errors.ValidationError{
+		{
+			Field:   "general",
+			Message: err.Error(),
+		},
+	}
+}
+
+func (h *orderHandleApi) getValidationMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return fmt.Sprintf("Must be at least %s", fe.Param())
+	case "max":
+		return fmt.Sprintf("Must be at most %s", fe.Param())
+	case "gte":
+		return fmt.Sprintf("Must be greater than or equal to %s", fe.Param())
+	case "lte":
+		return fmt.Sprintf("Must be less than or equal to %s", fe.Param())
+	case "oneof":
+		return fmt.Sprintf("Must be one of: %s", fe.Param())
+	default:
+		return fmt.Sprintf("Validation failed on '%s' tag", fe.Tag())
+	}
 }

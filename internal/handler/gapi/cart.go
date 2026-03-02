@@ -3,10 +3,9 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/errors/cart_errors"
 	"math"
 )
@@ -14,16 +13,13 @@ import (
 type cartHandleGrpc struct {
 	pb.UnimplementedCartServiceServer
 	cartService service.CartService
-	mapping     protomapper.CartProtoMapper
 }
 
 func NewCartHandleGrpc(
 	cartService service.CartService,
-	mapping protomapper.CartProtoMapper,
 ) *cartHandleGrpc {
 	return &cartHandleGrpc{
 		cartService: cartService,
-		mapping:     mapping,
 	}
 }
 
@@ -47,10 +43,25 @@ func (s *cartHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllCartReq
 		Search:   search,
 	}
 
-	cartItems, totalRecords, err := s.cartService.FindAll(&reqService)
-
+	cartItems, totalRecords, err := s.cartService.FindAll(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoCartItems := make([]*pb.CartResponse, len(cartItems))
+	for i, cartItem := range cartItems {
+		protoCartItems[i] = &pb.CartResponse{
+			Id:        int32(cartItem.CartID),
+			UserId:    int32(cartItem.UserID),
+			ProductId: int32(cartItem.ProductID),
+			Name:      cartItem.Name,
+			Price:     int32(cartItem.Price),
+			Image:     cartItem.Image,
+			Quantity:  int32(cartItem.Quantity),
+			Weight:    int32(cartItem.Weight),
+			CreatedAt: cartItem.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt: cartItem.UpdatedAt.Time.Format("2006-01-02"),
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -62,8 +73,12 @@ func (s *cartHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllCartReq
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationCart(paginationMeta, "success", "Successfully fetched cart items", cartItems)
-	return so, nil
+	return &pb.ApiResponsePaginationCart{
+		Status:     "success",
+		Message:    "Successfully fetched cart items",
+		Data:       protoCartItems,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *cartHandleGrpc) Create(ctx context.Context, request *pb.CreateCartRequest) (*pb.ApiResponseCart, error) {
@@ -77,14 +92,29 @@ func (s *cartHandleGrpc) Create(ctx context.Context, request *pb.CreateCartReque
 		return nil, cart_errors.ErrGrpcValidateCreateCart
 	}
 
-	cartItem, err := s.cartService.CreateCart(req)
-
+	cartItem, err := s.cartService.CreateCart(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCart("success", "Successfully added item to cart", cartItem)
-	return so, nil
+	protoCartItem := &pb.CartResponse{
+		Id:        int32(cartItem.CartID),
+		UserId:    int32(cartItem.UserID),
+		ProductId: int32(cartItem.ProductID),
+		Name:      cartItem.Name,
+		Price:     int32(cartItem.Price),
+		Image:     cartItem.Image,
+		Quantity:  int32(cartItem.Quantity),
+		Weight:    int32(cartItem.Weight),
+		CreatedAt: cartItem.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: cartItem.UpdatedAt.Time.Format("2006-01-02"),
+	}
+
+	return &pb.ApiResponseCart{
+		Status:  "success",
+		Message: "Successfully added item to cart",
+		Data:    protoCartItem,
+	}, nil
 }
 
 func (s *cartHandleGrpc) Delete(ctx context.Context, request *pb.FindByIdCartRequest) (*pb.ApiResponseCartDelete, error) {
@@ -94,15 +124,15 @@ func (s *cartHandleGrpc) Delete(ctx context.Context, request *pb.FindByIdCartReq
 		return nil, cart_errors.ErrGrpcCartInvalidId
 	}
 
-	_, err := s.cartService.DeletePermanent(id)
-
+	_, err := s.cartService.DeletePermanent(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCartDelete("success", "Successfully removed item from cart")
-
-	return so, nil
+	return &pb.ApiResponseCartDelete{
+		Status:  "success",
+		Message: "Successfully removed item from cart",
+	}, nil
 }
 
 func (s *cartHandleGrpc) DeleteAll(ctx context.Context, req *pb.DeleteCartRequest) (*pb.ApiResponseCartAll, error) {
@@ -115,12 +145,13 @@ func (s *cartHandleGrpc) DeleteAll(ctx context.Context, req *pb.DeleteCartReques
 		CartIds: cartIDs,
 	}
 
-	_, err := s.cartService.DeleteAllPermanently(deleteRequest)
-
+	_, err := s.cartService.DeleteAllPermanently(ctx, deleteRequest)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseCartAll("success", "Successfully cleared cart")
-	return so, nil
+	return &pb.ApiResponseCartAll{
+		Status:  "success",
+		Message: "Successfully cleared cart",
+	}, nil
 }

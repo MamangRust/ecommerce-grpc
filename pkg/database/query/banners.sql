@@ -9,12 +9,24 @@
 --   - Supports pagination
 -- Returns: List of all banners with total_count metadata
 -- name: GetBanners :many
-SELECT 
-    b.*,
-    COUNT(*) OVER() AS total_count
-FROM banners b
-WHERE LOWER(name) LIKE LOWER(CONCAT('%', $1::text, '%'))
-LIMIT $2 OFFSET $3;
+SELECT
+    banner_id,
+    name,
+    start_date,
+    end_date,
+    start_time,
+    end_time,
+    is_active,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
+FROM banners
+WHERE
+    deleted_at IS NULL
+    AND LOWER(name) LIKE LOWER(CONCAT('%', $1::text, '%'))
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetBannersActive: Retrieves active banners (not soft-deleted)
 -- Parameters:
@@ -27,14 +39,25 @@ LIMIT $2 OFFSET $3;
 --   - Supports pagination
 -- Returns: List of active banners with total_count metadata
 -- name: GetBannersActive :many
-SELECT 
-    b.*,
-    COUNT(*) OVER() AS total_count
-FROM banners b
-WHERE deleted_at IS NULL
-  AND LOWER(name) LIKE LOWER(CONCAT('%', $1::text, '%'))
-LIMIT $2 OFFSET $3;
-
+SELECT
+    banner_id,
+    name,
+    start_date,
+    end_date,
+    start_time,
+    end_time,
+    is_active,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
+FROM banners
+WHERE
+    deleted_at IS NULL
+    AND LOWER(name) LIKE LOWER(CONCAT('%', $1::text, '%'))
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetTrashedBanners: Retrieves soft-deleted (trashed) banners
 -- Parameters:
@@ -47,16 +70,25 @@ LIMIT $2 OFFSET $3;
 --   - Supports pagination
 -- Returns: List of trashed banners with total_count metadata
 -- name: GetBannersTrashed :many
-SELECT 
-    b.*,
-    COUNT(*) OVER() AS total_count
-FROM banners b
-WHERE deleted_at IS NOT NULL
-  AND LOWER(name) LIKE LOWER(CONCAT('%', $1::text, '%'))
-LIMIT $2 OFFSET $3;
-
-
-
+SELECT
+    banner_id,
+    name,
+    start_date,
+    end_date,
+    start_time,
+    end_time,
+    is_active,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
+FROM banners
+WHERE
+    deleted_at IS NOT NULL
+    AND LOWER(name) LIKE LOWER(CONCAT('%', $1::text, '%'))
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetBanner: Retrieves a single banner that is not soft-deleted
 -- Parameters:
@@ -65,12 +97,20 @@ LIMIT $2 OFFSET $3;
 --   - Returns the banner where deleted_at IS NULL
 -- Returns: A single banners record
 -- name: GetBanner :one
-SELECT *
+SELECT
+    banner_id,
+    name,
+    start_date,
+    end_date,
+    start_time,
+    end_time,
+    is_active,
+    created_at,
+    updated_at
 FROM banners
-WHERE banner_id = $1
-AND deleted_at IS NULL;
-
-
+WHERE
+    banner_id = $1
+    AND deleted_at IS NULL;
 
 -- CreateBanner: Inserts a new banner
 -- name: CreateBanner :one
@@ -82,18 +122,26 @@ AND deleted_at IS NULL;
 --   $5: end_time
 --   $6: is_active
 -- Returns: The newly created banner
-INSERT INTO banners (
+INSERT INTO
+    banners (
+        name,
+        start_date,
+        end_date,
+        start_time,
+        end_time,
+        is_active
+    )
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING
+    banner_id,
     name,
     start_date,
     end_date,
     start_time,
     end_time,
-    is_active
-) VALUES (
-    $1, $2, $3, $4, $5, $6
-)
-RETURNING *;
-
+    is_active,
+    created_at,
+    updated_at;
 
 -- UpdateBanner: Updates an existing banner
 -- name: UpdateBanner :one
@@ -115,10 +163,19 @@ SET
     end_time = $6,
     is_active = $7,
     updated_at = CURRENT_TIMESTAMP
-WHERE banner_id = $1
-  AND deleted_at IS NULL
-RETURNING *;
-
+WHERE
+    banner_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    banner_id,
+    name,
+    start_date,
+    end_date,
+    start_time,
+    end_time,
+    is_active,
+    created_at,
+    updated_at;
 
 -- TrashBanner: Soft deletes a banner
 -- name: TrashBanner :one
@@ -126,11 +183,22 @@ RETURNING *;
 --   $1: banner_id
 -- Returns: The trashed banner
 UPDATE banners
-SET deleted_at = CURRENT_TIMESTAMP
-WHERE banner_id = $1
-  AND deleted_at IS NULL
-RETURNING *;
-
+SET
+    deleted_at = CURRENT_TIMESTAMP
+WHERE
+    banner_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    banner_id,
+    name,
+    start_date,
+    end_date,
+    start_time,
+    end_time,
+    is_active,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreBanner: Restores a soft-deleted banner
 -- name: RestoreBanner :one
@@ -138,29 +206,36 @@ RETURNING *;
 --   $1: banner_id
 -- Returns: The restored banner
 UPDATE banners
-SET deleted_at = NULL
-WHERE banner_id = $1
-  AND deleted_at IS NOT NULL
-RETURNING *;
-
+SET
+    deleted_at = NULL
+WHERE
+    banner_id = $1
+    AND deleted_at IS NOT NULL
+RETURNING
+    banner_id,
+    name,
+    start_date,
+    end_date,
+    start_time,
+    end_time,
+    is_active,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeleteBannerPermanently: Permanently delete a single trashed banner
 -- name: DeleteBannerPermanently :exec
 -- Parameters:
 --   $1: banner_id
 DELETE FROM banners
-WHERE banner_id = $1
-  AND deleted_at IS NOT NULL;
-
+WHERE
+    banner_id = $1
+    AND deleted_at IS NOT NULL;
 
 -- RestoreAllBanners: Restore all trashed banners
 -- name: RestoreAllBanners :exec
-UPDATE banners
-SET deleted_at = NULL
-WHERE deleted_at IS NOT NULL;
-
+UPDATE banners SET deleted_at = NULL WHERE deleted_at IS NOT NULL;
 
 -- DeleteAllPermanentBanners: Permanently delete all trashed banners
 -- name: DeleteAllPermanentBanners :exec
-DELETE FROM banners
-WHERE deleted_at IS NOT NULL;
+DELETE FROM banners WHERE deleted_at IS NOT NULL;

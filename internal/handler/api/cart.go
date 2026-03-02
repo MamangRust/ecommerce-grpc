@@ -1,22 +1,30 @@
 package api
 
 import (
+	cart_cache "ecommerce/internal/cache/api/cart"
 	"ecommerce/internal/domain/requests"
-	response_api "ecommerce/internal/mapper/response/api"
+	response_api "ecommerce/internal/mapper"
+	"fmt"
+
 	"ecommerce/internal/pb"
-	"ecommerce/pkg/errors/cart_errors"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/logger"
 	"net/http"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type cartHandleApi struct {
-	client  pb.CartServiceClient
-	logger  logger.LoggerInterface
-	mapping response_api.CartResponseMapper
+	client     pb.CartServiceClient
+	logger     logger.LoggerInterface
+	mapping    response_api.CartResponseMapper
+	apiHandler errors.ApiHandler
+	cache      cart_cache.CartMencache
 }
 
 func NewHandlerCart(
@@ -24,18 +32,23 @@ func NewHandlerCart(
 	client pb.CartServiceClient,
 	logger logger.LoggerInterface,
 	mapping response_api.CartResponseMapper,
+	apiHandler errors.ApiHandler,
+	cache cart_cache.CartMencache,
 ) *cartHandleApi {
 	cartHandler := &cartHandleApi{
-		client:  client,
-		logger:  logger,
-		mapping: mapping,
+		client:     client,
+		logger:     logger,
+		mapping:    mapping,
+		apiHandler: apiHandler,
+		cache:      cache,
 	}
 
 	routerCart := router.Group("/api/cart")
-	routerCart.GET("", cartHandler.FindAll)
-	routerCart.POST("/create", cartHandler.Create)
-	routerCart.DELETE("/:id", cartHandler.Delete)
-	routerCart.POST("/delete-all", cartHandler.DeleteAll)
+
+	routerCart.GET("", apiHandler.Handle("findAll", cartHandler.FindAll))
+	routerCart.POST("/create", apiHandler.Handle("create", cartHandler.Create))
+	routerCart.DELETE("/:id", apiHandler.Handle("delete", cartHandler.Delete))
+	routerCart.POST("/delete-all", apiHandler.Handle("deleteAll", cartHandler.DeleteAll))
 
 	return cartHandler
 }
@@ -57,8 +70,7 @@ func (h *cartHandleApi) FindAll(c echo.Context) error {
 	userID, err := strconv.Atoi(c.QueryParam("user_id"))
 
 	if err != nil || userID <= 0 {
-		h.logger.Debug("Invalid user ID format", zap.Error(err))
-		return cart_errors.ErrApiFailedInvalidUserId(c)
+		return errors.NewBadRequestError("user_id is required")
 	}
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
@@ -75,6 +87,19 @@ func (h *cartHandleApi) FindAll(c echo.Context) error {
 	search := c.QueryParam("search")
 	ctx := c.Request().Context()
 
+	reqCache := &requests.FindAllCarts{
+		UserID:   userID,
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetCachedCarts(ctx, reqCache)
+
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
 	req := &pb.FindAllCartRequest{
 		UserId:   int32(userID),
 		Page:     int32(page),
@@ -86,7 +111,7 @@ func (h *cartHandleApi) FindAll(c echo.Context) error {
 
 	if err != nil {
 		h.logger.Error("Failed to fetch cart details", zap.Error(err))
-		return cart_errors.ErrApiFailedFindAllCarts(c)
+		return err
 	}
 
 	so := h.mapping.ToApiResponseCartPagination(res)
@@ -109,13 +134,12 @@ func (h *cartHandleApi) Create(c echo.Context) error {
 	var body requests.CreateCartRequest
 
 	if err := c.Bind(&body); err != nil {
-		h.logger.Debug("Invalid request format", zap.Error(err))
-		return cart_errors.ErrApiBindCreateCart(c)
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
 	}
 
 	if err := body.Validate(); err != nil {
-		h.logger.Debug("Validation failed", zap.Error(err))
-		return cart_errors.ErrApiValidateCreateCart(c)
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
@@ -127,8 +151,7 @@ func (h *cartHandleApi) Create(c echo.Context) error {
 
 	res, err := h.client.Create(ctx, req)
 	if err != nil {
-		h.logger.Error("cart creation failed", zap.Error(err))
-		return cart_errors.ErrApiFailedCreateCart(c)
+		return h.handleGrpcError(err, "Create")
 	}
 
 	so := h.mapping.ToApiResponseCart(res)
@@ -152,9 +175,7 @@ func (h *cartHandleApi) Delete(c echo.Context) error {
 	idStr, err := strconv.Atoi(id)
 
 	if err != nil {
-		h.logger.Debug("Invalid id parameter", zap.Error(err))
-
-		return cart_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -166,8 +187,7 @@ func (h *cartHandleApi) Delete(c echo.Context) error {
 	res, err := h.client.Delete(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to delete cart", zap.Error(err))
-		return cart_errors.ErrApiFailedDeleteCart(c)
+		return h.handleGrpcError(err, "Delete")
 	}
 
 	so := h.mapping.ToApiResponseCartDelete(res)
@@ -186,14 +206,14 @@ func (h *cartHandleApi) Delete(c echo.Context) error {
 // @Router /api/cart/delete-all [post]
 func (h *cartHandleApi) DeleteAll(c echo.Context) error {
 	var req requests.DeleteCartRequest
+
 	if err := c.Bind(&req); err != nil {
-		h.logger.Debug("Invalid request parameter", zap.Error(err))
-		return cart_errors.ErrApiBindDeleteAllCart(c)
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
 	}
 
 	if err := req.Validate(); err != nil {
-		h.logger.Debug("Validation failed", zap.Error(err))
-		return cart_errors.ErrApiValidateDeleteAllCart(c)
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
@@ -210,10 +230,87 @@ func (h *cartHandleApi) DeleteAll(c echo.Context) error {
 	res, err := h.client.DeleteAll(ctx, reqPb)
 
 	if err != nil {
-		h.logger.Error("Failed to delete cart items", zap.Error(err))
-		return cart_errors.ErrApiFailedDeleteAllCarts(c)
+		return h.handleGrpcError(err, "DeleteAll")
 	}
 
 	so := h.mapping.ToApiResponseCartAll(res)
 	return c.JSON(http.StatusOK, so)
+}
+
+func (h *cartHandleApi) handleGrpcError(err error, operation string) *errors.AppError {
+	st, ok := status.FromError(err)
+	if !ok {
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return errors.NewNotFoundError("Cart").WithInternal(err)
+
+	case codes.AlreadyExists:
+		return errors.NewConflictError("Cart already exists").WithInternal(err)
+
+	case codes.InvalidArgument:
+		return errors.NewBadRequestError(st.Message()).WithInternal(err)
+
+	case codes.PermissionDenied:
+		return errors.ErrForbidden.WithInternal(err)
+
+	case codes.Unauthenticated:
+		return errors.ErrUnauthorized.WithInternal(err)
+
+	case codes.ResourceExhausted:
+		return errors.ErrTooManyRequests.WithInternal(err)
+
+	case codes.Unavailable:
+		return errors.NewServiceUnavailableError("Cart Address service").WithInternal(err)
+
+	case codes.DeadlineExceeded:
+		return errors.ErrTimeout.WithInternal(err)
+
+	default:
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+}
+
+func (h *cartHandleApi) parseValidationErrors(err error) []errors.ValidationError {
+	var validationErrs []errors.ValidationError
+
+	if ve, ok := err.(validator.ValidationErrors); ok {
+		for _, fe := range ve {
+			validationErrs = append(validationErrs, errors.ValidationError{
+				Field:   fe.Field(),
+				Message: h.getValidationMessage(fe),
+			})
+		}
+		return validationErrs
+	}
+
+	return []errors.ValidationError{
+		{
+			Field:   "general",
+			Message: err.Error(),
+		},
+	}
+}
+
+func (h *cartHandleApi) getValidationMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return fmt.Sprintf("Must be at least %s", fe.Param())
+	case "max":
+		return fmt.Sprintf("Must be at most %s", fe.Param())
+	case "gte":
+		return fmt.Sprintf("Must be greater than or equal to %s", fe.Param())
+	case "lte":
+		return fmt.Sprintf("Must be less than or equal to %s", fe.Param())
+	case "oneof":
+		return fmt.Sprintf("Must be one of: %s", fe.Param())
+	default:
+		return fmt.Sprintf("Validation failed on '%s' tag", fe.Tag())
+	}
 }

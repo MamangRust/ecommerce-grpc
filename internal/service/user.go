@@ -1,49 +1,57 @@
 package service
 
 import (
+	"context"
 	"database/sql"
+	user_cache "ecommerce/internal/cache/user"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	response_service "ecommerce/internal/mapper/response/services"
+	"ecommerce/internal/errorhandler"
 	"ecommerce/internal/repository"
+	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/errors/user_errors"
 	"ecommerce/pkg/hash"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/observability"
 	"errors"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
 type userService struct {
 	userRepository repository.UserRepository
 	logger         logger.LoggerInterface
-	mapping        response_service.UserResponseMapper
+	observability  observability.TraceLoggerObservability
 	hashing        hash.HashPassword
+	cache          user_cache.UserMencache
 }
 
-func NewUserService(
-	userRepository repository.UserRepository,
-	logger logger.LoggerInterface,
-	mapper response_service.UserResponseMapper,
-	hashing hash.HashPassword,
-) *userService {
+type UserServiceDeps struct {
+	UserRepo repository.UserRepository
+
+	Logger        logger.LoggerInterface
+	Observability observability.TraceLoggerObservability
+
+	Hashing hash.HashPassword
+	Cache   user_cache.UserMencache
+}
+
+func NewUserService(deps UserServiceDeps) *userService {
 	return &userService{
-		userRepository: userRepository,
-		logger:         logger,
-		mapping:        mapper,
-		hashing:        hashing,
+		userRepository: deps.UserRepo,
+		logger:         deps.Logger,
+		observability:  deps.Observability,
+		hashing:        deps.Hashing,
+		cache:          deps.Cache,
 	}
 }
 
-func (s *userService) FindAll(request *requests.FindAllUsers) ([]*response.UserResponse, *int, *response.ErrorResponse) {
-	page := request.Page
-	pageSize := request.PageSize
-	search := request.Search
+func (s *userService) FindAll(ctx context.Context, req *requests.FindAllUsers) ([]*db.GetUsersRow, *int, error) {
+	const method = "FindAll"
 
-	s.logger.Debug("Fetching users",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
 
 	if page <= 0 {
 		page = 1
@@ -53,54 +61,95 @@ func (s *userService) FindAll(request *requests.FindAllUsers) ([]*response.UserR
 		pageSize = 10
 	}
 
-	users, totalRecords, err := s.userRepository.FindAllUsers(request)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetCachedUsersCache(ctx, req); found {
+		logSuccess("Successfully retrieved all user records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+
+		return data, total, nil
+	}
+
+	users, err := s.userRepository.FindAllUsers(ctx, req)
 	if err != nil {
-		s.logger.Error("Failed to fetch user",
-			zap.Error(err),
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetUsersRow](
+			s.logger,
+			user_errors.ErrFailedFindAll,
+			method,
+			span,
+
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
-
-		return nil, nil, user_errors.ErrFailedFindAll
+			zap.String("search", search),
+		)
 	}
 
-	userResponses := s.mapping.ToUsersResponse(users)
+	var totalCount int
 
-	s.logger.Debug("Successfully fetched user",
-		zap.Int("totalRecords", *totalRecords),
+	if len(users) > 0 {
+		totalCount = int(users[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedUsersCache(ctx, req, users, &totalCount)
+
+	logSuccess("Successfully fetched user",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return userResponses, totalRecords, nil
+	return users, &totalCount, nil
 }
 
-func (s *userService) FindByID(id int) (*response.UserResponse, *response.ErrorResponse) {
-	s.logger.Debug("Fetching user by id", zap.Int("user_id", id))
+func (s *userService) FindByID(ctx context.Context, id int) (*db.GetUserByIDRow, error) {
+	const method = "FindByID"
 
-	user, err := s.userRepository.FindById(id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("user_id", id))
 
-	if err != nil {
-		s.logger.Error("failed to find user by ID", zap.Error(err))
-		return nil, user_errors.ErrUserNotFoundRes
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetCachedUserCache(ctx, id); found {
+		logSuccess("Successfully retrieved user record from cache", zap.Int("user.id", id))
+		return data, nil
 	}
 
-	so := s.mapping.ToUserResponse(user)
+	user, err := s.userRepository.FindById(ctx, id)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[*db.GetUserByIDRow](
+			s.logger,
+			user_errors.ErrUserNotFoundRes,
+			method,
+			span,
 
-	s.logger.Debug("Successfully fetched user", zap.Int("user_id", id))
+			zap.Int("user_id", id),
+		)
+	}
 
-	return so, nil
+	s.cache.SetCachedUserCache(ctx, user)
+
+	logSuccess("Successfully fetched user", zap.Int("user_id", id))
+
+	return user, nil
 }
 
-func (s *userService) FindByActive(request *requests.FindAllUsers) ([]*response.UserResponseDeleteAt, *int, *response.ErrorResponse) {
-	page := request.Page
-	pageSize := request.PageSize
-	search := request.Search
+func (s *userService) FindByActive(ctx context.Context, req *requests.FindAllUsers) ([]*db.GetUsersActiveRow, *int, error) {
+	const method = "FindByActive"
 
-	s.logger.Debug("Fetching active user",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
 
 	if page <= 0 {
 		page = 1
@@ -110,36 +159,59 @@ func (s *userService) FindByActive(request *requests.FindAllUsers) ([]*response.
 		pageSize = 10
 	}
 
-	users, totalRecords, err := s.userRepository.FindByActive(request)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetCachedUserActiveCache(ctx, req); found {
+		logSuccess("Successfully retrieved active user records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
+	}
+
+	users, err := s.userRepository.FindByActive(ctx, req)
 	if err != nil {
-		s.logger.Error("Failed to fetch active user",
-			zap.Error(err),
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetUsersActiveRow](
+			s.logger,
+			user_errors.ErrFailedFindActive,
+			method,
+			span,
+
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
-
-		return nil, nil, user_errors.ErrFailedFindActive
+			zap.String("search", search),
+		)
 	}
 
-	so := s.mapping.ToUsersResponseDeleteAt(users)
+	var totalCount int
 
-	s.logger.Debug("Successfully fetched active user",
-		zap.Int("totalRecords", *totalRecords),
+	if len(users) > 0 {
+		totalCount = int(users[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedUserActiveCache(ctx, req, users, &totalCount)
+
+	logSuccess("Successfully fetched active user",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return so, totalRecords, nil
+	return users, &totalCount, nil
 }
 
-func (s *userService) FindByTrashed(request *requests.FindAllUsers) ([]*response.UserResponseDeleteAt, *int, *response.ErrorResponse) {
-	page := request.Page
-	pageSize := request.PageSize
-	search := request.Search
+func (s *userService) FindByTrashed(ctx context.Context, req *requests.FindAllUsers) ([]*db.GetUserTrashedRow, *int, error) {
+	const method = "FindByTrashed"
 
-	s.logger.Debug("Fetching trashed user",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
 
 	if page <= 0 {
 		page = 1
@@ -149,181 +221,330 @@ func (s *userService) FindByTrashed(request *requests.FindAllUsers) ([]*response
 		pageSize = 10
 	}
 
-	users, totalRecords, err := s.userRepository.FindByTrashed(request)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to find trashed users", zap.Error(err))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, nil, user_errors.ErrFailedFindTrashed
+	if data, total, found := s.cache.GetCachedUserTrashedCache(ctx, req); found {
+		return data, total, nil
 	}
 
-	so := s.mapping.ToUsersResponseDeleteAt(users)
+	users, err := s.userRepository.FindByTrashed(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetUserTrashedRow](
+			s.logger,
+			user_errors.ErrFailedFindTrashed,
+			method,
+			span,
 
-	s.logger.Debug("Successfully fetched trashed user",
-		zap.Int("totalRecords", *totalRecords),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+			zap.String("search", search),
+		)
+	}
+
+	var totalCount int
+
+	if len(users) > 0 {
+		totalCount = int(users[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedUserTrashedCache(ctx, req, users, &totalCount)
+
+	logSuccess("Successfully fetched trashed user",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return so, totalRecords, nil
+	return users, &totalCount, nil
 }
 
-func (s *userService) Create(request *requests.CreateUserRequest) (*response.UserResponse, *response.ErrorResponse) {
+func (s *userService) CreateUser(ctx context.Context, request *requests.CreateUserRequest) (*db.CreateUserRow, error) {
+	const method = "CreateUser"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.String("email", request.Email))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Creating new user", zap.String("email", request.Email), zap.Any("request", request))
 
-	existingUser, err := s.userRepository.FindByEmail(request.Email)
+	existingUser, err := s.userRepository.FindByEmail(ctx, request.Email)
 	if err != nil {
-
 		if errors.Is(err, sql.ErrNoRows) {
 			s.logger.Debug("Email is available, proceeding to create user", zap.String("email", request.Email))
 		} else {
-			s.logger.Error("Error checking existing email", zap.String("email", request.Email), zap.Error(err))
-			return nil, user_errors.ErrUserEmailAlready
+			status = "error"
+			return errorhandler.HandleError[*db.CreateUserRow](
+				s.logger,
+				user_errors.ErrUserEmailAlready,
+				method,
+				span,
+				zap.String("email", request.Email),
+			)
 		}
 	} else if existingUser != nil {
-		s.logger.Error("Email is already in use", zap.String("email", request.Email))
-		return nil, user_errors.ErrUserEmailAlready
+		status = "error"
+		return errorhandler.HandleError[*db.CreateUserRow](
+			s.logger,
+			user_errors.ErrUserEmailAlready,
+			method,
+			span,
+			zap.String("email", request.Email),
+		)
 	}
 
 	hash, err := s.hashing.HashPassword(request.Password)
 	if err != nil {
-		s.logger.Error("Failed to hash password", zap.Error(err))
-		return nil, user_errors.ErrUserPassword
+		status = "error"
+		return errorhandler.HandleError[*db.CreateUserRow](
+			s.logger,
+			user_errors.ErrUserPassword,
+			method,
+			span,
+		)
 	}
 
 	request.Password = hash
 
-	res, err := s.userRepository.CreateUser(request)
+	res, err := s.userRepository.CreateUser(ctx, request)
 	if err != nil {
-		s.logger.Error("Failed to create user", zap.Error(err))
-		return nil, user_errors.ErrFailedCreateUser
+		status = "error"
+		return errorhandler.HandleError[*db.CreateUserRow](
+			s.logger,
+			user_errors.ErrFailedCreateUser,
+			method,
+			span,
+		)
 	}
 
-	so := s.mapping.ToUserResponse(res)
+	logSuccess("Successfully created new user", zap.String("email", res.Email), zap.Int("user_id", int(res.UserID)))
 
-	s.logger.Debug("Successfully created new user", zap.String("email", so.Email), zap.Int("user", so.ID))
-
-	return so, nil
+	return res, nil
 }
 
-func (s *userService) Update(request *requests.UpdateUserRequest) (*response.UserResponse, *response.ErrorResponse) {
+func (s *userService) UpdateUser(ctx context.Context, request *requests.UpdateUserRequest) (*db.UpdateUserRow, error) {
+	const method = "UpdateUser"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("user_id", *request.UserID))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Updating user", zap.Int("user_id", *request.UserID), zap.Any("request", request))
 
-	existingUser, err := s.userRepository.FindById(*request.UserID)
-
+	existingUser, err := s.userRepository.FindByIdWithPassword(ctx, *request.UserID)
 	if err != nil {
-		s.logger.Error("Failed to find user by ID", zap.Error(err))
-		return nil, user_errors.ErrUserNotFoundRes
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateUserRow](
+			s.logger,
+			user_errors.ErrUserNotFoundRes,
+			method,
+			span,
+
+			zap.Int("user_id", *request.UserID),
+		)
 	}
 
 	if request.Email != "" && request.Email != existingUser.Email {
-		duplicateUser, _ := s.userRepository.FindByEmail(request.Email)
-
+		duplicateUser, _ := s.userRepository.FindByEmail(ctx, request.Email)
 		if duplicateUser != nil {
-			return nil, user_errors.ErrUserEmailAlready
+			status = "error"
+			return errorhandler.HandleError[*db.UpdateUserRow](
+				s.logger,
+				user_errors.ErrUserEmailAlready,
+				method,
+				span,
+				zap.String("email", request.Email),
+			)
 		}
-
 		existingUser.Email = request.Email
 	}
 
 	if request.Password != "" {
 		hash, err := s.hashing.HashPassword(request.Password)
 		if err != nil {
-			s.logger.Error("Failed to hash password", zap.Error(err))
-			return nil, user_errors.ErrUserPassword
+			status = "error"
+			return errorhandler.HandleError[*db.UpdateUserRow](
+				s.logger,
+				user_errors.ErrUserPassword,
+				method,
+				span,
+			)
 		}
 		existingUser.Password = hash
 	}
 
-	res, err := s.userRepository.UpdateUser(request)
+	res, err := s.userRepository.UpdateUser(ctx, request)
 	if err != nil {
-		s.logger.Error("Failed to update user", zap.Error(err))
-		return nil, user_errors.ErrFailedUpdateUser
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateUserRow](
+			s.logger,
+			user_errors.ErrFailedUpdateUser,
+			method,
+			span,
+
+			zap.Int("user_id", *request.UserID),
+		)
 	}
 
-	so := s.mapping.ToUserResponse(res)
+	logSuccess("Successfully updated user", zap.Int("user_id", int(res.UserID)))
 
-	s.logger.Debug("Successfully updated user", zap.Int("user_id", so.ID))
-
-	return so, nil
+	return res, nil
 }
 
-func (s *userService) Trashed(user_id int) (*response.UserResponseDeleteAt, *response.ErrorResponse) {
+func (s *userService) TrashedUser(ctx context.Context, user_id int) (*db.TrashUserRow, error) {
+	const method = "TrashedUser"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("user_id", user_id))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Trashing user", zap.Int("user_id", user_id))
 
-	res, err := s.userRepository.TrashedUser(user_id)
-
+	res, err := s.userRepository.TrashedUser(ctx, user_id)
 	if err != nil {
-		s.logger.Error("Failed to trash user", zap.Error(err), zap.Int("user_id", user_id))
-		return nil, user_errors.ErrFailedTrashedUser
+		status = "error"
+		return errorhandler.HandleError[*db.TrashUserRow](
+			s.logger,
+			user_errors.ErrFailedTrashedUser,
+			method,
+			span,
+
+			zap.Int("user_id", user_id),
+		)
 	}
 
-	so := s.mapping.ToUserResponseDeleteAt(res)
+	logSuccess("Successfully trashed user", zap.Int("user_id", user_id))
 
-	s.logger.Debug("Successfully trashed user", zap.Int("user_id", user_id))
-
-	return so, nil
+	return res, nil
 }
 
-func (s *userService) Restore(user_id int) (*response.UserResponseDeleteAt, *response.ErrorResponse) {
+func (s *userService) RestoreUser(ctx context.Context, user_id int) (*db.RestoreUserRow, error) {
+	const method = "RestoreUser"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("user_id", user_id))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Restoring user", zap.Int("user_id", user_id))
 
-	res, err := s.userRepository.RestoreUser(user_id)
-
+	res, err := s.userRepository.RestoreUser(ctx, user_id)
 	if err != nil {
-		s.logger.Error("Failed to restore user", zap.Error(err), zap.Int("user_id", user_id))
+		status = "error"
+		return errorhandler.HandleError[*db.RestoreUserRow](
+			s.logger,
+			user_errors.ErrFailedRestoreUser,
+			method,
+			span,
 
-		return nil, user_errors.ErrFailedRestoreUser
+			zap.Int("user_id", user_id),
+		)
 	}
 
-	so := s.mapping.ToUserResponseDeleteAt(res)
+	logSuccess("Successfully restored user", zap.Int("user_id", user_id))
 
-	s.logger.Debug("Successfully restored user", zap.Int("user_id", user_id))
-
-	return so, nil
+	return res, nil
 }
 
-func (s *userService) DeletePermanent(user_id int) (bool, *response.ErrorResponse) {
+func (s *userService) DeleteUserPermanent(ctx context.Context, user_id int) (bool, error) {
+	const method = "DeleteUserPermanent"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("user_id", user_id))
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Deleting user permanently", zap.Int("user_id", user_id))
 
-	_, err := s.userRepository.DeleteUserPermanent(user_id)
-
+	_, err := s.userRepository.DeleteUserPermanent(ctx, user_id)
 	if err != nil {
-		s.logger.Error("Failed to delete user permanently", zap.Error(err), zap.Int("user_id", user_id))
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			user_errors.ErrFailedDeletePermanent,
+			method,
+			span,
 
-		return false, user_errors.ErrFailedDeletePermanent
+			zap.Int("user_id", user_id),
+		)
 	}
 
-	s.logger.Debug("Successfully deleted user permanently", zap.Int("user_id", user_id))
+	logSuccess("Successfully deleted user permanently", zap.Int("user_id", user_id))
 
 	return true, nil
 }
 
-func (s *userService) RestoreAll() (bool, *response.ErrorResponse) {
+func (s *userService) RestoreAllUser(ctx context.Context) (bool, error) {
+	const method = "RestoreAllUser"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Restoring all users")
 
-	_, err := s.userRepository.RestoreAllUser()
-
+	_, err := s.userRepository.RestoreAllUser(ctx)
 	if err != nil {
-		s.logger.Error("Failed to restore all users", zap.Error(err))
-		return false, user_errors.ErrFailedRestoreAll
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			user_errors.ErrFailedRestoreAll,
+			method,
+			span,
+		)
 	}
 
-	s.logger.Debug("Successfully restored all users")
+	logSuccess("Successfully restored all users")
 
 	return true, nil
 }
 
-func (s *userService) DeleteAllPermanent() (bool, *response.ErrorResponse) {
+func (s *userService) DeleteAllUserPermanent(ctx context.Context) (bool, error) {
+	const method = "DeleteAllUserPermanent"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
+
+	defer func() {
+		end(status)
+	}()
+
 	s.logger.Debug("Permanently deleting all users")
 
-	_, err := s.userRepository.DeleteAllUserPermanent()
-
+	_, err := s.userRepository.DeleteAllUserPermanent(ctx)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete all users", zap.Error(err))
-		return false, user_errors.ErrFailedDeleteAll
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			user_errors.ErrFailedDeleteAll,
+			method,
+			span,
+		)
 	}
 
-	s.logger.Debug("Successfully deleted all users permanently")
+	logSuccess("Successfully deleted all users permanently")
 
 	return true, nil
 }

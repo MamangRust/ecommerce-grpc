@@ -14,14 +14,25 @@
 --   - Uses window function COUNT(*) OVER() for efficient total count
 -- name: GetOrders :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
 FROM orders
-WHERE deleted_at IS NULL
-AND ($1::TEXT IS NULL OR order_id::TEXT ILIKE '%' || $1 || '%' OR total_price::TEXT ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR order_id::TEXT ILIKE '%' || $1 || '%'
+        OR total_price::TEXT ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetOrdersActive: Retrieves paginated list of active orders (identical to GetOrders)
 -- Purpose: Maintains consistent API pattern with other active/trashed endpoints
@@ -37,13 +48,26 @@ LIMIT $2 OFFSET $3;
 -- Note: Could be consolidated with GetOrders if duplicate functionality is undesired
 -- name: GetOrdersActive :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM orders
-WHERE deleted_at IS NULL
-AND ($1::TEXT IS NULL OR order_id::TEXT ILIKE '%' || $1 || '%' OR total_price::TEXT ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR order_id::TEXT ILIKE '%' || $1 || '%'
+        OR total_price::TEXT ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetOrdersTrashed: Retrieves paginated list of soft-deleted orders
 -- Purpose: View and manage deleted orders for potential restoration
@@ -61,14 +85,26 @@ LIMIT $2 OFFSET $3;
 --   - Includes total_count for pagination in trash management UI
 -- name: GetOrdersTrashed :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM orders
-WHERE deleted_at IS NOT NULL
-AND ($1::TEXT IS NULL OR order_id::TEXT ILIKE '%' || $1 || '%' OR total_price::TEXT ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NOT NULL
+    AND (
+        $1::TEXT IS NULL
+        OR order_id::TEXT ILIKE '%' || $1 || '%'
+        OR total_price::TEXT ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetOrdersByMerchant: Retrieves merchant-specific orders with pagination
 -- Purpose: List orders filtered by merchant ID
@@ -86,16 +122,29 @@ LIMIT $2 OFFSET $3;
 --   - NULL merchant_id parameter returns all merchants' orders
 -- name: GetOrdersByMerchant :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
 FROM orders
-WHERE 
+WHERE
     deleted_at IS NULL
-    AND ($1::TEXT IS NULL OR order_id::TEXT ILIKE '%' || $1 || '%' OR total_price::TEXT ILIKE '%' || $1 || '%')
-    AND ($4::INT IS NULL OR merchant_id = $4)
+    AND (
+        $1::TEXT IS NULL
+        OR order_id::TEXT ILIKE '%' || $1 || '%'
+        OR total_price::TEXT ILIKE '%' || $1 || '%'
+    )
+    AND (
+        $4::INT IS NULL
+        OR merchant_id = $4
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetMonthlyTotalRevenue: Retrieves monthly total revenue across two custom date ranges
 -- Purpose: Compare total revenue between two time periods (e.g., current month vs previous month)
@@ -114,52 +163,70 @@ LIMIT $2 OFFSET $3;
 --   - Includes only non-deleted orders and order items
 --   - Output formatted for charting or reporting tools
 -- name: GetMonthlyTotalRevenue :many
-WITH monthly_revenue AS (
-    SELECT
-        EXTRACT(YEAR FROM o.created_at)::TEXT AS year,
-        EXTRACT(MONTH FROM o.created_at)::integer AS month,
-        COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND (
-            (o.created_at >= $1 AND o.created_at <= $2)  
-            OR (o.created_at >= $3 AND o.created_at <= $4) 
-        )
-    GROUP BY
-        EXTRACT(YEAR FROM o.created_at),
-        EXTRACT(MONTH FROM o.created_at)
-),
-all_months AS (
-    SELECT 
-        EXTRACT(YEAR FROM $1)::TEXT AS year,
-        EXTRACT(MONTH FROM $1)::integer AS month,
-        TO_CHAR($1, 'FMMonth') AS month_name
-    
-    UNION
-    
-    SELECT 
-        EXTRACT(YEAR FROM $3)::TEXT AS year,
-        EXTRACT(MONTH FROM $3)::integer AS month,
-        TO_CHAR($3, 'FMMonth') AS month_name
-)
-SELECT 
-    COALESCE(am.year, EXTRACT(YEAR FROM $1)::TEXT) AS year,
-    COALESCE(am.month_name, TO_CHAR($1, 'FMMonth')) AS month,
-    COALESCE(mr.total_revenue, 0) AS total_revenue
-FROM 
+WITH
+    monthly_revenue AS (
+        SELECT EXTRACT(
+                YEAR
+                FROM o.created_at
+            )::TEXT AS year, EXTRACT(
+                MONTH
+                FROM o.created_at
+            )::integer AS month, COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND (
+                (
+                    o.created_at >= $1
+                    AND o.created_at <= $2
+                )
+                OR (
+                    o.created_at >= $3
+                    AND o.created_at <= $4
+                )
+            )
+        GROUP BY
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            ),
+            EXTRACT(
+                MONTH
+                FROM o.created_at
+            )
+    ),
+    all_months AS (
+        SELECT EXTRACT(
+                YEAR
+                FROM $1
+            )::TEXT AS year, EXTRACT(
+                MONTH
+                FROM $1
+            )::integer AS month, TO_CHAR($1, 'FMMonth') AS month_name
+        UNION
+        SELECT EXTRACT(
+                YEAR
+                FROM $3
+            )::TEXT AS year, EXTRACT(
+                MONTH
+                FROM $3
+            )::integer AS month, TO_CHAR($3, 'FMMonth') AS month_name
+    )
+SELECT COALESCE(
+        am.year, EXTRACT(
+            YEAR
+            FROM $1
+        )::TEXT
+    ) AS year, COALESCE(
+        am.month_name, TO_CHAR($1, 'FMMonth')
+    ) AS month, COALESCE(mr.total_revenue, 0) AS total_revenue
+FROM
     all_months am
-LEFT JOIN 
-    monthly_revenue mr ON am.year = mr.year 
-                      AND am.month = mr.month
-ORDER BY 
-    am.year DESC,
-    am.month DESC;
-
+    LEFT JOIN monthly_revenue mr ON am.year = mr.year
+    AND am.month = mr.month
+ORDER BY am.year DESC, am.month DESC;
 
 -- GetYearlyTotalRevenue: Retrieves yearly total revenue for current and previous year
 -- Purpose: Show year-over-year revenue trends
@@ -173,40 +240,43 @@ ORDER BY
 --   - Includes zero-value years for complete data visualization
 --   - Filters only active/non-deleted orders and order items
 -- name: GetYearlyTotalRevenue :many
-WITH yearly_revenue AS (
-    SELECT
-        EXTRACT(YEAR FROM o.created_at)::integer AS year,
-        COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND (
-            EXTRACT(YEAR FROM o.created_at) = $1::integer
-            OR EXTRACT(YEAR FROM o.created_at) = $1::integer - 1
-        )
-    GROUP BY
-        EXTRACT(YEAR FROM o.created_at)
-),
-all_years AS (
-    SELECT $1 AS year
-    UNION
-    SELECT $1 - 1 AS year
-)
-SELECT 
-    ay.year::text AS year,
-    COALESCE(yr.total_revenue, 0) AS total_revenue
-FROM 
+WITH
+    yearly_revenue AS (
+        SELECT EXTRACT(
+                YEAR
+                FROM o.created_at
+            )::integer AS year, COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND (
+                EXTRACT(
+                    YEAR
+                    FROM o.created_at
+                ) = $1::integer
+                OR EXTRACT(
+                    YEAR
+                    FROM o.created_at
+                ) = $1::integer - 1
+            )
+        GROUP BY
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            )
+    ),
+    all_years AS (
+        SELECT $1 AS year
+        UNION
+        SELECT $1 - 1 AS year
+    )
+SELECT ay.year::text AS year, COALESCE(yr.total_revenue, 0) AS total_revenue
+FROM
     all_years ay
-LEFT JOIN 
-    yearly_revenue yr ON ay.year = yr.year
-ORDER BY 
-    ay.year DESC;
-
-
+    LEFT JOIN yearly_revenue yr ON ay.year = yr.year
+ORDER BY ay.year DESC;
 
 -- GetMonthlyTotalRevenueById: Retrieves monthly total revenue across two custom date ranges by order_id
 -- Purpose: Compare total revenue between two time periods (e.g., current month vs previous month)
@@ -226,53 +296,71 @@ ORDER BY
 --   - Includes only non-deleted orders and order items
 --   - Output formatted for charting or reporting tools
 -- name: GetMonthlyTotalRevenueById :many
-WITH monthly_revenue AS (
-    SELECT
-        EXTRACT(YEAR FROM o.created_at)::TEXT AS year,
-        EXTRACT(MONTH FROM o.created_at)::integer AS month,
-        COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND (
-            (o.created_at >= $1 AND o.created_at <= $2)  
-            OR (o.created_at >= $3 AND o.created_at <= $4) 
-        )
-        AND o.order_id = $5
-    GROUP BY
-        EXTRACT(YEAR FROM o.created_at),
-        EXTRACT(MONTH FROM o.created_at)
-),
-all_months AS (
-    SELECT 
-        EXTRACT(YEAR FROM $1)::TEXT AS year,
-        EXTRACT(MONTH FROM $1)::integer AS month,
-        TO_CHAR($1, 'FMMonth') AS month_name
-    
-    UNION
-    
-    SELECT 
-        EXTRACT(YEAR FROM $3)::TEXT AS year,
-        EXTRACT(MONTH FROM $3)::integer AS month,
-        TO_CHAR($3, 'FMMonth') AS month_name
-)
-SELECT 
-    COALESCE(am.year, EXTRACT(YEAR FROM $1)::TEXT) AS year,
-    COALESCE(am.month_name, TO_CHAR($1, 'FMMonth')) AS month,
-    COALESCE(mr.total_revenue, 0) AS total_revenue
-FROM 
+WITH
+    monthly_revenue AS (
+        SELECT EXTRACT(
+                YEAR
+                FROM o.created_at
+            )::TEXT AS year, EXTRACT(
+                MONTH
+                FROM o.created_at
+            )::integer AS month, COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND (
+                (
+                    o.created_at >= $1
+                    AND o.created_at <= $2
+                )
+                OR (
+                    o.created_at >= $3
+                    AND o.created_at <= $4
+                )
+            )
+            AND o.order_id = $5
+        GROUP BY
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            ),
+            EXTRACT(
+                MONTH
+                FROM o.created_at
+            )
+    ),
+    all_months AS (
+        SELECT EXTRACT(
+                YEAR
+                FROM $1
+            )::TEXT AS year, EXTRACT(
+                MONTH
+                FROM $1
+            )::integer AS month, TO_CHAR($1, 'FMMonth') AS month_name
+        UNION
+        SELECT EXTRACT(
+                YEAR
+                FROM $3
+            )::TEXT AS year, EXTRACT(
+                MONTH
+                FROM $3
+            )::integer AS month, TO_CHAR($3, 'FMMonth') AS month_name
+    )
+SELECT COALESCE(
+        am.year, EXTRACT(
+            YEAR
+            FROM $1
+        )::TEXT
+    ) AS year, COALESCE(
+        am.month_name, TO_CHAR($1, 'FMMonth')
+    ) AS month, COALESCE(mr.total_revenue, 0) AS total_revenue
+FROM
     all_months am
-LEFT JOIN 
-    monthly_revenue mr ON am.year = mr.year 
-                      AND am.month = mr.month
-ORDER BY 
-    am.year DESC,
-    am.month DESC;
-
+    LEFT JOIN monthly_revenue mr ON am.year = mr.year
+    AND am.month = mr.month
+ORDER BY am.year DESC, am.month DESC;
 
 -- GetYearlyTotalRevenueById: Retrieves yearly total revenue for current and previous year by order_id
 -- Purpose: Show year-over-year revenue trends
@@ -287,40 +375,44 @@ ORDER BY
 --   - Includes zero-value years for complete data visualization
 --   - Filters only active/non-deleted orders and order items
 -- name: GetYearlyTotalRevenueById :many
-WITH yearly_revenue AS (
-    SELECT
-        EXTRACT(YEAR FROM o.created_at)::integer AS year,
-        COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND (
-            EXTRACT(YEAR FROM o.created_at) = $1::integer
-            OR EXTRACT(YEAR FROM o.created_at) = $1::integer - 1
-        )
-        AND o.order_id =  $2
-    GROUP BY
-        EXTRACT(YEAR FROM o.created_at)
-),
-all_years AS (
-    SELECT $1 AS year
-    UNION
-    SELECT $1 - 1 AS year
-)
-SELECT 
-    ay.year::text AS year,
-    COALESCE(yr.total_revenue, 0) AS total_revenue
-FROM 
+WITH
+    yearly_revenue AS (
+        SELECT EXTRACT(
+                YEAR
+                FROM o.created_at
+            )::integer AS year, COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND (
+                EXTRACT(
+                    YEAR
+                    FROM o.created_at
+                ) = $1::integer
+                OR EXTRACT(
+                    YEAR
+                    FROM o.created_at
+                ) = $1::integer - 1
+            )
+            AND o.order_id = $2
+        GROUP BY
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            )
+    ),
+    all_years AS (
+        SELECT $1 AS year
+        UNION
+        SELECT $1 - 1 AS year
+    )
+SELECT ay.year::text AS year, COALESCE(yr.total_revenue, 0) AS total_revenue
+FROM
     all_years ay
-LEFT JOIN 
-    yearly_revenue yr ON ay.year = yr.year
-ORDER BY 
-    ay.year DESC;
-
+    LEFT JOIN yearly_revenue yr ON ay.year = yr.year
+ORDER BY ay.year DESC;
 
 -- GetMonthlyTotalRevenueByMerchant: Retrieves monthly total revenue across two custom date ranges by merchant_id
 -- Purpose: Compare total revenue between two time periods (e.g., current month vs previous month)
@@ -340,53 +432,71 @@ ORDER BY
 --   - Includes only non-deleted orders and order items
 --   - Output formatted for charting or reporting tools
 -- name: GetMonthlyTotalRevenueByMerchant :many
-WITH monthly_revenue AS (
-    SELECT
-        EXTRACT(YEAR FROM o.created_at)::TEXT AS year,
-        EXTRACT(MONTH FROM o.created_at)::integer AS month,
-        COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND (
-            (o.created_at >= $1 AND o.created_at <= $2)  
-            OR (o.created_at >= $3 AND o.created_at <= $4) 
-        )
-        AND o.merchant_id = $5
-    GROUP BY
-        EXTRACT(YEAR FROM o.created_at),
-        EXTRACT(MONTH FROM o.created_at)
-),
-all_months AS (
-    SELECT 
-        EXTRACT(YEAR FROM $1)::TEXT AS year,
-        EXTRACT(MONTH FROM $1)::integer AS month,
-        TO_CHAR($1, 'FMMonth') AS month_name
-    
-    UNION
-    
-    SELECT 
-        EXTRACT(YEAR FROM $3)::TEXT AS year,
-        EXTRACT(MONTH FROM $3)::integer AS month,
-        TO_CHAR($3, 'FMMonth') AS month_name
-)
-SELECT 
-    COALESCE(am.year, EXTRACT(YEAR FROM $1)::TEXT) AS year,
-    COALESCE(am.month_name, TO_CHAR($1, 'FMMonth')) AS month,
-    COALESCE(mr.total_revenue, 0) AS total_revenue
-FROM 
+WITH
+    monthly_revenue AS (
+        SELECT EXTRACT(
+                YEAR
+                FROM o.created_at
+            )::TEXT AS year, EXTRACT(
+                MONTH
+                FROM o.created_at
+            )::integer AS month, COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND (
+                (
+                    o.created_at >= $1
+                    AND o.created_at <= $2
+                )
+                OR (
+                    o.created_at >= $3
+                    AND o.created_at <= $4
+                )
+            )
+            AND o.merchant_id = $5
+        GROUP BY
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            ),
+            EXTRACT(
+                MONTH
+                FROM o.created_at
+            )
+    ),
+    all_months AS (
+        SELECT EXTRACT(
+                YEAR
+                FROM $1
+            )::TEXT AS year, EXTRACT(
+                MONTH
+                FROM $1
+            )::integer AS month, TO_CHAR($1, 'FMMonth') AS month_name
+        UNION
+        SELECT EXTRACT(
+                YEAR
+                FROM $3
+            )::TEXT AS year, EXTRACT(
+                MONTH
+                FROM $3
+            )::integer AS month, TO_CHAR($3, 'FMMonth') AS month_name
+    )
+SELECT COALESCE(
+        am.year, EXTRACT(
+            YEAR
+            FROM $1
+        )::TEXT
+    ) AS year, COALESCE(
+        am.month_name, TO_CHAR($1, 'FMMonth')
+    ) AS month, COALESCE(mr.total_revenue, 0) AS total_revenue
+FROM
     all_months am
-LEFT JOIN 
-    monthly_revenue mr ON am.year = mr.year 
-                      AND am.month = mr.month
-ORDER BY 
-    am.year DESC,
-    am.month DESC;
-
+    LEFT JOIN monthly_revenue mr ON am.year = mr.year
+    AND am.month = mr.month
+ORDER BY am.year DESC, am.month DESC;
 
 -- GetYearlyTotalRevenueByMerchant: Retrieves yearly total revenue for current and previous year by merchant_id
 -- Purpose: Show year-over-year revenue trends
@@ -401,41 +511,44 @@ ORDER BY
 --   - Includes zero-value years for complete data visualization
 --   - Filters only active/non-deleted orders and order items
 -- name: GetYearlyTotalRevenueByMerchant :many
-WITH yearly_revenue AS (
-    SELECT
-        EXTRACT(YEAR FROM o.created_at)::integer AS year,
-        COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND (
-            EXTRACT(YEAR FROM o.created_at) = $1::integer
-            OR EXTRACT(YEAR FROM o.created_at) = $1::integer - 1
-        )
-        AND o.merchant_id = $2
-    GROUP BY
-        EXTRACT(YEAR FROM o.created_at)
-),
-all_years AS (
-    SELECT $1 AS year
-    UNION
-    SELECT $1 - 1 AS year
-)
-SELECT 
-    ay.year::text AS year,
-    COALESCE(yr.total_revenue, 0) AS total_revenue
-FROM 
+WITH
+    yearly_revenue AS (
+        SELECT EXTRACT(
+                YEAR
+                FROM o.created_at
+            )::integer AS year, COALESCE(SUM(o.total_price), 0)::INTEGER AS total_revenue
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND (
+                EXTRACT(
+                    YEAR
+                    FROM o.created_at
+                ) = $1::integer
+                OR EXTRACT(
+                    YEAR
+                    FROM o.created_at
+                ) = $1::integer - 1
+            )
+            AND o.merchant_id = $2
+        GROUP BY
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            )
+    ),
+    all_years AS (
+        SELECT $1 AS year
+        UNION
+        SELECT $1 - 1 AS year
+    )
+SELECT ay.year::text AS year, COALESCE(yr.total_revenue, 0) AS total_revenue
+FROM
     all_years ay
-LEFT JOIN 
-    yearly_revenue yr ON ay.year = yr.year
-ORDER BY 
-    ay.year DESC;
-
-
+    LEFT JOIN yearly_revenue yr ON ay.year = yr.year
+ORDER BY ay.year DESC;
 
 -- GetMonthlyOrder: Retrieves monthly order summary within a 1-year period
 -- Purpose: Provides monthly sales performance metrics for trend and operational analysis
@@ -453,39 +566,34 @@ ORDER BY
 --   - Uses short month format for dashboard/chart compactness
 --   - Sorts chronologically by month
 -- name: GetMonthlyOrder :many
-WITH date_range AS (
-    SELECT 
-        date_trunc('month', $1::timestamp) AS start_date,
-        date_trunc('month', $1::timestamp) + interval '1 year' - interval '1 day' AS end_date
-),
-monthly_orders AS (
-    SELECT
-        date_trunc('month', o.created_at) AS activity_month,
-        COUNT(o.order_id) AS order_count,
-        SUM(o.total_price)::NUMERIC AS total_revenue,
-        SUM(oi.quantity) AS total_items_sold
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND o.created_at BETWEEN (SELECT start_date FROM date_range) 
-                             AND (SELECT end_date FROM date_range)
-    GROUP BY
-        activity_month
-)
-SELECT
-    TO_CHAR(mo.activity_month, 'Mon') AS month,
-    mo.order_count,
-    mo.total_revenue,
-    mo.total_items_sold
-FROM
-    monthly_orders mo
-ORDER BY
-    mo.activity_month;
-
+WITH
+    date_range AS (
+        SELECT date_trunc('month', $1::timestamp) AS start_date, date_trunc('month', $1::timestamp) + interval '1 year' - interval '1 day' AS end_date
+    ),
+    monthly_orders AS (
+        SELECT
+            date_trunc('month', o.created_at) AS activity_month,
+            COUNT(o.order_id) AS order_count,
+            SUM(o.total_price)::NUMERIC AS total_revenue,
+            SUM(oi.quantity) AS total_items_sold
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND o.created_at BETWEEN (
+                SELECT start_date
+                FROM date_range
+            ) AND (
+                SELECT end_date
+                FROM date_range
+            )
+        GROUP BY
+            activity_month
+    )
+SELECT TO_CHAR(mo.activity_month, 'Mon') AS month, mo.order_count, mo.total_revenue, mo.total_items_sold
+FROM monthly_orders mo
+ORDER BY mo.activity_month;
 
 -- GetYearlyOrder: Retrieves yearly order summary over the past 5 years
 -- Purpose: Enables long-term trend analysis of sales performance
@@ -505,35 +613,48 @@ ORDER BY
 --   - Includes both volume and revenue metrics for comprehensive reporting
 --   - Results sorted by year in ascending order
 -- name: GetYearlyOrder :many
-WITH last_five_years AS (
-    SELECT
-        EXTRACT(YEAR FROM o.created_at)::text AS year,
-        COUNT(o.order_id) AS order_count,
-        SUM(o.total_price)::NUMERIC AS total_revenue,
-        SUM(oi.quantity) AS total_items_sold,
-        COUNT(DISTINCT oi.product_id) AS unique_products_sold
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND EXTRACT(YEAR FROM o.created_at) BETWEEN (EXTRACT(YEAR FROM $1::timestamp) - 4) AND EXTRACT(YEAR FROM $1::timestamp)
-    GROUP BY
-        EXTRACT(YEAR FROM o.created_at)
-)
+WITH
+    last_five_years AS (
+        SELECT
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            )::text AS year,
+            COUNT(o.order_id) AS order_count,
+            SUM(o.total_price)::NUMERIC AS total_revenue,
+            SUM(oi.quantity) AS total_items_sold,
+            COUNT(DISTINCT oi.product_id) AS unique_products_sold
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND EXTRACT(
+                YEAR
+                FROM o.created_at
+            ) BETWEEN (
+                EXTRACT(
+                    YEAR
+                    FROM $1::timestamp
+                ) - 4
+            ) AND EXTRACT(
+                YEAR
+                FROM $1::timestamp
+            )
+        GROUP BY
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            )
+    )
 SELECT
     year,
     order_count,
     total_revenue,
     total_items_sold,
     unique_products_sold
-FROM
-    last_five_years
-ORDER BY
-    year;
-
+FROM last_five_years
+ORDER BY year;
 
 -- GetMonthlyOrderByMerchant: Retrieves monthly order summary within a 1-year period by merchant_id
 -- Purpose: Provides monthly sales performance metrics for trend and operational analysis
@@ -552,41 +673,35 @@ ORDER BY
 --   - Uses short month format for dashboard/chart compactness
 --   - Sorts chronologically by month
 -- name: GetMonthlyOrderByMerchant :many
-WITH date_range AS (
-    SELECT 
-        date_trunc('month', $1::timestamp) AS start_date,
-        date_trunc('month', $1::timestamp) + interval '1 year' - interval '1 day' AS end_date
-),
-monthly_orders AS (
-    SELECT
-        date_trunc('month', o.created_at) AS activity_month,
-        COUNT(o.order_id) AS order_count,
-        SUM(o.total_price)::NUMERIC AS total_revenue,
-        SUM(oi.quantity) AS total_items_sold
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND o.created_at BETWEEN (SELECT start_date FROM date_range) 
-                             AND (SELECT end_date FROM date_range)
-        AND o.merchant_id = $2
-    GROUP BY
-        activity_month
-)
-SELECT
-    TO_CHAR(mo.activity_month, 'Mon') AS month,
-    mo.order_count,
-    mo.total_revenue,
-    mo.total_items_sold
-FROM
-    monthly_orders mo
-ORDER BY
-    mo.activity_month;
-
-
+WITH
+    date_range AS (
+        SELECT date_trunc('month', $1::timestamp) AS start_date, date_trunc('month', $1::timestamp) + interval '1 year' - interval '1 day' AS end_date
+    ),
+    monthly_orders AS (
+        SELECT
+            date_trunc('month', o.created_at) AS activity_month,
+            COUNT(o.order_id) AS order_count,
+            SUM(o.total_price)::NUMERIC AS total_revenue,
+            SUM(oi.quantity) AS total_items_sold
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND o.created_at BETWEEN (
+                SELECT start_date
+                FROM date_range
+            ) AND (
+                SELECT end_date
+                FROM date_range
+            )
+            AND o.merchant_id = $2
+        GROUP BY
+            activity_month
+    )
+SELECT TO_CHAR(mo.activity_month, 'Mon') AS month, mo.order_count, mo.total_revenue, mo.total_items_sold
+FROM monthly_orders mo
+ORDER BY mo.activity_month;
 
 -- GetYearlyOrderByMerchant: Retrieves yearly order summary over the past 5 years by merchant_id
 -- Purpose: Enables long-term trend analysis of sales performance
@@ -606,37 +721,49 @@ ORDER BY
 --   - Includes both volume and revenue metrics for comprehensive reporting
 --   - Results sorted by year in ascending order
 -- name: GetYearlyOrderByMerchant :many
-WITH last_five_years AS (
-    SELECT
-        EXTRACT(YEAR FROM o.created_at)::text AS year,
-        COUNT(o.order_id) AS order_count,
-        SUM(o.total_price)::NUMERIC AS total_revenue,
-        SUM(oi.quantity) AS total_items_sold,
-        COUNT(DISTINCT oi.product_id) AS unique_products_sold
-    FROM
-        orders o
-    JOIN
-        order_items oi ON o.order_id = oi.order_id
-    WHERE
-        o.deleted_at IS NULL
-        AND oi.deleted_at IS NULL
-        AND EXTRACT(YEAR FROM o.created_at) BETWEEN (EXTRACT(YEAR FROM $1::timestamp) - 4) AND EXTRACT(YEAR FROM $1::timestamp)
-        AND o.merchant_id = $2
-    GROUP BY
-        EXTRACT(YEAR FROM o.created_at)
-)
+WITH
+    last_five_years AS (
+        SELECT
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            )::text AS year,
+            COUNT(o.order_id) AS order_count,
+            SUM(o.total_price)::NUMERIC AS total_revenue,
+            SUM(oi.quantity) AS total_items_sold,
+            COUNT(DISTINCT oi.product_id) AS unique_products_sold
+        FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE
+            o.deleted_at IS NULL
+            AND oi.deleted_at IS NULL
+            AND EXTRACT(
+                YEAR
+                FROM o.created_at
+            ) BETWEEN (
+                EXTRACT(
+                    YEAR
+                    FROM $1::timestamp
+                ) - 4
+            ) AND EXTRACT(
+                YEAR
+                FROM $1::timestamp
+            )
+            AND o.merchant_id = $2
+        GROUP BY
+            EXTRACT(
+                YEAR
+                FROM o.created_at
+            )
+    )
 SELECT
     year,
     order_count,
     total_revenue,
     total_items_sold,
     unique_products_sold
-FROM
-    last_five_years
-ORDER BY
-    year;
-
-
+FROM last_five_years
+ORDER BY year;
 
 -- CreateOrder: Creates a new order record
 -- Purpose: Register a new transaction in the system
@@ -650,9 +777,20 @@ ORDER BY
 --   - Requires merchant_id, user_id and total_price
 --   - Typically followed by order item creation
 -- name: CreateOrder :one
-INSERT INTO orders (merchant_id, user_id, total_price)
+INSERT INTO
+    orders (
+        merchant_id,
+        user_id,
+        total_price
+    )
 VALUES ($1, $2, $3)
-RETURNING *;
+RETURNING
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at;
 
 -- GetOrderByID: Retrieves an active order by ID
 -- Purpose: Fetch order details for display/processing
@@ -664,10 +802,31 @@ RETURNING *;
 --   - Used for order viewing, receipts, and processing
 --   - Typically joined with order_items in application
 -- name: GetOrderByID :one
-SELECT *
+SELECT
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at
 FROM orders
-WHERE order_id = $1
-  AND deleted_at IS NULL;
+WHERE
+    order_id = $1
+    AND deleted_at IS NULL;
+
+-- name: GetOrderByIDTrashed :one
+SELECT
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at,
+    deleted_at
+FROM orders
+WHERE
+    order_id = $1
+    AND deleted_at IS NOT NULL;
 
 -- UpdateOrder: Modifies order information
 -- Purpose: Update order details (primarily total price)
@@ -682,11 +841,19 @@ WHERE order_id = $1
 --   - Should trigger recalculation of total_price
 -- name: UpdateOrder :one
 UPDATE orders
-SET total_price = $2,
+SET
+    total_price = $2,
     updated_at = CURRENT_TIMESTAMP
-WHERE order_id = $1
-  AND deleted_at IS NULL
-  RETURNING *;
+WHERE
+    order_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at;
 
 -- TrashedOrder: Soft-deletes an order
 -- Purpose: Cancel/void an order without permanent deletion
@@ -705,7 +872,14 @@ SET
 WHERE
     order_id = $1
     AND deleted_at IS NULL
-    RETURNING *;
+RETURNING
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreOrder: Recovers a soft-deleted order
 -- Purpose: Reactivate a cancelled order
@@ -723,7 +897,14 @@ SET
 WHERE
     order_id = $1
     AND deleted_at IS NOT NULL
-  RETURNING *;
+RETURNING
+    order_id,
+    user_id,
+    merchant_id,
+    total_price,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeleteOrderPermanently: Hard-deletes an order
 -- Purpose: Completely remove order from database
@@ -758,6 +939,4 @@ WHERE
 --   - Typically used during database maintenance
 --   - Should be restricted to admin users
 -- name: DeleteAllPermanentOrders :exec
-DELETE FROM orders
-WHERE
-    deleted_at IS NOT NULL;
+DELETE FROM orders WHERE deleted_at IS NOT NULL;

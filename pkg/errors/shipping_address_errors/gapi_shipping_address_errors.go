@@ -1,11 +1,11 @@
 package shippingaddress_errors
 
 import (
-	"ecommerce/internal/domain/response"
+	"ecommerce/pkg/errors"
 
 	"google.golang.org/grpc/codes"
 )
 
 var (
-	ErrGrpcInvalidID = response.NewGrpcError("error", "invalid ID", int(codes.InvalidArgument))
+	ErrGrpcInvalidID = errors.NewGrpcError("invalid ID", int(codes.InvalidArgument))
 )

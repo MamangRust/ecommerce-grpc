@@ -1,14 +1,14 @@
 package merchantpolicy_errors
 
 import (
-	"ecommerce/internal/domain/response"
+	"ecommerce/pkg/errors"
 
 	"google.golang.org/grpc/codes"
 )
 
 var (
-	ErrGrpcInvalidMerchantPolicyID = response.NewGrpcError("error", "Invalid merchant policy ID", int(codes.InvalidArgument))
+	ErrGrpcInvalidMerchantPolicyID = errors.NewGrpcError("Invalid merchant policy ID", int(codes.InvalidArgument))
 
-	ErrGrpcValidateCreateMerchantPolicy = response.NewGrpcError("error", "Validation failed: invalid create merchant policy request", int(codes.InvalidArgument))
-	ErrGrpcValidateUpdateMerchantPolicy = response.NewGrpcError("error", "Validation failed: invalid update merchant policy request", int(codes.InvalidArgument))
+	ErrGrpcValidateCreateMerchantPolicy = errors.NewGrpcError("Validation failed: invalid create merchant policy request", int(codes.InvalidArgument))
+	ErrGrpcValidateUpdateMerchantPolicy = errors.NewGrpcError("Validation failed: invalid update merchant policy request", int(codes.InvalidArgument))
 )

@@ -1,15 +1,15 @@
 package cart_errors
 
 import (
-	"ecommerce/internal/domain/response"
+	"ecommerce/pkg/errors"
 
 	"google.golang.org/grpc/codes"
 )
 
 var (
-	ErrGrpcCartNotFound  = response.NewGrpcError("error", "Cart not found", int(codes.NotFound))
-	ErrGrpcCartInvalidId = response.NewGrpcError("error", "Invalid cart ID", int(codes.InvalidArgument))
+	ErrGrpcCartNotFound  = errors.NewGrpcError("Cart not found", int(codes.NotFound))
+	ErrGrpcCartInvalidId = errors.NewGrpcError("Invalid cart ID", int(codes.InvalidArgument))
 
-	ErrGrpcFailedCreateCart   = response.NewGrpcError("error", "Failed to create cart", int(codes.Internal))
-	ErrGrpcValidateCreateCart = response.NewGrpcError("error", "Validation failed: invalid create cart request", int(codes.InvalidArgument))
+	ErrGrpcFailedCreateCart   = errors.NewGrpcError("Failed to create cart", int(codes.Internal))
+	ErrGrpcValidateCreateCart = errors.NewGrpcError("Validation failed: invalid create cart request", int(codes.InvalidArgument))
 )

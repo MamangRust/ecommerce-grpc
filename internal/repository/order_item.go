@@ -2,28 +2,22 @@ package repository
 
 import (
 	"context"
-	"ecommerce/internal/domain/record"
 	"ecommerce/internal/domain/requests"
-	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
 	orderitem_errors "ecommerce/pkg/errors/order_item_errors"
 )
 
 type orderItemRepository struct {
-	db      *db.Queries
-	ctx     context.Context
-	mapping recordmapper.OrderItemRecordMapping
+	db *db.Queries
 }
 
-func NewOrderItemRepository(db *db.Queries, ctx context.Context, mapping recordmapper.OrderItemRecordMapping) *orderItemRepository {
+func NewOrderItemRepository(db *db.Queries) *orderItemRepository {
 	return &orderItemRepository{
-		db:      db,
-		ctx:     ctx,
-		mapping: mapping,
+		db: db,
 	}
 }
 
-func (r *orderItemRepository) FindAllOrderItems(req *requests.FindAllOrderItems) ([]*record.OrderItemRecord, *int, error) {
+func (r *orderItemRepository) FindAllOrderItems(ctx context.Context, req *requests.FindAllOrderItems) ([]*db.GetOrderItemsRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetOrderItemsParams{
@@ -32,24 +26,16 @@ func (r *orderItemRepository) FindAllOrderItems(req *requests.FindAllOrderItems)
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetOrderItems(r.ctx, reqDb)
+	res, err := r.db.GetOrderItems(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, orderitem_errors.ErrFindAllOrderItems
+		return nil, orderitem_errors.ErrFindAllOrderItems
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToOrderItemsRecordPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *orderItemRepository) FindByActive(req *requests.FindAllOrderItems) ([]*record.OrderItemRecord, *int, error) {
+func (r *orderItemRepository) FindByActive(ctx context.Context, req *requests.FindAllOrderItems) ([]*db.GetOrderItemsActiveRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetOrderItemsActiveParams{
@@ -58,24 +44,16 @@ func (r *orderItemRepository) FindByActive(req *requests.FindAllOrderItems) ([]*
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetOrderItemsActive(r.ctx, reqDb)
+	res, err := r.db.GetOrderItemsActive(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, orderitem_errors.ErrFindByActive
+		return nil, orderitem_errors.ErrFindByActive
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToOrderItemsRecordActivePagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *orderItemRepository) FindByTrashed(req *requests.FindAllOrderItems) ([]*record.OrderItemRecord, *int, error) {
+func (r *orderItemRepository) FindByTrashed(ctx context.Context, req *requests.FindAllOrderItems) ([]*db.GetOrderItemsTrashedRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetOrderItemsTrashedParams{
@@ -84,35 +62,37 @@ func (r *orderItemRepository) FindByTrashed(req *requests.FindAllOrderItems) ([]
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetOrderItemsTrashed(r.ctx, reqDb)
+	res, err := r.db.GetOrderItemsTrashed(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, orderitem_errors.ErrFindByTrashed
+		return nil, orderitem_errors.ErrFindByTrashed
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToOrderItemsRecordTrashedPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *orderItemRepository) FindOrderItemByOrder(order_id int) ([]*record.OrderItemRecord, error) {
-	res, err := r.db.GetOrderItemsByOrder(r.ctx, int32(order_id))
+func (r *orderItemRepository) FindOrderItemByOrder(ctx context.Context, order_id int) ([]*db.GetOrderItemsByOrderRow, error) {
+	res, err := r.db.GetOrderItemsByOrder(ctx, int32(order_id))
 
 	if err != nil {
 		return nil, orderitem_errors.ErrFindOrderItemByOrder
 	}
 
-	return r.mapping.ToOrderItemsRecord(res), nil
+	return res, nil
 }
 
-func (r *orderItemRepository) CalculateTotalPrice(order_id int) (*int32, error) {
-	res, err := r.db.CalculateTotalPrice(r.ctx, int32(order_id))
+func (r *orderItemRepository) FindOrderItemByOrderTrashed(ctx context.Context, order_id int) ([]*db.OrderItem, error) {
+	res, err := r.db.GetOrderItemsByOrderTrashed(ctx, int32(order_id))
+
+	if err != nil {
+		return nil, orderitem_errors.ErrFindOrderItemByOrder
+	}
+
+	return res, nil
+}
+
+func (r *orderItemRepository) CalculateTotalPrice(ctx context.Context, order_id int) (*int32, error) {
+	res, err := r.db.CalculateTotalPrice(ctx, int32(order_id))
 
 	if err != nil {
 		return nil, orderitem_errors.ErrCalculateTotalPrice
@@ -122,8 +102,8 @@ func (r *orderItemRepository) CalculateTotalPrice(order_id int) (*int32, error) 
 
 }
 
-func (r *orderItemRepository) CreateOrderItem(req *requests.CreateOrderItemRecordRequest) (*record.OrderItemRecord, error) {
-	res, err := r.db.CreateOrderItem(r.ctx, db.CreateOrderItemParams{
+func (r *orderItemRepository) CreateOrderItem(ctx context.Context, req *requests.CreateOrderItemRecordRequest) (*db.CreateOrderItemRow, error) {
+	res, err := r.db.CreateOrderItem(ctx, db.CreateOrderItemParams{
 		OrderID:   int32(req.OrderID),
 		ProductID: int32(req.ProductID),
 		Quantity:  int32(req.Quantity),
@@ -134,11 +114,11 @@ func (r *orderItemRepository) CreateOrderItem(req *requests.CreateOrderItemRecor
 		return nil, orderitem_errors.ErrCreateOrderItem
 	}
 
-	return r.mapping.ToOrderItemRecord(res), nil
+	return res, nil
 }
 
-func (r *orderItemRepository) UpdateOrderItem(req *requests.UpdateOrderItemRecordRequest) (*record.OrderItemRecord, error) {
-	res, err := r.db.UpdateOrderItem(r.ctx, db.UpdateOrderItemParams{
+func (r *orderItemRepository) UpdateOrderItem(ctx context.Context, req *requests.UpdateOrderItemRecordRequest) (*db.UpdateOrderItemRow, error) {
+	res, err := r.db.UpdateOrderItem(ctx, db.UpdateOrderItemParams{
 		OrderItemID: int32(req.OrderItemID),
 		Quantity:    int32(req.Quantity),
 		Price:       int32(req.Price),
@@ -148,31 +128,31 @@ func (r *orderItemRepository) UpdateOrderItem(req *requests.UpdateOrderItemRecor
 		return nil, orderitem_errors.ErrUpdateOrderItem
 	}
 
-	return r.mapping.ToOrderItemRecord(res), nil
+	return res, nil
 }
 
-func (r *orderItemRepository) TrashedOrderItem(order_id int) (*record.OrderItemRecord, error) {
-	res, err := r.db.TrashOrderItem(r.ctx, int32(order_id))
+func (r *orderItemRepository) TrashedOrderItem(ctx context.Context, order_id int) (*db.OrderItem, error) {
+	res, err := r.db.TrashOrderItem(ctx, int32(order_id))
 
 	if err != nil {
 		return nil, orderitem_errors.ErrTrashedOrderItem
 	}
 
-	return r.mapping.ToOrderItemRecord(res), nil
+	return res, nil
 }
 
-func (r *orderItemRepository) RestoreOrderItem(order_id int) (*record.OrderItemRecord, error) {
-	res, err := r.db.RestoreOrderItem(r.ctx, int32(order_id))
+func (r *orderItemRepository) RestoreOrderItem(ctx context.Context, order_id int) (*db.OrderItem, error) {
+	res, err := r.db.RestoreOrderItem(ctx, int32(order_id))
 
 	if err != nil {
 		return nil, orderitem_errors.ErrRestoreOrderItem
 	}
 
-	return r.mapping.ToOrderItemRecord(res), nil
+	return res, nil
 }
 
-func (r *orderItemRepository) DeleteOrderItemPermanent(order_id int) (bool, error) {
-	err := r.db.DeleteOrderItemPermanently(r.ctx, int32(order_id))
+func (r *orderItemRepository) DeleteOrderItemPermanent(ctx context.Context, order_id int) (bool, error) {
+	err := r.db.DeleteOrderItemPermanently(ctx, int32(order_id))
 
 	if err != nil {
 		return false, orderitem_errors.ErrDeleteOrderItemPermanent
@@ -181,8 +161,8 @@ func (r *orderItemRepository) DeleteOrderItemPermanent(order_id int) (bool, erro
 	return true, nil
 }
 
-func (r *orderItemRepository) RestoreAllOrderItem() (bool, error) {
-	err := r.db.RestoreAllUsers(r.ctx)
+func (r *orderItemRepository) RestoreAllOrderItem(ctx context.Context) (bool, error) {
+	err := r.db.RestoreAllUsers(ctx)
 
 	if err != nil {
 		return false, orderitem_errors.ErrRestoreAllOrderItem
@@ -190,8 +170,8 @@ func (r *orderItemRepository) RestoreAllOrderItem() (bool, error) {
 	return true, nil
 }
 
-func (r *orderItemRepository) DeleteAllOrderPermanent() (bool, error) {
-	err := r.db.DeleteAllPermanentOrders(r.ctx)
+func (r *orderItemRepository) DeleteAllOrderPermanent(ctx context.Context) (bool, error) {
+	err := r.db.DeleteAllPermanentOrders(ctx)
 
 	if err != nil {
 		return false, orderitem_errors.ErrDeleteAllOrderPermanent

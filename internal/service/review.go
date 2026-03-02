@@ -1,15 +1,19 @@
 package service
 
 import (
+	"context"
+	review_cache "ecommerce/internal/cache/review"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	response_service "ecommerce/internal/mapper/response/services"
+	"ecommerce/internal/errorhandler"
 	"ecommerce/internal/repository"
+	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/errors/product_errors"
 	review_errors "ecommerce/pkg/errors/review"
 	"ecommerce/pkg/errors/user_errors"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/observability"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -18,342 +22,638 @@ type reviewService struct {
 	productRepository repository.ProductRepository
 	userRepository    repository.UserRepository
 	logger            logger.LoggerInterface
-	mapping           response_service.ReviewResponseMapper
+	observability     observability.TraceLoggerObservability
+	cache             review_cache.ReviewMencache
 }
 
-func NewReviewService(
-	reviewRepository repository.ReviewRepository,
-	productRepository repository.ProductRepository,
-	userRepository repository.UserRepository,
-) *reviewService {
+type ReviewServiceDeps struct {
+	ReviewRepository  repository.ReviewRepository
+	ProductRepository repository.ProductRepository
+	UserRepository    repository.UserRepository
+	Logger            logger.LoggerInterface
+	Observability     observability.TraceLoggerObservability
+	Cache             review_cache.ReviewMencache
+}
+
+func NewReviewService(deps ReviewServiceDeps) ReviewService {
 	return &reviewService{
-		reviewRepository:  reviewRepository,
-		productRepository: productRepository,
-		userRepository:    userRepository,
+		reviewRepository:  deps.ReviewRepository,
+		productRepository: deps.ProductRepository,
+		userRepository:    deps.UserRepository,
+		logger:            deps.Logger,
+		observability:     deps.Observability,
+		cache:             deps.Cache,
 	}
 }
-func (s *reviewService) FindAllReviews(req *requests.FindAllReview) ([]*response.ReviewResponse, *int, *response.ErrorResponse) {
+
+func (s *reviewService) FindAllReview(ctx context.Context, req *requests.FindAllReview) ([]*db.GetReviewsRow, *int, error) {
+	const method = "FindAllReview"
 
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching Reviews",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	Reviews, totalRecords, err := s.reviewRepository.FindAllReview(req)
-	if err != nil {
-		s.logger.Error("Failed to retrieve review list",
-			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-		return nil, nil, review_errors.ErrFailedFindAllReviews
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetReviewAllCache(ctx, req); found {
+		logSuccess("Successfully retrieved all review records from cache",
+			zap.Int("totalRecords", *total),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched Reviews",
-		zap.Int("totalRecords", *totalRecords),
+	reviews, err := s.reviewRepository.FindAllReview(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetReviewsRow](
+			s.logger,
+			review_errors.ErrFailedFindAllReviews,
+			method,
+			span,
+
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(reviews) > 0 {
+		totalCount = int(reviews[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetReviewAllCache(ctx, req, reviews, &totalCount)
+
+	logSuccess("Successfully fetched all reviews",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return s.mapping.ToReviewsResponse(Reviews), totalRecords, nil
+	return reviews, &totalCount, nil
 }
 
-func (s *reviewService) FindByActive(req *requests.FindAllReview) ([]*response.ReviewResponseDeleteAt, *int, *response.ErrorResponse) {
+func (s *reviewService) FindByActive(ctx context.Context, req *requests.FindAllReview) ([]*db.GetReviewsActiveRow, *int, error) {
+	const method = "FindByActiveReviews"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching Reviews",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	Reviews, totalRecords, err := s.reviewRepository.FindByActive(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve review active list",
-			zap.Error(err),
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetReviewActiveCache(ctx, req); found {
+		logSuccess("Successfully retrieved active review records from cache",
+			zap.Int("totalRecords", *total),
 			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
-
-		return nil, nil, review_errors.ErrFailedFindActiveReviews
+			zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched Reviews",
-		zap.Int("totalRecords", *totalRecords),
+	reviews, err := s.reviewRepository.FindByActive(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetReviewsActiveRow](
+			s.logger,
+			review_errors.ErrFailedFindActiveReviews,
+			method,
+			span,
+
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(reviews) > 0 {
+		totalCount = int(reviews[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetReviewActiveCache(ctx, req, reviews, &totalCount)
+
+	logSuccess("Successfully fetched active reviews",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return s.mapping.ToReviewsResponseDeleteAt(Reviews), totalRecords, nil
+	return reviews, &totalCount, nil
 }
 
-func (s *reviewService) FindByTrashed(req *requests.FindAllReview) ([]*response.ReviewResponseDeleteAt, *int, *response.ErrorResponse) {
+func (s *reviewService) FindByTrashed(ctx context.Context, req *requests.FindAllReview) ([]*db.GetReviewsTrashedRow, *int, error) {
+	const method = "FindByTrashedReviews"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching Reviews",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	Reviews, totalRecords, err := s.reviewRepository.FindByTrashed(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve review trashed list",
-			zap.Error(err),
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetReviewTrashedCache(ctx, req); found {
+		logSuccess("Successfully retrieved trashed review records from cache",
+			zap.Int("totalRecords", *total),
 			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
-
-		return nil, nil, review_errors.ErrFailedFindTrashedReviews
+			zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched Reviews",
-		zap.Int("totalRecords", *totalRecords),
+	reviews, err := s.reviewRepository.FindByTrashed(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetReviewsTrashedRow](
+			s.logger,
+			review_errors.ErrFailedFindTrashedReviews,
+			method,
+			span,
+
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(reviews) > 0 {
+		totalCount = int(reviews[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetReviewTrashedCache(ctx, req, reviews, &totalCount)
+
+	logSuccess("Successfully fetched trashed reviews",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return s.mapping.ToReviewsResponseDeleteAt(Reviews), totalRecords, nil
+	return reviews, &totalCount, nil
 }
 
-func (s *reviewService) FindByProduct(req *requests.FindAllReviewByProduct) ([]*response.ReviewsDetailResponse, *int, *response.ErrorResponse) {
+func (s *reviewService) FindByProduct(ctx context.Context, req *requests.FindAllReviewByProduct) ([]*db.GetReviewByProductIdRow, *int, error) {
+	const method = "FindByProductReviews"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching Reviews",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	reviews, totalRecords, err := s.reviewRepository.FindByProduct(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search),
+		attribute.Int("productID", req.ProductID))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve review product list",
-			zap.Error(err),
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetReviewByProductCache(ctx, req); found {
+		logSuccess("Successfully retrieved product review records from cache",
+			zap.Int("totalRecords", *total),
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
-
-		return nil, nil, review_errors.ErrFailedFindByProductReviews
+			zap.Int("productID", req.ProductID))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched Reviews",
-		zap.Int("totalRecords", *totalRecords),
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize))
+	reviews, err := s.reviewRepository.FindByProduct(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetReviewByProductIdRow](
+			s.logger,
+			review_errors.ErrFailedFindByProductReviews,
+			method,
+			span,
 
-	return s.mapping.ToReviewsDetailResponse(reviews), totalRecords, nil
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+			zap.Int("productID", req.ProductID),
+		)
+	}
+
+	var totalCount int
+
+	if len(reviews) > 0 {
+		totalCount = int(reviews[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetReviewByProductCache(ctx, req, reviews, &totalCount)
+
+	logSuccess("Successfully fetched product reviews",
+		zap.Int("totalRecords", totalCount),
+		zap.Int("page", page),
+		zap.Int("pageSize", pageSize),
+		zap.Int("productID", req.ProductID))
+
+	return reviews, &totalCount, nil
 }
 
-func (s *reviewService) FindByMerchant(req *requests.FindAllReviewByMerchant) ([]*response.ReviewsDetailResponse, *int, *response.ErrorResponse) {
+func (s *reviewService) FindByMerchant(ctx context.Context, req *requests.FindAllReviewByMerchant) ([]*db.GetReviewByMerchantIdRow, *int, error) {
+	const method = "FindByMerchantReviews"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching Reviews",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	reviews, totalRecords, err := s.reviewRepository.FindByMerchant(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search),
+		attribute.Int("merchantID", req.MerchantID))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve review product list",
-			zap.Error(err),
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetReviewByMerchantCache(ctx, req); found {
+		logSuccess("Successfully retrieved merchant review records from cache",
+			zap.Int("totalRecords", *total),
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
-
-		return nil, nil, review_errors.ErrFailedFindByMerchantReviews
+			zap.Int("merchantID", req.MerchantID))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched Reviews",
-		zap.Int("totalRecords", *totalRecords),
+	reviews, err := s.reviewRepository.FindByMerchant(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetReviewByMerchantIdRow](
+			s.logger,
+			review_errors.ErrFailedFindByMerchantReviews,
+			method,
+			span,
+
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+			zap.Int("merchantID", req.MerchantID),
+		)
+	}
+
+	var totalCount int
+
+	if len(reviews) > 0 {
+		totalCount = int(reviews[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetReviewByMerchantCache(ctx, req, reviews, &totalCount)
+
+	logSuccess("Successfully fetched merchant reviews",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
-		zap.Int("pageSize", pageSize))
+		zap.Int("pageSize", pageSize),
+		zap.Int("merchantID", req.MerchantID))
 
-	return s.mapping.ToReviewsDetailResponse(reviews), totalRecords, nil
+	return reviews, &totalCount, nil
 }
 
-func (s *reviewService) CreateReview(req *requests.CreateReviewRequest) (*response.ReviewResponse, *response.ErrorResponse) {
-	s.logger.Debug("Creating new cashier")
+func (s *reviewService) FindById(ctx context.Context, id int) (*db.GetReviewByIDRow, error) {
+	const method = "FindReviewById"
 
-	_, err := s.userRepository.FindById(req.UserID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("id", id))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve user details",
-			zap.Error(err),
-			zap.Int("user_id", req.UserID))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, user_errors.ErrUserNotFoundRes
+	if data, found := s.cache.GetReviewByIdCache(ctx, id); found {
+		logSuccess("Successfully retrieved review by ID from cache",
+			zap.Int("id", id))
+		return data, nil
 	}
 
-	_, err = s.productRepository.FindById(req.ProductID)
-
+	review, err := s.reviewRepository.FindById(ctx, id)
 	if err != nil {
-		s.logger.Error("Failed to retrieve product details",
-			zap.Error(err),
-			zap.Int("product_id", req.UserID))
+		status = "error"
+		return errorhandler.HandleError[*db.GetReviewByIDRow](
+			s.logger,
+			review_errors.ErrFailedReviewNotFound,
+			method,
+			span,
 
-		return nil, product_errors.ErrFailedFindProductById
+			zap.Int("id", id),
+		)
 	}
 
-	review, err := s.reviewRepository.CreateReview(req)
+	s.cache.SetReviewByIdCache(ctx, review)
 
-	if err != nil {
-		s.logger.Error("Failed to create new review",
-			zap.Error(err),
-			zap.Any("request", req))
+	logSuccess("Successfully fetched review by ID",
+		zap.Int("id", id))
 
-		return nil, review_errors.ErrFailedCreateReview
-	}
-
-	return s.mapping.ToReviewResponse(review), nil
+	return review, nil
 }
 
-func (s *reviewService) UpdateReview(req *requests.UpdateReviewRequest) (*response.ReviewResponse, *response.ErrorResponse) {
-	s.logger.Debug("Updating review", zap.Int("review_id", *req.ReviewID))
+func (s *reviewService) CreateReview(ctx context.Context, req *requests.CreateReviewRequest) (*db.CreateReviewRow, error) {
+	const method = "CreateReview"
 
-	_, err := s.reviewRepository.FindById(*req.ReviewID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("user_id", req.UserID),
+		attribute.Int("product_id", req.ProductID))
 
+	defer func() {
+		end(status)
+	}()
+
+	_, err := s.userRepository.FindById(ctx, req.UserID)
 	if err != nil {
-		s.logger.Error("Failed to retrieve review details",
-			zap.Error(err),
-			zap.Int("review_id", *req.ReviewID))
+		status = "error"
+		return errorhandler.HandleError[*db.CreateReviewRow](
+			s.logger,
+			user_errors.ErrUserNotFoundRes,
+			method,
+			span,
 
-		return nil, review_errors.ErrFailedReviewNotFound
+			zap.Int("user_id", req.UserID),
+		)
 	}
 
-	review, err := s.reviewRepository.UpdateReview(req)
-
+	_, err = s.productRepository.FindById(ctx, req.ProductID)
 	if err != nil {
-		s.logger.Error("Failed to update category",
-			zap.Error(err),
-			zap.Any("request", req))
+		status = "error"
+		return errorhandler.HandleError[*db.CreateReviewRow](
+			s.logger,
+			product_errors.ErrFailedFindProductById,
+			method,
+			span,
 
-		return nil, review_errors.ErrFailedUpdateReview
+			zap.Int("product_id", req.ProductID),
+		)
 	}
 
-	return s.mapping.ToReviewResponse(review), nil
+	review, err := s.reviewRepository.CreateReview(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[*db.CreateReviewRow](
+			s.logger,
+			review_errors.ErrFailedCreateReview,
+			method,
+			span,
+
+			zap.Any("request", req),
+		)
+	}
+
+	s.cache.DeleteReviewCache(ctx, int(review.ReviewID))
+
+	logSuccess("Successfully created review",
+		zap.Int("review_id", int(review.ReviewID)),
+		zap.Int("user_id", req.UserID),
+		zap.Int("product_id", req.ProductID))
+
+	return review, nil
 }
 
-func (s *reviewService) TrashedReview(reviewID int) (*response.ReviewResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Trashing review", zap.Int("reviewID", reviewID))
+func (s *reviewService) UpdateReview(ctx context.Context, req *requests.UpdateReviewRequest) (*db.UpdateReviewRow, error) {
+	const method = "UpdateReview"
 
-	review, err := s.reviewRepository.TrashReview(reviewID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("review_id", *req.ReviewID))
 
+	defer func() {
+		end(status)
+	}()
+
+	_, err := s.reviewRepository.FindById(ctx, *req.ReviewID)
 	if err != nil {
-		s.logger.Error("Failed to move category to trash",
-			zap.Error(err),
-			zap.Int("reviewID", reviewID))
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateReviewRow](
+			s.logger,
+			review_errors.ErrFailedReviewNotFound,
+			method,
+			span,
 
-		return nil, review_errors.ErrFailedTrashedReview
+			zap.Int("review_id", *req.ReviewID),
+		)
 	}
 
-	return s.mapping.ToReviewResponseDeleteAt(review), nil
+	review, err := s.reviewRepository.UpdateReview(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateReviewRow](
+			s.logger,
+			review_errors.ErrFailedUpdateReview,
+			method,
+			span,
+
+			zap.Any("request", req),
+		)
+	}
+
+	s.cache.DeleteReviewCache(ctx, int(review.ReviewID))
+
+	logSuccess("Successfully updated review",
+		zap.Int("review_id", int(review.ReviewID)))
+
+	return review, nil
 }
 
-func (s *reviewService) RestoreReview(reviewID int) (*response.ReviewResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Restoring review", zap.Int("reviewID", reviewID))
+func (s *reviewService) TrashReview(ctx context.Context, reviewID int) (*db.Review, error) {
+	const method = "TrashReview"
 
-	review, err := s.reviewRepository.RestoreReview(reviewID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("reviewID", reviewID))
 
+	defer func() {
+		end(status)
+	}()
+
+	review, err := s.reviewRepository.TrashReview(ctx, reviewID)
 	if err != nil {
-		s.logger.Error("Failed to restore review from trash",
-			zap.Error(err),
-			zap.Int("reviewID", reviewID))
+		status = "error"
+		return errorhandler.HandleError[*db.Review](
+			s.logger,
+			review_errors.ErrFailedTrashedReview,
+			method,
+			span,
 
-		return nil, review_errors.ErrFailedRestoreReview
+			zap.Int("reviewID", reviewID),
+		)
 	}
 
-	return s.mapping.ToReviewResponseDeleteAt(review), nil
+	s.cache.DeleteReviewCache(ctx, int(review.ReviewID))
+
+	logSuccess("Successfully trashed review",
+		zap.Int("review_id", int(review.ReviewID)))
+
+	return review, nil
 }
 
-func (s *reviewService) DeleteReviewPermanent(reviewID int) (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting review", zap.Int("reviewID", reviewID))
+func (s *reviewService) RestoreReview(ctx context.Context, reviewID int) (*db.Review, error) {
+	const method = "RestoreReview"
 
-	success, err := s.reviewRepository.DeleteReviewPermanently(reviewID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("reviewID", reviewID))
 
+	defer func() {
+		end(status)
+	}()
+
+	review, err := s.reviewRepository.RestoreReview(ctx, reviewID)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete review",
-			zap.Error(err),
-			zap.Int("reviewID", reviewID))
+		status = "error"
+		return errorhandler.HandleError[*db.Review](
+			s.logger,
+			review_errors.ErrFailedRestoreReview,
+			method,
+			span,
 
-		return false, review_errors.ErrFailedDeletePermanentReview
+			zap.Int("reviewID", reviewID),
+		)
 	}
+
+	s.cache.DeleteReviewCache(ctx, int(review.ReviewID))
+
+	logSuccess("Successfully restored review",
+		zap.Int("review_id", int(review.ReviewID)))
+
+	return review, nil
+}
+
+func (s *reviewService) DeleteReviewPermanently(ctx context.Context, reviewID int) (bool, error) {
+	const method = "DeleteReviewPermanently"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("reviewID", reviewID))
+
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.reviewRepository.DeleteReviewPermanently(ctx, reviewID)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			review_errors.ErrFailedDeletePermanentReview,
+			method,
+			span,
+
+			zap.Int("reviewID", reviewID),
+		)
+	}
+
+	s.cache.DeleteReviewCache(ctx, reviewID)
+
+	logSuccess("Successfully permanently deleted review",
+		zap.Int("review_id", reviewID))
+
 	return success, nil
 }
 
-func (s *reviewService) RestoreAllReviews() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Restoring all trashed reviews")
+func (s *reviewService) RestoreAllReview(ctx context.Context) (bool, error) {
+	const method = "RestoreAllReview"
 
-	success, err := s.reviewRepository.RestoreAllReview()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
+
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.reviewRepository.RestoreAllReview(ctx)
 	if err != nil {
-		s.logger.Error("Failed to restore all trashed reviews",
-			zap.Error(err))
-
-		return false, review_errors.ErrFailedRestoreAllReviews
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			review_errors.ErrFailedRestoreAllReviews,
+			method,
+			span,
+		)
 	}
+
+	logSuccess("Successfully restored all trashed reviews")
 
 	return success, nil
 }
 
-func (s *reviewService) DeleteAllReviewsPermanent() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting all reviews")
+func (s *reviewService) DeleteAllPermanentReview(ctx context.Context) (bool, error) {
+	const method = "DeleteAllPermanentReview"
 
-	success, err := s.reviewRepository.DeleteAllPermanentReview()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
+
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.reviewRepository.DeleteAllPermanentReview(ctx)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete all reviews", zap.Error(err))
-
-		return false, review_errors.ErrFailedDeleteAllPermanentReviews
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			review_errors.ErrFailedDeleteAllPermanentReviews,
+			method,
+			span,
+		)
 	}
+
+	logSuccess("Successfully permanently deleted all reviews")
 
 	return success, nil
 }

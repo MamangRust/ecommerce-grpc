@@ -1,15 +1,19 @@
 package service
 
 import (
+	"context"
+	cart_cache "ecommerce/internal/cache/cart"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	response_service "ecommerce/internal/mapper/response/services"
+	"ecommerce/internal/errorhandler"
 	"ecommerce/internal/repository"
+	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/errors/cart_errors"
 	"ecommerce/pkg/errors/product_errors"
 	"ecommerce/pkg/errors/user_errors"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/observability"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -18,138 +22,200 @@ type cartService struct {
 	userRepository    repository.UserRepository
 	cartRepository    repository.CartRepository
 	logger            logger.LoggerInterface
-	mapping           response_service.CartResponseMapper
+	cache             cart_cache.CartMencache
+	observability     observability.TraceLoggerObservability
 }
 
-func NewCartService(
-	productRepository repository.ProductRepository,
-	userRepository repository.UserRepository,
-	cartRepository repository.CartRepository,
-	logger logger.LoggerInterface,
-	mapping response_service.CartResponseMapper,
-) *cartService {
+type CartServiceDeps struct {
+	ProductRepository repository.ProductRepository
+	UserRepository    repository.UserRepository
+	CartRepository    repository.CartRepository
+	Logger            logger.LoggerInterface
+	Cache             cart_cache.CartMencache
+	Observability     observability.TraceLoggerObservability
+}
+
+func NewCartService(deps CartServiceDeps) *cartService {
 	return &cartService{
-		productRepository: productRepository,
-		cartRepository:    cartRepository,
-		userRepository:    userRepository,
-		logger:            logger,
-		mapping:           mapping,
+		productRepository: deps.ProductRepository,
+		userRepository:    deps.UserRepository,
+		cartRepository:    deps.CartRepository,
+		logger:            deps.Logger,
+		cache:             deps.Cache,
+		observability:     deps.Observability,
 	}
 }
 
-func (s *cartService) FindAll(req *requests.FindAllCarts) ([]*response.CartResponse, *int, *response.ErrorResponse) {
+func (s *cartService) FindAll(ctx context.Context, req *requests.FindAllCarts) ([]*db.GetCartsRow, *int, error) {
+	const method = "FindAllCarts"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching cart",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	cart, totalRecords, err := s.cartRepository.FindCarts(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to fetch cart",
-			zap.Error(err),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize),
-			zap.String("search", search))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, nil, cart_errors.ErrFailedFindAllCarts
+	if data, total, found := s.cache.GetCachedCartsCache(ctx, req); found {
+		logSuccess("Successfully retrieved all cart records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	cartRes := s.mapping.ToCartsResponse(cart)
+	carts, err := s.cartRepository.FindCarts(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetCartsRow](
+			s.logger,
+			cart_errors.ErrFailedFindAllCarts,
+			method,
+			span,
 
-	s.logger.Debug("Successfully fetched cart",
-		zap.Int("totalRecords", *totalRecords),
+			zap.Int("page", req.Page),
+			zap.Int("page_size", req.PageSize),
+			zap.String("search", req.Search),
+		)
+	}
+
+	var totalCount int
+
+	if len(carts) > 0 {
+		totalCount = int(carts[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCartsCache(ctx, req, carts, &totalCount)
+
+	logSuccess("Successfully fetched all carts",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return cartRes, totalRecords, nil
+	return carts, &totalCount, nil
 }
 
-func (s *cartService) CreateCart(req *requests.CreateCartRequest) (*response.CartResponse, *response.ErrorResponse) {
-	product, err := s.productRepository.FindById(req.ProductID)
+func (s *cartService) CreateCart(ctx context.Context, req *requests.CreateCartRequest) (*db.Cart, error) {
+	const method = "CreateCart"
 
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
+
+	defer func() {
+		end(status)
+	}()
+
+	product, err := s.productRepository.FindById(ctx, req.ProductID)
 	if err != nil {
-		s.logger.Error("Failed to retrieve product details",
-			zap.Error(err),
-			zap.Int("product_id", req.UserID))
+		status = "error"
+		return errorhandler.HandleError[*db.Cart](
+			s.logger,
+			product_errors.ErrFailedFindProductById,
+			method,
+			span,
 
-		return nil, product_errors.ErrFailedFindProductById
+			zap.Int("product_id", req.ProductID),
+		)
 	}
 
-	_, err = s.userRepository.FindById(req.UserID)
-
+	_, err = s.userRepository.FindById(ctx, req.UserID)
 	if err != nil {
-		s.logger.Error("Failed to retrieve user details",
-			zap.Error(err),
-			zap.Int("user_id", req.UserID))
+		status = "error"
+		return errorhandler.HandleError[*db.Cart](
+			s.logger,
+			user_errors.ErrUserNotFoundRes,
+			method,
+			span,
 
-		return nil, user_errors.ErrUserNotFoundRes
+			zap.Int("user_id", req.UserID),
+		)
 	}
 
 	cartRecord := &requests.CartCreateRecord{
 		ProductID:    req.ProductID,
 		UserID:       req.UserID,
 		Name:         product.Name,
-		Price:        product.Price,
-		ImageProduct: product.ImageProduct,
+		Price:        int(product.Price),
+		ImageProduct: *product.ImageProduct,
 		Quantity:     req.Quantity,
-		Weight:       product.Weight,
+		Weight:       int(*product.Weight),
 	}
 
-	res, err := s.cartRepository.CreateCart(cartRecord)
-
+	res, err := s.cartRepository.CreateCart(ctx, cartRecord)
 	if err != nil {
-		s.logger.Error("Failed to create new cart",
-			zap.Error(err),
-			zap.Any("request", req))
+		status = "error"
+		return errorhandler.HandleError[*db.Cart](
+			s.logger,
+			cart_errors.ErrFailedCreateCart,
+			method,
+			span,
 
-		return nil, cart_errors.ErrFailedCreateCart
+			zap.Any("request", req),
+		)
 	}
 
-	so := s.mapping.ToCartResponse(res)
-
-	return so, nil
+	logSuccess("Successfully created cart", zap.Int("cartID", int(res.CartID)))
+	return res, nil
 }
 
-func (s *cartService) DeletePermanent(cart_id int) (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting cart", zap.Int("cart_id", cart_id))
+func (s *cartService) DeletePermanent(ctx context.Context, cartID int) (bool, error) {
+	const method = "DeletePermanentCart"
 
-	success, err := s.cartRepository.DeletePermanent(cart_id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("cartID", cartID))
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.cartRepository.DeletePermanent(ctx, cartID)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete cart",
-			zap.Error(err),
-			zap.Int("cart_id", cart_id))
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			cart_errors.ErrFailedDeleteCart,
+			method,
+			span,
 
-		return false, cart_errors.ErrFailedDeleteCart
+			zap.Int("cart_id", cartID),
+		)
 	}
 
+	logSuccess("Successfully deleted cart permanently", zap.Int("cartID", cartID))
 	return success, nil
 }
 
-func (s *cartService) DeleteAllPermanently(req *requests.DeleteCartRequest) (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting cart all", zap.Any("cart_id", req.CartIds))
+func (s *cartService) DeleteAllPermanently(ctx context.Context, req *requests.DeleteCartRequest) (bool, error) {
+	const method = "DeleteAllPermanentlyCarts"
 
-	success, err := s.cartRepository.DeleteAllPermanently(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.cartRepository.DeleteAllPermanently(ctx, req)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete all trashed cart",
-			zap.Error(err))
-
-		return false, cart_errors.ErrFailedDeleteAllCarts
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			cart_errors.ErrFailedDeleteAllCarts,
+			method,
+			span,
+		)
 	}
 
+	logSuccess("Successfully deleted all carts permanently")
 	return success, nil
 }

@@ -1,10 +1,12 @@
 package service
 
 import (
+	"context"
+	order_cache "ecommerce/internal/cache/order"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	response_service "ecommerce/internal/mapper/response/services"
+	"ecommerce/internal/errorhandler"
 	"ecommerce/internal/repository"
+	db "ecommerce/pkg/database/schema"
 	merchant_errors "ecommerce/pkg/errors/merchant"
 	"ecommerce/pkg/errors/order_errors"
 	orderitem_errors "ecommerce/pkg/errors/order_item_errors"
@@ -12,7 +14,9 @@ import (
 	shippingaddress_errors "ecommerce/pkg/errors/shipping_address_errors"
 	"ecommerce/pkg/errors/user_errors"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/observability"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
@@ -24,402 +28,738 @@ type orderService struct {
 	merchantRepository  repository.MerchantRepository
 	shippingRepository  repository.ShippingAddressRepository
 	logger              logger.LoggerInterface
-	mapping             response_service.OrderResponseMapper
+	observability       observability.TraceLoggerObservability
+	cache               order_cache.OrderMencache
 }
 
-func NewOrderService(
-	orderRepository repository.OrderRepository,
-	orderItemRepository repository.OrderItemRepository,
-	userRepository repository.UserRepository,
-	merchantRepository repository.MerchantRepository,
-	productRepository repository.ProductRepository,
-	shippingRepository repository.ShippingAddressRepository,
-	logger logger.LoggerInterface,
-	mapping response_service.OrderResponseMapper,
-) *orderService {
+type OrderServiceDeps struct {
+	OrderRepository     repository.OrderRepository
+	OrderItemRepository repository.OrderItemRepository
+	ProductRepository   repository.ProductRepository
+	UserRepository      repository.UserRepository
+	MerchantRepository  repository.MerchantRepository
+	ShippingRepository  repository.ShippingAddressRepository
+	Logger              logger.LoggerInterface
+	Observability       observability.TraceLoggerObservability
+	Cache               order_cache.OrderMencache
+}
+
+func NewOrderService(deps OrderServiceDeps) *orderService {
 	return &orderService{
-		orderRepository:     orderRepository,
-		orderItemRepository: orderItemRepository,
-		productRepository:   productRepository,
-		userRepository:      userRepository,
-		merchantRepository:  merchantRepository,
-		shippingRepository:  shippingRepository,
-		logger:              logger,
-		mapping:             mapping,
+		orderRepository:     deps.OrderRepository,
+		orderItemRepository: deps.OrderItemRepository,
+		productRepository:   deps.ProductRepository,
+		userRepository:      deps.UserRepository,
+		merchantRepository:  deps.MerchantRepository,
+		shippingRepository:  deps.ShippingRepository,
+		logger:              deps.Logger,
+		observability:       deps.Observability,
+		cache:               deps.Cache,
 	}
 }
 
-func (s *orderService) FindAll(req *requests.FindAllOrder) ([]*response.OrderResponse, *int, *response.ErrorResponse) {
+func (s *orderService) FindAllOrders(ctx context.Context, req *requests.FindAllOrder) ([]*db.GetOrdersRow, *int, error) {
+	const method = "FindAllOrders"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching all orders",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	orders, totalRecords, err := s.orderRepository.FindAllOrders(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve order list",
-			zap.Error(err),
-			zap.String("search", search),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize))
-		return nil, nil, order_errors.ErrFailedFindAllOrders
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetOrderAllCache(ctx, req); found {
+		logSuccess("Successfully retrieved all order records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	orderResponse := s.mapping.ToOrdersResponse(orders)
+	orders, err := s.orderRepository.FindAllOrders(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetOrdersRow](
+			s.logger,
+			order_errors.ErrFailedFindAllOrders,
+			method,
+			span,
 
-	s.logger.Debug("Successfully fetched order",
-		zap.Int("totalRecords", *totalRecords),
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(orders) > 0 {
+		totalCount = int(orders[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetOrderAllCache(ctx, req, orders, &totalCount)
+
+	logSuccess("Successfully fetched all orders",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return orderResponse, totalRecords, nil
+	return orders, &totalCount, nil
 }
 
-func (s *orderService) FindById(order_id int) (*response.OrderResponse, *response.ErrorResponse) {
-	s.logger.Debug("Fetching order by ID", zap.Int("order_id", order_id))
+func (s *orderService) FindByActive(ctx context.Context, req *requests.FindAllOrder) ([]*db.GetOrdersActiveRow, *int, error) {
+	const method = "FindActiveOrders"
 
-	order, err := s.orderRepository.FindById(order_id)
-
-	if err != nil {
-		s.logger.Error("Failed to retrieve order details",
-			zap.Error(err),
-			zap.Int("order_id", order_id))
-
-		return nil, order_errors.ErrFailedFindOrderById
-	}
-
-	return s.mapping.ToOrderResponse(order), nil
-}
-
-func (s *orderService) FindByActive(req *requests.FindAllOrder) ([]*response.OrderResponseDeleteAt, *int, *response.ErrorResponse) {
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching all order active",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	orders, totalRecords, err := s.orderRepository.FindByActive(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve active orders",
-			zap.Error(err),
-			zap.String("search", search),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, nil, order_errors.ErrFailedFindOrdersByActive
+	if data, total, found := s.cache.GetOrderActiveCache(ctx, req); found {
+		logSuccess("Successfully retrieved active order records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	orderResponse := s.mapping.ToOrdersResponseDeleteAt(orders)
+	orders, err := s.orderRepository.FindByActive(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetOrdersActiveRow](
+			s.logger,
+			order_errors.ErrFailedFindOrdersByActive,
+			method,
+			span,
 
-	s.logger.Debug("Successfully fetched order",
-		zap.Int("totalRecords", *totalRecords),
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(orders) > 0 {
+		totalCount = int(orders[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetOrderActiveCache(ctx, req, orders, &totalCount)
+
+	logSuccess("Successfully fetched active orders",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return orderResponse, totalRecords, nil
+	return orders, &totalCount, nil
 }
 
-func (s *orderService) FindByTrashed(req *requests.FindAllOrder) ([]*response.OrderResponseDeleteAt, *int, *response.ErrorResponse) {
+func (s *orderService) FindByTrashed(ctx context.Context, req *requests.FindAllOrder) ([]*db.GetOrdersTrashedRow, *int, error) {
+	const method = "FindTrashedOrders"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching all order trashed",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	orders, totalRecords, err := s.orderRepository.FindByTrashed(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve trashed orders from database",
-			zap.Error(err),
-			zap.String("search", search),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize))
-		return nil, nil, order_errors.ErrFailedFindOrdersByTrashed
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetOrderTrashedCache(ctx, req); found {
+		logSuccess("Successfully retrieved trashed order records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	orderResponse := s.mapping.ToOrdersResponseDeleteAt(orders)
+	orders, err := s.orderRepository.FindByTrashed(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetOrdersTrashedRow](
+			s.logger,
+			order_errors.ErrFailedFindOrdersByTrashed,
+			method,
+			span,
 
-	s.logger.Debug("Successfully fetched order",
-		zap.Int("totalRecords", *totalRecords),
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(orders) > 0 {
+		totalCount = int(orders[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetOrderTrashedCache(ctx, req, orders, &totalCount)
+
+	logSuccess("Successfully fetched trashed orders",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return orderResponse, totalRecords, nil
+	return orders, &totalCount, nil
 }
 
-func (s *orderService) FindMonthlyTotalRevenue(req *requests.MonthTotalRevenue) ([]*response.OrderMonthlyTotalRevenueResponse, *response.ErrorResponse) {
-	year := req.Year
-	month := req.Month
+func (s *orderService) FindById(ctx context.Context, orderID int) (*db.GetOrderByIDRow, error) {
+	const method = "FindByIdOrder"
 
-	res, err := s.orderRepository.GetMonthlyTotalRevenue(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("orderID", orderID))
 
-	if err != nil {
-		s.logger.Error("failed to get monthly total revenue",
-			zap.Int("year", year),
-			zap.Int("month", month),
-			zap.Error(err))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, order_errors.ErrFailedFindMonthlyTotalRevenue
+	if data, found := s.cache.GetCachedOrderCache(ctx, orderID); found {
+		logSuccess("Successfully retrieved order by ID from cache", zap.Int("orderID", orderID))
+		return data, nil
 	}
 
-	return s.mapping.ToOrderMonthlyTotalRevenues(res), nil
-}
-
-func (s *orderService) FindYearlyTotalRevenue(year int) ([]*response.OrderYearlyTotalRevenueResponse, *response.ErrorResponse) {
-	res, err := s.orderRepository.GetYearlyTotalRevenue(year)
-
+	order, err := s.orderRepository.FindById(ctx, orderID)
 	if err != nil {
-		s.logger.Error("failed to get yearly total revenue",
-			zap.Int("year", year),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedFindYearlyTotalRevenue
+		status = "error"
+		return errorhandler.HandleError[*db.GetOrderByIDRow](
+			s.logger,
+			order_errors.ErrFailedFindOrderById,
+			method,
+			span,
+
+			zap.Int("order_id", orderID),
+		)
 	}
 
-	return s.mapping.ToOrderYearlyTotalRevenues(res), nil
+	s.cache.SetCachedOrderCache(ctx, order)
+
+	logSuccess("Successfully fetched order by ID", zap.Int("orderID", orderID))
+	return order, nil
 }
 
-func (s *orderService) FindMonthlyTotalRevenueById(req *requests.MonthTotalRevenueOrder) ([]*response.OrderMonthlyTotalRevenueResponse, *response.ErrorResponse) {
-	year := req.Year
-	month := req.Month
+func (s *orderService) FindMonthlyTotalRevenue(ctx context.Context, req *requests.MonthTotalRevenue) ([]*db.GetMonthlyTotalRevenueRow, error) {
+	const method = "FindMonthlyTotalRevenue"
 
-	res, err := s.orderRepository.GetMonthlyTotalRevenueById(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", req.Year),
+		attribute.Int("month", req.Month))
 
-	if err != nil {
-		s.logger.Error("failed to get monthly total revenue",
-			zap.Int("year", year),
-			zap.Int("month", month),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedFindMonthlyTotalRevenueById
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetMonthlyTotalRevenueCache(ctx, req); found {
+		logSuccess("Successfully retrieved monthly total revenue from cache",
+			zap.Int("year", req.Year),
+			zap.Int("month", req.Month))
+		return data, nil
 	}
 
-	return s.mapping.ToOrderMonthlyTotalRevenues(res), nil
-}
-
-func (s *orderService) FindYearlyTotalRevenueById(req *requests.YearTotalRevenueOrder) ([]*response.OrderYearlyTotalRevenueResponse, *response.ErrorResponse) {
-	year := req.Year
-	orderId := req.OrderID
-
-	res, err := s.orderRepository.GetYearlyTotalRevenueById(req)
-
+	res, err := s.orderRepository.GetMonthlyTotalRevenue(ctx, req)
 	if err != nil {
-		s.logger.Error("failed to get yearly total revenue",
-			zap.Int("year", year),
-			zap.Int("order_id", orderId),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedFindYearlyTotalRevenueById
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetMonthlyTotalRevenueRow](
+			s.logger,
+			order_errors.ErrFailedFindMonthlyTotalRevenue,
+			method,
+			span,
+			zap.Int("year", req.Year),
+			zap.Int("month", req.Month),
+		)
 	}
 
-	return s.mapping.ToOrderYearlyTotalRevenues(res), nil
+	s.cache.SetMonthlyTotalRevenueCache(ctx, req, res)
+
+	logSuccess("Successfully fetched monthly total revenue from repository",
+		zap.Int("year", req.Year),
+		zap.Int("month", req.Month))
+
+	return res, nil
 }
 
-func (s *orderService) FindMonthlyTotalRevenueByMerchant(req *requests.MonthTotalRevenueMerchant) ([]*response.OrderMonthlyTotalRevenueResponse, *response.ErrorResponse) {
-	year := req.Year
-	month := req.Month
+func (s *orderService) FindYearlyTotalRevenue(ctx context.Context, year int) ([]*db.GetYearlyTotalRevenueRow, error) {
+	const method = "FindYearlyTotalRevenue"
 
-	res, err := s.orderRepository.GetMonthlyTotalRevenueByMerchant(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", year))
 
-	if err != nil {
-		s.logger.Error("failed to get monthly total revenue",
-			zap.Int("year", year),
-			zap.Int("month", month),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedFindMonthlyTotalRevenueByMerchant
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetYearlyTotalRevenueCache(ctx, year); found {
+		logSuccess("Successfully retrieved yearly total revenue from cache",
+			zap.Int("year", year))
+		return data, nil
 	}
 
-	return s.mapping.ToOrderMonthlyTotalRevenues(res), nil
-}
-
-func (s *orderService) FindYearlyTotalRevenueByMerchant(req *requests.YearTotalRevenueMerchant) ([]*response.OrderYearlyTotalRevenueResponse, *response.ErrorResponse) {
-	year := req.Year
-	merchantId := req.MerchantID
-
-	res, err := s.orderRepository.GetYearlyTotalRevenueByMerchant(req)
-
+	res, err := s.orderRepository.GetYearlyTotalRevenue(ctx, year)
 	if err != nil {
-		s.logger.Error("failed to get yearly total revenue",
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetYearlyTotalRevenueRow](
+			s.logger,
+			order_errors.ErrFailedFindYearlyTotalRevenue,
+			method,
+			span,
 			zap.Int("year", year),
-			zap.Int("merchant_id", merchantId),
-			zap.Error(err))
-
-		return nil, order_errors.ErrFailedFindYearlyTotalRevenueByMerchant
+		)
 	}
 
-	return s.mapping.ToOrderYearlyTotalRevenues(res), nil
+	s.cache.SetYearlyTotalRevenueCache(ctx, year, res)
+
+	logSuccess("Successfully fetched yearly total revenue from repository",
+		zap.Int("year", year))
+
+	return res, nil
 }
 
-func (s *orderService) FindMonthlyOrder(year int) ([]*response.OrderMonthlyResponse, *response.ErrorResponse) {
-	res, err := s.orderRepository.GetMonthlyOrder(year)
+func (s *orderService) FindMonthlyTotalRevenueById(ctx context.Context, req *requests.MonthTotalRevenueOrder) ([]*db.GetMonthlyTotalRevenueByIdRow, error) {
+	const method = "FindMonthlyTotalRevenueById"
 
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", req.Year),
+		attribute.Int("month", req.Month),
+		attribute.Int("orderID", req.OrderID))
+
+	defer func() {
+		end(status)
+	}()
+
+	res, err := s.orderRepository.GetMonthlyTotalRevenueById(ctx, req)
 	if err != nil {
-		s.logger.Error("failed to get monthly orders",
-			zap.Int("year", year),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedFindMonthlyOrder
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetMonthlyTotalRevenueByIdRow](
+			s.logger,
+			order_errors.ErrFailedFindMonthlyTotalRevenueById,
+			method,
+			span,
+			zap.Int("year", req.Year),
+			zap.Int("month", req.Month),
+			zap.Int("orderID", req.OrderID),
+		)
 	}
 
-	return s.mapping.ToOrderMonthlyPrices(res), nil
+	logSuccess("Successfully fetched monthly total revenue by ID",
+		zap.Int("year", req.Year),
+		zap.Int("month", req.Month),
+		zap.Int("orderID", req.OrderID))
+
+	return res, nil
 }
 
-func (s *orderService) FindYearlyOrder(year int) ([]*response.OrderYearlyResponse, *response.ErrorResponse) {
-	res, err := s.orderRepository.GetYearlyOrder(year)
+func (s *orderService) FindYearlyTotalRevenueById(ctx context.Context, req *requests.YearTotalRevenueOrder) ([]*db.GetYearlyTotalRevenueByIdRow, error) {
+	const method = "FindYearlyTotalRevenueById"
 
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", req.Year),
+		attribute.Int("orderID", req.OrderID))
+
+	defer func() {
+		end(status)
+	}()
+
+	res, err := s.orderRepository.GetYearlyTotalRevenueById(ctx, req)
 	if err != nil {
-		s.logger.Error("failed to get yearly orders",
-			zap.Int("year", year),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedFindYearlyOrder
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetYearlyTotalRevenueByIdRow](
+			s.logger,
+			order_errors.ErrFailedFindYearlyTotalRevenueById,
+			method,
+			span,
+			zap.Int("year", req.Year),
+			zap.Int("orderID", req.OrderID),
+		)
 	}
 
-	return s.mapping.ToOrderYearlyPrices(res), nil
+	logSuccess("Successfully fetched yearly total revenue by ID",
+		zap.Int("year", req.Year),
+		zap.Int("orderID", req.OrderID))
+
+	return res, nil
 }
 
-func (s *orderService) FindMonthlyOrderByMerchant(req *requests.MonthOrderMerchant) ([]*response.OrderMonthlyResponse, *response.ErrorResponse) {
-	year := req.Year
-	merchant_id := req.MerchantID
+func (s *orderService) FindMonthlyTotalRevenueByMerchant(ctx context.Context, req *requests.MonthTotalRevenueMerchant) ([]*db.GetMonthlyTotalRevenueByMerchantRow, error) {
+	const method = "FindMonthlyTotalRevenueByMerchant"
 
-	res, err := s.orderRepository.GetMonthlyOrderByMerchant(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", req.Year),
+		attribute.Int("month", req.Month),
+		attribute.Int("merchantID", req.MerchantID))
 
-	if err != nil {
-		s.logger.Error("failed to get monthly orders by merchant",
-			zap.Int("year", year),
-			zap.Int("merchant_id", merchant_id),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedFindMonthlyOrderByMerchant
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetMonthlyTotalRevenueByMerchantCache(ctx, req); found {
+		logSuccess("Successfully retrieved monthly total revenue by merchant from cache",
+			zap.Int("year", req.Year),
+			zap.Int("month", req.Month),
+			zap.Int("merchantID", req.MerchantID))
+		return data, nil
 	}
 
-	return s.mapping.ToOrderMonthlyPrices(res), nil
-}
-
-func (s *orderService) FindYearlyOrderByMerchant(req *requests.YearOrderMerchant) ([]*response.OrderYearlyResponse, *response.ErrorResponse) {
-	year := req.Year
-	merchant_id := req.MerchantID
-
-	res, err := s.orderRepository.GetYearlyOrderByMerchant(req)
-
+	res, err := s.orderRepository.GetMonthlyTotalRevenueByMerchant(ctx, req)
 	if err != nil {
-		s.logger.Error("failed to get yearly orders by merchant",
-			zap.Int("year", year),
-			zap.Int("merchant_id", merchant_id),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedFindYearlyOrderByMerchant
-	}
-
-	return s.mapping.ToOrderYearlyPrices(res), nil
-}
-
-func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.OrderResponse, *response.ErrorResponse) {
-	s.logger.Debug("Creating new order with items", zap.Int("merchantID", req.MerchantID), zap.Int("userID", req.UserID))
-
-	_, err := s.merchantRepository.FindById(req.MerchantID)
-
-	if err != nil {
-		s.logger.Error("Merchant not found for order creation",
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetMonthlyTotalRevenueByMerchantRow](
+			s.logger,
+			order_errors.ErrFailedFindMonthlyTotalRevenueByMerchant,
+			method,
+			span,
+			zap.Int("year", req.Year),
+			zap.Int("month", req.Month),
 			zap.Int("merchantID", req.MerchantID),
-			zap.Error(err))
-		return nil, merchant_errors.ErrFailedFindMerchantById
+		)
 	}
 
-	_, err = s.userRepository.FindById(req.UserID)
+	s.cache.SetMonthlyTotalRevenueByMerchantCache(ctx, req, res)
 
+	logSuccess("Successfully fetched monthly total revenue by merchant from repository",
+		zap.Int("year", req.Year),
+		zap.Int("month", req.Month),
+		zap.Int("merchantID", req.MerchantID))
+
+	return res, nil
+}
+
+func (s *orderService) FindYearlyTotalRevenueByMerchant(ctx context.Context, req *requests.YearTotalRevenueMerchant) ([]*db.GetYearlyTotalRevenueByMerchantRow, error) {
+	const method = "FindYearlyTotalRevenueByMerchant"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", req.Year),
+		attribute.Int("merchantID", req.MerchantID))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetYearlyTotalRevenueByMerchantCache(ctx, req); found {
+		logSuccess("Successfully retrieved yearly total revenue by merchant from cache",
+			zap.Int("year", req.Year),
+			zap.Int("merchantID", req.MerchantID))
+		return data, nil
+	}
+
+	res, err := s.orderRepository.GetYearlyTotalRevenueByMerchant(ctx, req)
 	if err != nil {
-		s.logger.Error("User not found for order creation",
-			zap.Int("user_id", req.UserID),
-			zap.Error(err))
-
-		return nil, user_errors.ErrUserNotFoundRes
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetYearlyTotalRevenueByMerchantRow](
+			s.logger,
+			order_errors.ErrFailedFindYearlyTotalRevenueByMerchant,
+			method,
+			span,
+			zap.Int("year", req.Year),
+			zap.Int("merchantID", req.MerchantID),
+		)
 	}
 
-	order, err := s.orderRepository.CreateOrder(&requests.CreateOrderRecordRequest{
+	s.cache.SetYearlyTotalRevenueByMerchantCache(ctx, req, res)
+
+	logSuccess("Successfully fetched yearly total revenue by merchant from repository",
+		zap.Int("year", req.Year),
+		zap.Int("merchantID", req.MerchantID))
+
+	return res, nil
+}
+
+func (s *orderService) FindMonthlyOrder(ctx context.Context, year int) ([]*db.GetMonthlyOrderRow, error) {
+	const method = "FindMonthlyOrder"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", year))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetMonthlyOrderCache(ctx, year); found {
+		logSuccess("Successfully retrieved monthly orders from cache",
+			zap.Int("year", year))
+		return data, nil
+	}
+
+	res, err := s.orderRepository.GetMonthlyOrder(ctx, year)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetMonthlyOrderRow](
+			s.logger,
+			order_errors.ErrFailedFindMonthlyOrder,
+			method,
+			span,
+			zap.Int("year", year),
+		)
+	}
+
+	s.cache.SetMonthlyOrderCache(ctx, year, res)
+
+	logSuccess("Successfully fetched monthly orders from repository",
+		zap.Int("year", year))
+
+	return res, nil
+}
+
+func (s *orderService) FindYearlyOrder(ctx context.Context, year int) ([]*db.GetYearlyOrderRow, error) {
+	const method = "FindYearlyOrder"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", year))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetYearlyOrderCache(ctx, year); found {
+		logSuccess("Successfully retrieved yearly orders from cache",
+			zap.Int("year", year))
+		return data, nil
+	}
+
+	res, err := s.orderRepository.GetYearlyOrder(ctx, year)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetYearlyOrderRow](
+			s.logger,
+			order_errors.ErrFailedFindYearlyOrder,
+			method,
+			span,
+			zap.Int("year", year),
+		)
+	}
+
+	s.cache.SetYearlyOrderCache(ctx, year, res)
+
+	logSuccess("Successfully fetched yearly orders from repository",
+		zap.Int("year", year))
+
+	return res, nil
+}
+
+func (s *orderService) FindMonthlyOrderByMerchant(ctx context.Context, req *requests.MonthOrderMerchant) ([]*db.GetMonthlyOrderByMerchantRow, error) {
+	const method = "FindMonthlyOrderByMerchant"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", req.Year),
+		attribute.Int("merchantID", req.MerchantID))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetMonthlyOrderByMerchantCache(ctx, req); found {
+		logSuccess("Successfully retrieved monthly orders by merchant from cache",
+			zap.Int("year", req.Year),
+			zap.Int("merchantID", req.MerchantID))
+		return data, nil
+	}
+
+	res, err := s.orderRepository.GetMonthlyOrderByMerchant(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetMonthlyOrderByMerchantRow](
+			s.logger,
+			order_errors.ErrFailedFindMonthlyOrderByMerchant,
+			method,
+			span,
+			zap.Int("year", req.Year),
+			zap.Int("merchantID", req.MerchantID),
+		)
+	}
+
+	s.cache.SetMonthlyOrderByMerchantCache(ctx, req, res)
+
+	logSuccess("Successfully fetched monthly orders by merchant from repository",
+		zap.Int("year", req.Year),
+		zap.Int("merchantID", req.MerchantID))
+
+	return res, nil
+}
+
+func (s *orderService) FindYearlyOrderByMerchant(ctx context.Context, req *requests.YearOrderMerchant) ([]*db.GetYearlyOrderByMerchantRow, error) {
+	const method = "FindYearlyOrderByMerchant"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("year", req.Year),
+		attribute.Int("merchantID", req.MerchantID))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetYearlyOrderByMerchantCache(ctx, req); found {
+		logSuccess("Successfully retrieved yearly orders by merchant from cache",
+			zap.Int("year", req.Year),
+			zap.Int("merchantID", req.MerchantID))
+		return data, nil
+	}
+
+	res, err := s.orderRepository.GetYearlyOrderByMerchant(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[[]*db.GetYearlyOrderByMerchantRow](
+			s.logger,
+			order_errors.ErrFailedFindYearlyOrderByMerchant,
+			method,
+			span,
+			zap.Int("year", req.Year),
+			zap.Int("merchantID", req.MerchantID),
+		)
+	}
+
+	s.cache.SetYearlyOrderByMerchantCache(ctx, req, res)
+
+	logSuccess("Successfully fetched yearly orders by merchant from repository",
+		zap.Int("year", req.Year),
+		zap.Int("merchantID", req.MerchantID))
+
+	return res, nil
+}
+
+func (s *orderService) CreateOrder(ctx context.Context, req *requests.CreateOrderRequest) (*db.UpdateOrderRow, error) {
+	const method = "CreateOrder"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("merchantID", req.MerchantID),
+		attribute.Int("userID", req.UserID))
+
+	defer func() {
+		end(status)
+	}()
+
+	_, err := s.merchantRepository.FindById(ctx, req.MerchantID)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			merchant_errors.ErrFailedFindMerchantById,
+			method,
+			span,
+			zap.Int("merchantID", req.MerchantID),
+		)
+	}
+
+	_, err = s.userRepository.FindById(ctx, req.UserID)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			user_errors.ErrUserNotFoundRes,
+			method,
+			span,
+			zap.Int("user_id", req.UserID),
+		)
+	}
+
+	order, err := s.orderRepository.CreateOrder(ctx, &requests.CreateOrderRecordRequest{
 		MerchantID: req.MerchantID,
 		UserID:     req.UserID,
 	})
-
 	if err != nil {
-		s.logger.Error("Failed to create order", zap.Error(err))
-
-		return nil, order_errors.ErrFailedCreateOrder
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			order_errors.ErrFailedCreateOrder,
+			method,
+			span,
+		)
 	}
 
 	for _, item := range req.Items {
-		product, err := s.productRepository.FindById(item.ProductID)
-
+		product, err := s.productRepository.FindById(ctx, item.ProductID)
 		if err != nil {
-			s.logger.Error("Product not found for order item",
+			status = "error"
+			return errorhandler.HandleError[*db.UpdateOrderRow](
+				s.logger,
+				product_errors.ErrFailedFindProductById,
+				method,
+				span,
 				zap.Int("productID", item.ProductID),
-				zap.Error(err))
-			return nil, product_errors.ErrFailedFindProductById
+			)
 		}
 
-		if product.CountInStock < item.Quantity {
-			s.logger.Error("Insufficient product stock",
+		if int(product.CountInStock) < item.Quantity {
+			status = "error"
+			return errorhandler.HandleError[*db.UpdateOrderRow](
+				s.logger,
+				order_errors.ErrInsufficientProductStock,
+				method,
+				span,
 				zap.Int("productID", item.ProductID),
 				zap.Int("requested", item.Quantity),
-				zap.Int("available", product.CountInStock))
-
-			return nil, order_errors.ErrInsufficientProductStock
+				zap.Int("available", int(product.CountInStock)),
+			)
 		}
 
-		_, err = s.orderItemRepository.CreateOrderItem(&requests.CreateOrderItemRecordRequest{
-			OrderID:   order.ID,
+		_, err = s.orderItemRepository.CreateOrderItem(ctx, &requests.CreateOrderItemRecordRequest{
+			OrderID:   int(order.OrderID),
 			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
-			Price:     product.Price,
+			Price:     int(product.Price),
 		})
-
 		if err != nil {
-			s.logger.Error("Failed to create order item",
-				zap.Error(err))
-			return nil, orderitem_errors.ErrFailedCreateOrderItem
+			status = "error"
+			return errorhandler.HandleError[*db.UpdateOrderRow](
+				s.logger,
+				orderitem_errors.ErrFailedCreateOrderItem,
+				method,
+				span,
+			)
 		}
 
-		product.CountInStock -= item.Quantity
-		_, err = s.productRepository.UpdateProductCountStock(product.ID, product.CountInStock)
-
+		product.CountInStock -= int32(item.Quantity)
+		_, err = s.productRepository.UpdateProductCountStock(ctx, int(product.ProductID), int(product.CountInStock))
 		if err != nil {
-			s.logger.Error("Failed to update product stock",
-				zap.Error(err))
-			return nil, product_errors.ErrFailedCountStock
+			status = "error"
+			return errorhandler.HandleError[*db.UpdateOrderRow](
+				s.logger,
+				product_errors.ErrFailedCountStock,
+				method,
+				span,
+			)
 		}
 	}
 
-	_, err = s.shippingRepository.CreateShippingAddress(&requests.CreateShippingAddressRequest{
-		OrderID:        &order.ID,
+	orderId := int(order.OrderID)
+
+	_, err = s.shippingRepository.CreateShippingAddress(ctx, &requests.CreateShippingAddressRequest{
+		OrderID:        &orderId,
 		Alamat:         req.ShippingAddress.Alamat,
 		Provinsi:       req.ShippingAddress.Provinsi,
 		Kota:           req.ShippingAddress.Kota,
@@ -428,117 +768,168 @@ func (s *orderService) CreateOrder(req *requests.CreateOrderRequest) (*response.
 		ShippingCost:   req.ShippingAddress.ShippingCost,
 		Negara:         req.ShippingAddress.Negara,
 	})
-
 	if err != nil {
-		s.logger.Error("Failed to create shipping address", zap.Error(err))
-		return nil, shippingaddress_errors.ErrFailedCreateShippingAddress
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			shippingaddress_errors.ErrFailedCreateShippingAddress,
+			method,
+			span,
+		)
 	}
 
-	totalPrice, err := s.orderItemRepository.CalculateTotalPrice(order.ID)
-
+	totalPrice, err := s.orderItemRepository.CalculateTotalPrice(ctx, int(order.OrderID))
 	if err != nil {
-		s.logger.Error("Failed to calculate total price", zap.Error(err))
-
-		return nil, orderitem_errors.ErrFailedCalculateTotal
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			orderitem_errors.ErrFailedCalculateTotal,
+			method,
+			span,
+		)
 	}
 
-	_, err = s.orderRepository.UpdateOrder(&requests.UpdateOrderRecordRequest{
-		OrderID:    order.ID,
+	updatedOrder, err := s.orderRepository.UpdateOrder(ctx, &requests.UpdateOrderRecordRequest{
+		OrderID:    int(order.OrderID),
 		UserID:     req.UserID,
 		TotalPrice: int(*totalPrice),
 	})
-
 	if err != nil {
-		s.logger.Error("Failed to update order total price",
-			zap.Error(err))
-
-		return nil, order_errors.ErrFailedUpdateOrder
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			order_errors.ErrFailedUpdateOrder,
+			method,
+			span,
+		)
 	}
 
-	return s.mapping.ToOrderResponse(order), nil
+	logSuccess("Successfully created order with transfer",
+		zap.Int("orderID", int(order.OrderID)),
+		zap.Int("userID", req.UserID),
+		zap.Int("merchantID", req.MerchantID),
+		zap.Int("totalPrice", int(*totalPrice)))
+
+	return updatedOrder, nil
 }
 
-func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.OrderResponse, *response.ErrorResponse) {
-	s.logger.Debug("Updating order with items", zap.Int("orderID", *req.OrderID))
+func (s *orderService) UpdateOrder(ctx context.Context, req *requests.UpdateOrderRequest) (*db.UpdateOrderRow, error) {
+	const method = "UpdateOrder"
 
-	existingOrder, err := s.orderRepository.FindById(*req.OrderID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("orderID", *req.OrderID),
+		attribute.Int("userID", req.UserID))
 
+	defer func() {
+		end(status)
+	}()
+
+	existingOrder, err := s.orderRepository.FindById(ctx, *req.OrderID)
 	if err != nil {
-		s.logger.Error("Order not found for update",
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			order_errors.ErrFailedFindOrderById,
+			method,
+			span,
 			zap.Int("orderID", *req.OrderID),
-			zap.Error(err))
-
-		return nil, order_errors.ErrFailedFindOrderById
+		)
 	}
 
-	_, err = s.userRepository.FindById(req.UserID)
+	_, err = s.userRepository.FindById(ctx, req.UserID)
 	if err != nil {
-		s.logger.Error("Order not found for order creation",
-			zap.Int("orderID", *req.OrderID),
-			zap.Error(err))
-
-		return nil, user_errors.ErrUserNotFoundRes
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			user_errors.ErrUserNotFoundRes,
+			method,
+			span,
+			zap.Int("userID", req.UserID),
+		)
 	}
 
 	for _, item := range req.Items {
-		product, err := s.productRepository.FindById(item.ProductID)
-
+		product, err := s.productRepository.FindById(ctx, item.ProductID)
 		if err != nil {
-			s.logger.Error("Product not found for order item",
+			status = "error"
+			return errorhandler.HandleError[*db.UpdateOrderRow](
+				s.logger,
+				product_errors.ErrFailedFindProductById,
+				method,
+				span,
 				zap.Int("productID", item.ProductID),
-				zap.Error(err))
-			return nil, product_errors.ErrFailedFindProductById
+			)
 		}
 
 		if item.OrderItemID > 0 {
-			_, err := s.orderItemRepository.UpdateOrderItem(&requests.UpdateOrderItemRecordRequest{
+			_, err := s.orderItemRepository.UpdateOrderItem(ctx, &requests.UpdateOrderItemRecordRequest{
 				OrderItemID: item.OrderItemID,
 				ProductID:   item.ProductID,
 				Quantity:    item.Quantity,
-				Price:       product.Price,
+				Price:       int(product.Price),
 			})
-
 			if err != nil {
-				s.logger.Error("Failed to update order item",
-					zap.Error(err))
-				return nil, orderitem_errors.ErrFailedUpdateOrderItem
+				status = "error"
+				return errorhandler.HandleError[*db.UpdateOrderRow](
+					s.logger,
+					orderitem_errors.ErrFailedUpdateOrderItem,
+					method,
+					span,
+					zap.Int("orderItemID", item.OrderItemID),
+				)
 			}
 		} else {
-			if product.CountInStock < item.Quantity {
-				s.logger.Error("Insufficient product stock for new order item",
+			if product.CountInStock < int32(item.Quantity) {
+				status = "error"
+				return errorhandler.HandleError[*db.UpdateOrderRow](
+					s.logger,
+					order_errors.ErrInsufficientProductStock,
+					method,
+					span,
 					zap.Int("productID", item.ProductID),
 					zap.Int("requested", item.Quantity),
-					zap.Int("available", product.CountInStock))
-				return nil, order_errors.ErrInsufficientProductStock
+					zap.Int("available", int(product.CountInStock)),
+				)
 			}
 
-			_, err := s.orderItemRepository.CreateOrderItem(&requests.CreateOrderItemRecordRequest{
+			_, err := s.orderItemRepository.CreateOrderItem(ctx, &requests.CreateOrderItemRecordRequest{
 				OrderID:   *req.OrderID,
 				ProductID: item.ProductID,
 				Quantity:  item.Quantity,
-				Price:     product.Price,
+				Price:     int(product.Price),
 			})
-
 			if err != nil {
-				s.logger.Error("Failed to add new order item",
-					zap.Error(err))
-				return nil, orderitem_errors.ErrFailedCreateOrderItem
+				status = "error"
+				return errorhandler.HandleError[*db.UpdateOrderRow](
+					s.logger,
+					orderitem_errors.ErrFailedCreateOrderItem,
+					method,
+					span,
+					zap.Int("orderID", *req.OrderID),
+					zap.Int("productID", item.ProductID),
+				)
 			}
 
-			product.CountInStock -= item.Quantity
-			_, err = s.productRepository.UpdateProductCountStock(product.ID, product.CountInStock)
-
+			product.CountInStock -= int32(item.Quantity)
+			_, err = s.productRepository.UpdateProductCountStock(ctx, int(product.ProductID), int(product.CountInStock))
 			if err != nil {
-				s.logger.Error("Failed to update product stock",
-					zap.Error(err))
-				return nil, product_errors.ErrFailedCountStock
+				status = "error"
+				return errorhandler.HandleError[*db.UpdateOrderRow](
+					s.logger,
+					product_errors.ErrFailedCountStock,
+					method,
+					span,
+					zap.Int("productID", int(product.ProductID)),
+				)
 			}
 		}
 	}
 
-	_, err = s.shippingRepository.UpdateShippingAddress(&requests.UpdateShippingAddressRequest{
+	orderId := int(existingOrder.OrderID)
+
+	_, err = s.shippingRepository.UpdateShippingAddress(ctx, &requests.UpdateShippingAddressRequest{
 		ShippingID:     req.ShippingAddress.ShippingID,
-		OrderID:        &existingOrder.ID,
+		OrderID:        &orderId,
 		Alamat:         req.ShippingAddress.Alamat,
 		Provinsi:       req.ShippingAddress.Provinsi,
 		Kota:           req.ShippingAddress.Kota,
@@ -547,216 +938,294 @@ func (s *orderService) UpdateOrder(req *requests.UpdateOrderRequest) (*response.
 		ShippingCost:   req.ShippingAddress.ShippingCost,
 		Negara:         req.ShippingAddress.Negara,
 	})
-
 	if err != nil {
-		s.logger.Error("Failed to update shipping address", zap.Error(err))
-
-		return nil, shippingaddress_errors.ErrFailedUpdateShippingAddress
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			shippingaddress_errors.ErrFailedUpdateShippingAddress,
+			method,
+			span,
+			zap.Int("shippingID", *req.ShippingAddress.ShippingID),
+		)
 	}
 
-	totalPrice, err := s.orderItemRepository.CalculateTotalPrice(*req.OrderID)
-
+	totalPrice, err := s.orderItemRepository.CalculateTotalPrice(ctx, *req.OrderID)
 	if err != nil {
-		s.logger.Error("Failed to calculate updated order total",
-			zap.Error(err))
-
-		return nil, orderitem_errors.ErrFailedCalculateTotal
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			orderitem_errors.ErrFailedCalculateTotal,
+			method,
+			span,
+			zap.Int("orderID", *req.OrderID),
+		)
 	}
 
-	_, err = s.orderRepository.UpdateOrder(&requests.UpdateOrderRecordRequest{
+	updated, err := s.orderRepository.UpdateOrder(ctx, &requests.UpdateOrderRecordRequest{
 		OrderID:    *req.OrderID,
 		UserID:     req.UserID,
 		TotalPrice: int(*totalPrice),
 	})
-
 	if err != nil {
-		s.logger.Error("Failed to update order total price",
-			zap.Error(err))
-		return nil, order_errors.ErrFailedUpdateOrder
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateOrderRow](
+			s.logger,
+			order_errors.ErrFailedUpdateOrder,
+			method,
+			span,
+			zap.Int("orderID", *req.OrderID),
+		)
 	}
 
-	return s.mapping.ToOrderResponse(existingOrder), nil
+	logSuccess("Successfully updated order",
+		zap.Int("orderID", *req.OrderID),
+		zap.Int("userID", req.UserID),
+		zap.Int("totalPrice", int(*totalPrice)))
+
+	return updated, nil
 }
 
-func (s *orderService) TrashedOrder(order_id int) (*response.OrderResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Moving order to trash",
-		zap.Int("order_id", order_id))
+func (s *orderService) TrashedOrder(ctx context.Context, order_id int) (*db.Order, error) {
+	const method = "TrashedOrder"
 
-	order, err := s.orderRepository.FindById(order_id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("order_id", order_id))
 
+	defer func() {
+		end(status)
+	}()
+
+	_, err := s.orderRepository.FindByIdTrashed(ctx, order_id)
 	if err != nil {
-		s.logger.Error("Failed to fetch order",
+		status = "error"
+		return errorhandler.HandleError[*db.Order](
+			s.logger,
+			order_errors.ErrFailedFindOrderById,
+			method,
+			span,
 			zap.Int("order_id", order_id),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedFindOrderById
+		)
 	}
 
-	if order.DeletedAt != nil {
-		return nil, order_errors.ErrFailedNotDeleteAtOrder
-	}
-
-	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(order_id)
-
+	orderItems, err := s.orderItemRepository.FindOrderItemByOrderTrashed(ctx, order_id)
 	if err != nil {
-		s.logger.Error("Failed to retrieve order items for trashing",
+		status = "error"
+		return errorhandler.HandleError[*db.Order](
+			s.logger,
+			order_errors.ErrFailedNotDeleteAtOrder,
+			method,
+			span,
 			zap.Int("order_id", order_id),
-			zap.Error(err))
-		return nil, order_errors.ErrFailedNotDeleteAtOrder
+		)
 	}
 
 	for _, item := range orderItems {
-		if item.DeletedAt != nil {
-			s.logger.Debug("Order item already trashed, skipping",
-				zap.Int("order_item_id", item.ID))
-			return nil, orderitem_errors.ErrFailedNotDeleteAtOrderItem
-		}
-
-		trashedItem, err := s.orderItemRepository.TrashedOrderItem(item.ID)
-
+		_, err := s.orderItemRepository.TrashedOrderItem(ctx, int(item.OrderItemID))
 		if err != nil {
-			s.logger.Error("Failed to move order item to trash",
-				zap.Int("order_item_id", item.ID),
-				zap.Error(err))
-			return nil, orderitem_errors.ErrFailedTrashedOrderItem
+			status = "error"
+			return errorhandler.HandleError[*db.Order](
+				s.logger,
+				orderitem_errors.ErrFailedTrashedOrderItem,
+				method,
+				span,
+				zap.Int("order_item_id", int(item.OrderItemID)),
+			)
 		}
-
-		s.logger.Debug("Order item trashed successfully",
-			zap.Int("order_item_id", trashedItem.ID),
-			zap.String("deleted_at", *trashedItem.DeletedAt))
 	}
 
-	trashedOrder, err := s.orderRepository.TrashedOrder(order_id)
-
+	trashedOrder, err := s.orderRepository.TrashedOrder(ctx, order_id)
 	if err != nil {
-		s.logger.Error("Failed to move order to trash",
+		status = "error"
+		return errorhandler.HandleError[*db.Order](
+			s.logger,
+			order_errors.ErrFailedCreateOrder,
+			method,
+			span,
 			zap.Int("order_id", order_id),
-			zap.Error(err))
-
-		return nil, order_errors.ErrFailedCreateOrder
+		)
 	}
 
-	s.logger.Debug("Order moved to trash successfully",
+	logSuccess("Order moved to trash successfully",
 		zap.Int("order_id", order_id),
-		zap.String("deleted_at", *trashedOrder.DeletedAt))
+		zap.String("deleted_at", trashedOrder.DeletedAt.Time.String()))
 
-	return s.mapping.ToOrderResponseDeleteAt(trashedOrder), nil
+	return trashedOrder, nil
 }
 
-func (s *orderService) RestoreOrder(order_id int) (*response.OrderResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Restoring order and related order items", zap.Int("order_id", order_id))
+func (s *orderService) RestoreOrder(ctx context.Context, order_id int) (*db.Order, error) {
+	const method = "RestoreOrder"
 
-	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(order_id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("order_id", order_id))
 
+	defer func() {
+		end(status)
+	}()
+
+	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(ctx, order_id)
 	if err != nil {
-		s.logger.Error("Failed to retrieve order items for restoration",
+		status = "error"
+		return errorhandler.HandleError[*db.Order](
+			s.logger,
+			orderitem_errors.ErrFailedFindOrderItemByOrder,
+			method,
+			span,
 			zap.Int("order_id", order_id),
-			zap.Error(err))
-
-		return nil, orderitem_errors.ErrFailedFindOrderItemByOrder
+		)
 	}
 
 	for _, item := range orderItems {
-		_, err := s.orderItemRepository.RestoreOrderItem(item.ID)
-
+		_, err := s.orderItemRepository.RestoreOrderItem(ctx, int(item.OrderItemID))
 		if err != nil {
-			s.logger.Error("Failed to restore order item from trash",
-				zap.Int("order_item_id", item.ID),
-				zap.Error(err))
-
-			return nil, orderitem_errors.ErrFailedRestoreOrderItem
+			status = "error"
+			return errorhandler.HandleError[*db.Order](
+				s.logger,
+				orderitem_errors.ErrFailedRestoreOrderItem,
+				method,
+				span,
+				zap.Int("order_item_id", int(item.OrderItemID)),
+			)
 		}
 	}
 
-	order, err := s.orderRepository.RestoreOrder(order_id)
-
+	order, err := s.orderRepository.RestoreOrder(ctx, order_id)
 	if err != nil {
-		s.logger.Error("Failed to restore order from trash",
+		status = "error"
+		return errorhandler.HandleError[*db.Order](
+			s.logger,
+			order_errors.ErrFailedRestoreOrder,
+			method,
+			span,
 			zap.Int("order_id", order_id),
-			zap.Error(err))
-
-		return nil, order_errors.ErrFailedRestoreOrder
+		)
 	}
 
-	return s.mapping.ToOrderResponseDeleteAt(order), nil
+	logSuccess("Order restored successfully", zap.Int("order_id", order_id))
+
+	return order, nil
 }
 
-func (s *orderService) DeleteOrderPermanent(order_id int) (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting order and related order items", zap.Int("order_id", order_id))
+func (s *orderService) DeleteOrderPermanent(ctx context.Context, order_id int) (bool, error) {
+	const method = "DeleteOrderPermanent"
 
-	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(order_id)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("order_id", order_id))
 
+	defer func() {
+		end(status)
+	}()
+
+	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(ctx, order_id)
 	if err != nil {
-		s.logger.Error("Failed to retrieve order items for permanent deletion",
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			orderitem_errors.ErrFailedFindOrderItemByOrder,
+			method,
+			span,
 			zap.Int("order_id", order_id),
-			zap.Error(err))
-
-		return false, orderitem_errors.ErrFailedFindOrderItemByOrder
+		)
 	}
 
 	for _, item := range orderItems {
-		_, err := s.orderItemRepository.
-			DeleteOrderItemPermanent(item.ID)
-
+		_, err := s.orderItemRepository.DeleteOrderItemPermanent(ctx, int(item.OrderItemID))
 		if err != nil {
-			s.logger.Error("Failed to permanently delete order item",
-				zap.Int("order_item_id", item.ID),
-				zap.Error(err))
-			return false, orderitem_errors.ErrFailedDeleteOrderItem
+			status = "error"
+			return errorhandler.HandleError[bool](
+				s.logger,
+				orderitem_errors.ErrFailedDeleteOrderItem,
+				method,
+				span,
+				zap.Int("order_item_id", int(item.OrderItemID)),
+			)
 		}
 	}
 
-	success, err := s.orderRepository.DeleteOrderPermanent(order_id)
-
+	success, err := s.orderRepository.DeleteOrderPermanent(ctx, order_id)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete order",
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			order_errors.ErrFailedDeleteOrderPermanent,
+			method,
+			span,
 			zap.Int("order_id", order_id),
-			zap.Error(err))
-
-		return false, order_errors.ErrFailedDeleteOrderPermanent
+		)
 	}
+
+	logSuccess("Order permanently deleted successfully", zap.Int("order_id", order_id))
 
 	return success, nil
 }
 
-func (s *orderService) RestoreAllOrder() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Restoring all trashed orders and related order items")
+func (s *orderService) RestoreAllOrder(ctx context.Context) (bool, error) {
+	const method = "RestoreAllOrder"
 
-	successItems, err := s.orderItemRepository.RestoreAllOrderItem()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	successItems, err := s.orderItemRepository.RestoreAllOrderItem(ctx)
 	if err != nil || !successItems {
-		s.logger.Error("Failed to restore all order items",
-			zap.Error(err))
-		return false, orderitem_errors.ErrFailedRestoreAllOrderItem
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			orderitem_errors.ErrFailedRestoreAllOrderItem,
+			method,
+			span,
+		)
 	}
 
-	success, err := s.orderRepository.RestoreAllOrder()
+	success, err := s.orderRepository.RestoreAllOrder(ctx)
 	if err != nil || !success {
-		s.logger.Error("Failed to restore all orders",
-			zap.Error(err))
-		return false, order_errors.ErrFailedRestoreAllOrder
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			order_errors.ErrFailedRestoreAllOrder,
+			method,
+			span,
+		)
 	}
+
+	logSuccess("All orders restored successfully")
 
 	return success, nil
 }
 
-func (s *orderService) DeleteAllOrderPermanent() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting all orders and related order items")
+func (s *orderService) DeleteAllOrderPermanent(ctx context.Context) (bool, error) {
+	const method = "DeleteAllOrderPermanent"
 
-	successItems, err := s.orderItemRepository.DeleteAllOrderPermanent()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	successItems, err := s.orderItemRepository.DeleteAllOrderPermanent(ctx)
 	if err != nil || !successItems {
-		s.logger.Error("Failed to permanently delete all order items",
-			zap.Error(err))
-		return false, orderitem_errors.ErrFailedDeleteAllOrderItem
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			orderitem_errors.ErrFailedDeleteAllOrderItem,
+			method,
+			span,
+		)
 	}
 
-	success, err := s.orderRepository.DeleteAllOrderPermanent()
-
+	success, err := s.orderRepository.DeleteAllOrderPermanent(ctx)
 	if err != nil || !success {
-		s.logger.Error("Failed to permanently delete all orders",
-			zap.Error(err))
-		return false, order_errors.ErrFailedDeleteAllOrderPermanent
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			order_errors.ErrFailedDeleteAllOrderPermanent,
+			method,
+			span,
+		)
 	}
+
+	logSuccess("All orders permanently deleted successfully")
 
 	return success, nil
 }

@@ -2,7 +2,6 @@ package seeder
 
 import (
 	"context"
-	"database/sql"
 	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/logger"
 
@@ -27,67 +26,67 @@ func (r *merchantBusinessSeeder) Seed() error {
 	businessInfos := []db.CreateMerchantBusinessInformationParams{
 		{
 			MerchantID:        1,
-			BusinessType:      sql.NullString{String: "Toko Elektronik", Valid: true},
-			TaxID:             sql.NullString{String: "01.234.567.8-999.000", Valid: true},
-			EstablishedYear:   sql.NullInt32{Int32: 2010, Valid: true},
-			NumberOfEmployees: sql.NullInt32{Int32: 15, Valid: true},
-			WebsiteUrl:        sql.NullString{String: "https://technostore.com", Valid: true},
+			BusinessType:      strPtr("Toko Elektronik"),
+			TaxID:             strPtr("01.234.567.8-999.000"),
+			EstablishedYear:   int32Ptr(2010),
+			NumberOfEmployees: int32Ptr(15),
+			WebsiteUrl:        strPtr("https://technostore.com"),
 		},
 		{
 			MerchantID:        2,
-			BusinessType:      sql.NullString{String: "Produk Kecantikan", Valid: true},
-			TaxID:             sql.NullString{String: "02.345.678.9-888.000", Valid: true},
-			EstablishedYear:   sql.NullInt32{Int32: 2015, Valid: true},
-			NumberOfEmployees: sql.NullInt32{Int32: 10, Valid: true},
-			WebsiteUrl:        sql.NullString{String: "https://glowbeauty.id", Valid: true},
+			BusinessType:      strPtr("Produk Kecantikan"),
+			TaxID:             strPtr("02.345.678.9-888.000"),
+			EstablishedYear:   int32Ptr(2015),
+			NumberOfEmployees: int32Ptr(10),
+			WebsiteUrl:        strPtr("https://glowbeauty.id"),
 		},
 		{
 			MerchantID:        3,
-			BusinessType:      sql.NullString{String: "Toko Makanan Organik", Valid: true},
-			TaxID:             sql.NullString{String: "03.456.789.0-777.000", Valid: true},
-			EstablishedYear:   sql.NullInt32{Int32: 2012, Valid: true},
-			NumberOfEmployees: sql.NullInt32{Int32: 20, Valid: true},
-			WebsiteUrl:        sql.NullString{String: "https://dapsehat.id", Valid: true},
+			BusinessType:      strPtr("Toko Makanan Organik"),
+			TaxID:             strPtr("03.456.789.0-777.000"),
+			EstablishedYear:   int32Ptr(2012),
+			NumberOfEmployees: int32Ptr(20),
+			WebsiteUrl:        strPtr("https://dapsehat.id"),
 		},
 		{
 			MerchantID:        4,
-			BusinessType:      sql.NullString{String: "Retail Gadget", Valid: true},
-			TaxID:             sql.NullString{String: "04.567.890.1-666.000", Valid: true},
-			EstablishedYear:   sql.NullInt32{Int32: 2018, Valid: true},
-			NumberOfEmployees: sql.NullInt32{Int32: 8, Valid: true},
-			WebsiteUrl:        sql.NullString{String: "https://gadgethub.com", Valid: true},
+			BusinessType:      strPtr("Retail Gadget"),
+			TaxID:             strPtr("04.567.890.1-666.000"),
+			EstablishedYear:   int32Ptr(2018),
+			NumberOfEmployees: int32Ptr(8),
+			WebsiteUrl:        strPtr("https://gadgethub.com"),
 		},
 		{
 			MerchantID:        5,
-			BusinessType:      sql.NullString{String: "Produk Ibu & Bayi", Valid: true},
-			TaxID:             sql.NullString{String: "05.678.901.2-555.000", Valid: true},
-			EstablishedYear:   sql.NullInt32{Int32: 2019, Valid: true},
-			NumberOfEmployees: sql.NullInt32{Int32: 6, Valid: true},
-			WebsiteUrl:        sql.NullString{String: "https://bayiceria.id", Valid: true},
+			BusinessType:      strPtr("Produk Ibu & Bayi"),
+			TaxID:             strPtr("05.678.901.2-555.000"),
+			EstablishedYear:   int32Ptr(2019),
+			NumberOfEmployees: int32Ptr(6),
+			WebsiteUrl:        strPtr("https://bayiceria.id"),
 		},
 		{
 			MerchantID:        6,
-			BusinessType:      sql.NullString{String: "Peralatan Olahraga", Valid: true},
-			TaxID:             sql.NullString{String: "06.789.012.3-444.000", Valid: true},
-			EstablishedYear:   sql.NullInt32{Int32: 2016, Valid: true},
-			NumberOfEmployees: sql.NullInt32{Int32: 12, Valid: true},
-			WebsiteUrl:        sql.NullString{String: "https://tokosehat.id", Valid: true},
+			BusinessType:      strPtr("Peralatan Olahraga"),
+			TaxID:             strPtr("06.789.012.3-444.000"),
+			EstablishedYear:   int32Ptr(2016),
+			NumberOfEmployees: int32Ptr(12),
+			WebsiteUrl:        strPtr("https://tokosehat.id"),
 		},
 		{
 			MerchantID:        7,
-			BusinessType:      sql.NullString{String: "Gaming Store", Valid: true},
-			TaxID:             sql.NullString{String: "07.890.123.4-333.000", Valid: true},
-			EstablishedYear:   sql.NullInt32{Int32: 2020, Valid: true},
-			NumberOfEmployees: sql.NullInt32{Int32: 5, Valid: true},
-			WebsiteUrl:        sql.NullString{String: "https://gameworld.com", Valid: true},
+			BusinessType:      strPtr("Gaming Store"),
+			TaxID:             strPtr("07.890.123.4-333.000"),
+			EstablishedYear:   int32Ptr(2020),
+			NumberOfEmployees: int32Ptr(5),
+			WebsiteUrl:        strPtr("https://gameworld.com"),
 		},
 		{
 			MerchantID:        8,
-			BusinessType:      sql.NullString{String: "Aksesori Otomotif", Valid: true},
-			TaxID:             sql.NullString{String: "08.901.234.5-222.000", Valid: true},
-			EstablishedYear:   sql.NullInt32{Int32: 2013, Valid: true},
-			NumberOfEmployees: sql.NullInt32{Int32: 9, Valid: true},
-			WebsiteUrl:        sql.NullString{String: "https://otomotifmart.com", Valid: true},
+			BusinessType:      strPtr("Aksesori Otomotif"),
+			TaxID:             strPtr("08.901.234.5-222.000"),
+			EstablishedYear:   int32Ptr(2013),
+			NumberOfEmployees: int32Ptr(9),
+			WebsiteUrl:        strPtr("https://otomotifmart.com"),
 		},
 	}
 
@@ -99,6 +98,9 @@ func (r *merchantBusinessSeeder) Seed() error {
 	}
 
 	r.logger.Info("merchant business successfully seeded")
-
 	return nil
+}
+
+func int32Ptr(v int32) *int32 {
+	return &v
 }

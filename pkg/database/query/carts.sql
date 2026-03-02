@@ -15,20 +15,30 @@
 --   - Provides total_count for pagination calculations
 -- name: GetCarts :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    cart_id,
+    user_id,
+    product_id,
+    name,
+    price,
+    image,
+    quantity,
+    weight,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
 FROM carts
-WHERE deleted_at IS NULL
-  AND user_id = $1
-  AND (
-    $2::TEXT IS NULL OR 
-    name ILIKE '%' || $2 || '%' OR 
-    price::TEXT ILIKE '%' || $2 || '%'
-  )
+WHERE
+    deleted_at IS NULL
+    AND user_id = $1
+    AND (
+        $2::TEXT IS NULL
+        OR name ILIKE '%' || $2 || '%'
+        OR price::TEXT ILIKE '%' || $2 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $3 OFFSET $4;
-
-
+LIMIT $3
+OFFSET
+    $4;
 
 -- CreateCart: Adds a new product to user's shopping cart
 -- Purpose: Add items to cart during product browsing
@@ -47,10 +57,19 @@ LIMIT $3 OFFSET $4;
 --   - Requires all product information for historical accuracy
 --   - Returns the full record for immediate UI update
 -- name: CreateCart :one
-INSERT INTO "carts" ("user_id", "product_id", "name", "price", "image", "quantity", "weight")
+INSERT INTO
+    "carts" (
+        "user_id",
+        "product_id",
+        "name",
+        "price",
+        "image",
+        "quantity",
+        "weight"
+    )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING *;
-
+RETURNING
+    *;
 
 -- DeleteCart: Removes a single item from user's cart
 -- Purpose: Remove unwanted items during checkout process
@@ -65,7 +84,6 @@ RETURNING *;
 -- name: DeleteCart :exec
 DELETE FROM "carts" WHERE "cart_id" = $1;
 
-
 -- DeleteAllCart: Batch removes multiple cart items
 -- Purpose: Clear selected items or reset cart
 -- Parameters:
@@ -77,4 +95,4 @@ DELETE FROM "carts" WHERE "cart_id" = $1;
 --   - Uses array parameter for batch processing
 --   - Typically used for "Clear Cart" functionality
 -- name: DeleteAllCart :exec
-DELETE FROM "carts" WHERE "cart_id" = ANY($1::int[]);
+DELETE FROM "carts" WHERE "cart_id" = ANY ($1::int[]);

@@ -1,270 +1,472 @@
 package service
 
 import (
+	"context"
+	merchant_cache "ecommerce/internal/cache/merchant"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	response_service "ecommerce/internal/mapper/response/services"
+	"ecommerce/internal/errorhandler"
 	"ecommerce/internal/repository"
+	db "ecommerce/pkg/database/schema"
 	merchant_errors "ecommerce/pkg/errors/merchant"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/observability"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
 type merchantService struct {
 	merchantRepository repository.MerchantRepository
 	logger             logger.LoggerInterface
-	mapping            response_service.MerchantResponseMapper
+	observability      observability.TraceLoggerObservability
+	cache              merchant_cache.MerchantMencache
 }
 
-func NewMerchantService(
-	merchantRepository repository.MerchantRepository,
-	logger logger.LoggerInterface,
-	mapping response_service.MerchantResponseMapper,
-) *merchantService {
+type MerchantServiceDeps struct {
+	MerchantRepository repository.MerchantRepository
+	Logger             logger.LoggerInterface
+	Observability      observability.TraceLoggerObservability
+	Cache              merchant_cache.MerchantMencache
+}
+
+func NewMerchantService(deps MerchantServiceDeps) *merchantService {
 	return &merchantService{
-		merchantRepository: merchantRepository,
-		logger:             logger,
-		mapping:            mapping,
+		merchantRepository: deps.MerchantRepository,
+		logger:             deps.Logger,
+		observability:      deps.Observability,
+		cache:              deps.Cache,
 	}
 }
 
-func (s *merchantService) FindAll(req *requests.FindAllMerchant) ([]*response.MerchantResponse, *int, *response.ErrorResponse) {
+func (s *merchantService) FindAllMerchants(ctx context.Context, req *requests.FindAllMerchant) ([]*db.GetMerchantsRow, *int, error) {
+	const method = "FindAllMerchants"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching all merchants",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	merchants, totalRecords, err := s.merchantRepository.FindAllMerchants(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to fetch merchants",
-			zap.Error(err),
-			zap.Int("page", req.Page),
-			zap.Int("pageSize", req.PageSize),
-			zap.String("search", req.Search))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, nil, merchant_errors.ErrFailedFindAllMerchants
-	}
-
-	s.logger.Debug("Successfully fetched merchants",
-		zap.Int("totalRecords", *totalRecords),
-		zap.Int("page", req.Page),
-		zap.Int("pageSize", req.PageSize))
-
-	return s.mapping.ToMerchantsResponse(merchants), totalRecords, nil
-}
-
-func (s *merchantService) FindByActive(req *requests.FindAllMerchant) ([]*response.MerchantResponseDeleteAt, *int, *response.ErrorResponse) {
-	page := req.Page
-	pageSize := req.PageSize
-	search := req.Search
-
-	s.logger.Debug("Fetching all merchants active",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
-	if page <= 0 {
-		page = 1
-	}
-
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-
-	merchants, totalRecords, err := s.merchantRepository.FindByActive(req)
-
-	if err != nil {
-		s.logger.Error("Failed to retrieve active merchants",
-			zap.Error(err),
-			zap.String("search", search),
+	if data, total, found := s.cache.GetCachedMerchants(ctx, req); found {
+		logSuccess("Successfully retrieved all merchant records from cache",
+			zap.Int("totalRecords", *total),
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
-
-		return nil, nil, merchant_errors.ErrFailedFindActiveMerchants
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched active merchant",
-		zap.Int("totalRecords", *totalRecords),
+	merchants, err := s.merchantRepository.FindAllMerchants(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetMerchantsRow](
+			s.logger,
+			merchant_errors.ErrFailedFindAllMerchants,
+			method,
+			span,
+
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(merchants) > 0 {
+		totalCount = int(merchants[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedMerchants(ctx, req, merchants, &totalCount)
+
+	logSuccess("Successfully fetched all merchants",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return s.mapping.ToMerchantsResponseDeleteAt(merchants), totalRecords, nil
+	return merchants, &totalCount, nil
 }
 
-func (s *merchantService) FindByTrashed(req *requests.FindAllMerchant) ([]*response.MerchantResponseDeleteAt, *int, *response.ErrorResponse) {
+func (s *merchantService) FindByActive(ctx context.Context, req *requests.FindAllMerchant) ([]*db.GetMerchantsActiveRow, *int, error) {
+	const method = "FindByActiveMerchants"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching all merchants trashed",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	merchants, totalRecords, err := s.merchantRepository.FindByTrashed(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve trashed merchants",
-			zap.Error(err),
-			zap.String("search", search),
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetCachedMerchantActive(ctx, req); found {
+		logSuccess("Successfully retrieved active merchant records from cache",
+			zap.Int("totalRecords", *total),
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize))
-
-		return nil, nil, merchant_errors.ErrFailedFindTrashedMerchants
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched trashed merchant",
-		zap.Int("totalRecords", *totalRecords),
+	merchants, err := s.merchantRepository.FindByActive(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetMerchantsActiveRow](
+			s.logger,
+			merchant_errors.ErrFailedFindActiveMerchants,
+			method,
+			span,
+
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(merchants) > 0 {
+		totalCount = int(merchants[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedMerchantActive(ctx, req, merchants, &totalCount)
+
+	logSuccess("Successfully fetched active merchants",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return s.mapping.ToMerchantsResponseDeleteAt(merchants), totalRecords, nil
+	return merchants, &totalCount, nil
 }
 
-func (s *merchantService) FindById(merchantID int) (*response.MerchantResponse, *response.ErrorResponse) {
-	s.logger.Debug("Fetching merchant by ID", zap.Int("merchantID", merchantID))
+func (s *merchantService) FindByTrashed(ctx context.Context, req *requests.FindAllMerchant) ([]*db.GetMerchantsTrashedRow, *int, error) {
+	const method = "FindByTrashedMerchants"
 
-	merchant, err := s.merchantRepository.FindById(merchantID)
+	page := req.Page
+	pageSize := req.PageSize
+	search := req.Search
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve merchant details",
-			zap.Error(err),
-			zap.Int("merchant_id", merchantID))
-
-		return nil, merchant_errors.ErrFailedFindMerchantById
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
 	}
 
-	return s.mapping.ToMerchantResponse(merchant), nil
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetCachedMerchantTrashed(ctx, req); found {
+		logSuccess("Successfully retrieved trashed merchant records from cache",
+			zap.Int("totalRecords", *total),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize))
+		return data, total, nil
+	}
+
+	merchants, err := s.merchantRepository.FindByTrashed(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetMerchantsTrashedRow](
+			s.logger,
+			merchant_errors.ErrFailedFindTrashedMerchants,
+			method,
+			span,
+
+			zap.String("search", search),
+			zap.Int("page", page),
+			zap.Int("pageSize", pageSize),
+		)
+	}
+
+	var totalCount int
+
+	if len(merchants) > 0 {
+		totalCount = int(merchants[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedMerchantTrashed(ctx, req, merchants, &totalCount)
+
+	logSuccess("Successfully fetched trashed merchants",
+		zap.Int("totalRecords", totalCount),
+		zap.Int("page", page),
+		zap.Int("pageSize", pageSize))
+
+	return merchants, &totalCount, nil
 }
 
-func (s *merchantService) CreateMerchant(req *requests.CreateMerchantRequest) (*response.MerchantResponse, *response.ErrorResponse) {
-	s.logger.Debug("Creating new merchant")
+func (s *merchantService) FindById(ctx context.Context, merchantID int) (*db.GetMerchantByIDRow, error) {
+	const method = "FindMerchantById"
 
-	merchant, err := s.merchantRepository.CreateMerchant(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("merchantID", merchantID))
 
-	if err != nil {
-		s.logger.Error("Failed to create new merchant",
-			zap.Error(err),
-			zap.Any("request", req))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, merchant_errors.ErrFailedCreateMerchant
+	if data, found := s.cache.GetCachedMerchant(ctx, merchantID); found {
+		logSuccess("Successfully retrieved merchant by ID from cache",
+			zap.Int("merchantID", merchantID))
+		return data, nil
 	}
 
-	return s.mapping.ToMerchantResponse(merchant), nil
+	merchant, err := s.merchantRepository.FindById(ctx, merchantID)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[*db.GetMerchantByIDRow](
+			s.logger,
+			merchant_errors.ErrFailedFindMerchantById,
+			method,
+			span,
+
+			zap.Int("merchant_id", merchantID),
+		)
+	}
+
+	s.cache.SetCachedMerchant(ctx, merchant)
+
+	logSuccess("Successfully fetched merchant by ID",
+		zap.Int("merchantID", merchantID))
+
+	return merchant, nil
 }
 
-func (s *merchantService) UpdateMerchant(req *requests.UpdateMerchantRequest) (*response.MerchantResponse, *response.ErrorResponse) {
-	s.logger.Debug("Updating merchant", zap.Int("merchantID", *req.MerchantID))
+func (s *merchantService) CreateMerchant(ctx context.Context, req *requests.CreateMerchantRequest) (*db.CreateMerchantRow, error) {
+	const method = "CreateMerchant"
 
-	merchant, err := s.merchantRepository.UpdateMerchant(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	merchant, err := s.merchantRepository.CreateMerchant(ctx, req)
 	if err != nil {
-		s.logger.Error("Failed to update merchant",
-			zap.Error(err),
-			zap.Any("request", req))
+		status = "error"
+		return errorhandler.HandleError[*db.CreateMerchantRow](
+			s.logger,
+			merchant_errors.ErrFailedCreateMerchant,
+			method,
+			span,
 
-		return nil, merchant_errors.ErrFailedUpdateMerchant
+			zap.Any("request", req),
+		)
 	}
 
-	return s.mapping.ToMerchantResponse(merchant), nil
+	s.cache.DeleteCachedMerchant(ctx, int(merchant.MerchantID))
+
+	logSuccess("Successfully created merchant",
+		zap.Int("merchantID", int(merchant.MerchantID)))
+
+	return merchant, nil
 }
 
-func (s *merchantService) TrashedMerchant(merchantID int) (*response.MerchantResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Trashing merchant", zap.Int("merchantID", merchantID))
+func (s *merchantService) UpdateMerchant(ctx context.Context, req *requests.UpdateMerchantRequest) (*db.UpdateMerchantRow, error) {
+	const method = "UpdateMerchant"
 
-	merchant, err := s.merchantRepository.TrashedMerchant(merchantID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("merchantID", *req.MerchantID))
 
+	defer func() {
+		end(status)
+	}()
+
+	merchant, err := s.merchantRepository.UpdateMerchant(ctx, req)
 	if err != nil {
-		s.logger.Error("Failed to move merchant to trash",
-			zap.Error(err),
-			zap.Int("merchant_id", merchantID))
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateMerchantRow](
+			s.logger,
+			merchant_errors.ErrFailedUpdateMerchant,
+			method,
+			span,
 
-		return nil, merchant_errors.ErrFailedTrashedMerchant
+			zap.Any("request", req),
+		)
 	}
 
-	return s.mapping.ToMerchantResponseDeleteAt(merchant), nil
+	s.cache.DeleteCachedMerchant(ctx, int(merchant.MerchantID))
+
+	logSuccess("Successfully updated merchant",
+		zap.Int("merchantID", int(merchant.MerchantID)))
+
+	return merchant, nil
 }
 
-func (s *merchantService) RestoreMerchant(merchantID int) (*response.MerchantResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Restoring merchant", zap.Int("merchantID", merchantID))
+func (s *merchantService) TrashedMerchant(ctx context.Context, merchantID int) (*db.Merchant, error) {
+	const method = "TrashedMerchant"
 
-	merchant, err := s.merchantRepository.RestoreMerchant(merchantID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("merchantID", merchantID))
 
+	defer func() {
+		end(status)
+	}()
+
+	merchant, err := s.merchantRepository.TrashedMerchant(ctx, merchantID)
 	if err != nil {
-		s.logger.Error("Failed to restore merchant from trash",
-			zap.Error(err),
-			zap.Int("merchant_id", merchantID))
+		status = "error"
+		return errorhandler.HandleError[*db.Merchant](
+			s.logger,
+			merchant_errors.ErrFailedTrashedMerchant,
+			method,
+			span,
 
-		return nil, merchant_errors.ErrFailedRestoreMerchant
+			zap.Int("merchant_id", merchantID),
+		)
 	}
 
-	return s.mapping.ToMerchantResponseDeleteAt(merchant), nil
+	s.cache.DeleteCachedMerchant(ctx, merchantID)
+
+	logSuccess("Successfully trashed merchant",
+		zap.Int("merchantID", merchantID))
+
+	return merchant, nil
 }
 
-func (s *merchantService) DeleteMerchantPermanent(merchantID int) (bool, *response.ErrorResponse) {
-	s.logger.Debug("Deleting merchant permanently", zap.Int("merchantID", merchantID))
+func (s *merchantService) RestoreMerchant(ctx context.Context, merchantID int) (*db.Merchant, error) {
+	const method = "RestoreMerchant"
 
-	success, err := s.merchantRepository.DeleteMerchantPermanent(merchantID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("merchantID", merchantID))
 
+	defer func() {
+		end(status)
+	}()
+
+	merchant, err := s.merchantRepository.RestoreMerchant(ctx, merchantID)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete merchant",
-			zap.Error(err),
-			zap.Int("merchant_id", merchantID))
+		status = "error"
+		return errorhandler.HandleError[*db.Merchant](
+			s.logger,
+			merchant_errors.ErrFailedRestoreMerchant,
+			method,
+			span,
 
-		return false, merchant_errors.ErrFailedDeleteMerchantPermanent
+			zap.Int("merchant_id", merchantID),
+		)
 	}
+
+	s.cache.DeleteCachedMerchant(ctx, merchantID)
+
+	logSuccess("Successfully restored merchant",
+		zap.Int("merchantID", merchantID))
+
+	return merchant, nil
+}
+
+func (s *merchantService) DeleteMerchantPermanent(ctx context.Context, merchantID int) (bool, error) {
+	const method = "DeleteMerchantPermanent"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("merchantID", merchantID))
+
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.merchantRepository.DeleteMerchantPermanent(ctx, merchantID)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			merchant_errors.ErrFailedDeleteMerchantPermanent,
+			method,
+			span,
+
+			zap.Int("merchant_id", merchantID),
+		)
+	}
+
+	s.cache.DeleteCachedMerchant(ctx, merchantID)
+
+	logSuccess("Successfully permanently deleted merchant",
+		zap.Int("merchantID", merchantID))
 
 	return success, nil
 }
 
-func (s *merchantService) RestoreAllMerchant() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Restoring all trashed merchants")
+func (s *merchantService) RestoreAllMerchant(ctx context.Context) (bool, error) {
+	const method = "RestoreAllMerchant"
 
-	success, err := s.merchantRepository.RestoreAllMerchant()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.merchantRepository.RestoreAllMerchant(ctx)
 	if err != nil {
-		s.logger.Error("Failed to restore all trashed merchants",
-			zap.Error(err))
-
-		return false, merchant_errors.ErrFailedRestoreAllMerchants
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			merchant_errors.ErrFailedRestoreAllMerchants,
+			method,
+			span,
+		)
 	}
+
+	logSuccess("Successfully restored all trashed merchants")
 
 	return success, nil
 }
 
-func (s *merchantService) DeleteAllMerchantPermanent() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting all merchants")
+func (s *merchantService) DeleteAllMerchantPermanent(ctx context.Context) (bool, error) {
+	const method = "DeleteAllMerchantPermanent"
 
-	success, err := s.merchantRepository.DeleteAllMerchantPermanent()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.merchantRepository.DeleteAllMerchantPermanent(ctx)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete all trashed merchants",
-			zap.Error(err))
-
-		return false, merchant_errors.ErrFailedDeleteAllMerchantsPermanent
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			merchant_errors.ErrFailedDeleteAllMerchantsPermanent,
+			method,
+			span,
+		)
 	}
+
+	logSuccess("Successfully permanently deleted all trashed merchants")
 
 	return success, nil
 }

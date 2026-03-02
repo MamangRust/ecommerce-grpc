@@ -1,269 +1,446 @@
 package service
 
 import (
+	"context"
+	banner_cache "ecommerce/internal/cache/banner"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	response_service "ecommerce/internal/mapper/response/services"
+	"ecommerce/internal/errorhandler"
 	"ecommerce/internal/repository"
+	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/errors/banner_errors"
 	"ecommerce/pkg/logger"
+	"ecommerce/pkg/observability"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
 type bannerService struct {
 	bannerRepository repository.BannerRepository
+	observability    observability.TraceLoggerObservability
 	logger           logger.LoggerInterface
-	mapping          response_service.BannerResponseMapper
+	cache            banner_cache.BannerMencache
 }
 
-func NewBannerService(
-	bannerRepository repository.BannerRepository,
-	logger logger.LoggerInterface,
-	mapping response_service.BannerResponseMapper,
-) *bannerService {
+type BannerServiceDeps struct {
+	BannerRepository repository.BannerRepository
+	Observability    observability.TraceLoggerObservability
+	Logger           logger.LoggerInterface
+	Cache            banner_cache.BannerMencache
+}
+
+func NewBannerService(deps BannerServiceDeps) *bannerService {
 	return &bannerService{
-		bannerRepository: bannerRepository,
-		logger:           logger,
-		mapping:          mapping,
+		bannerRepository: deps.BannerRepository,
+		observability:    deps.Observability,
+		logger:           deps.Logger,
+		cache:            deps.Cache,
 	}
 }
 
-func (s *bannerService) FindAll(req *requests.FindAllBanner) ([]*response.BannerResponse, *int, *response.ErrorResponse) {
+func (s *bannerService) FindAll(ctx context.Context, req *requests.FindAllBanner) ([]*db.GetBannersRow, *int, error) {
+	const method = "FindAllBanners"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching all Banners",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	Banners, totalRecords, err := s.bannerRepository.FindAllBanners(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
+	defer func() {
+		end(status)
+	}()
+
+	if data, total, found := s.cache.GetCachedBannersCache(ctx, req); found {
+		logSuccess("Successfully retrieved all banner records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
+	}
+
+	banners, err := s.bannerRepository.FindAllBanners(ctx, req)
 	if err != nil {
-		s.logger.Error("Failed to fetch Banners",
-			zap.Error(err),
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetBannersRow](
+			s.logger,
+			banner_errors.ErrFailedFindAllBanners,
+			method,
+			span,
+
 			zap.Int("page", req.Page),
-			zap.Int("pageSize", req.PageSize),
-			zap.String("search", req.Search))
-
-		return nil, nil, banner_errors.ErrFailedFindAllBanners
+			zap.Int("page_size", req.PageSize),
+			zap.String("search", req.Search),
+		)
 	}
 
-	s.logger.Debug("Successfully fetched Banners",
-		zap.Int("totalRecords", *totalRecords),
-		zap.Int("page", req.Page),
-		zap.Int("pageSize", req.PageSize))
+	var totalCount int
 
-	return s.mapping.ToBannersResponse(Banners), totalRecords, nil
+	if len(banners) > 0 {
+		totalCount = int(banners[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedBannersCache(ctx, req, banners, &totalCount)
+
+	logSuccess("Successfully fetched all banners",
+		zap.Int("totalRecords", totalCount),
+		zap.Int("page", page),
+		zap.Int("pageSize", pageSize))
+
+	return banners, &totalCount, nil
 }
 
-func (s *bannerService) FindByActive(req *requests.FindAllBanner) ([]*response.BannerResponseDeleteAt, *int, *response.ErrorResponse) {
+func (s *bannerService) FindByActive(ctx context.Context, req *requests.FindAllBanner) ([]*db.GetBannersActiveRow, *int, error) {
+	const method = "FindActiveBanners"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching all Banners active",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	Banners, totalRecords, err := s.bannerRepository.FindByActive(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve active Banners",
-			zap.Error(err),
-			zap.String("search", search),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, nil, banner_errors.ErrFailedFindActiveBanners
+	if data, total, found := s.cache.GetCachedBannerActiveCache(ctx, req); found {
+		logSuccess("Successfully retrieved active banner records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched active Banner",
-		zap.Int("totalRecords", *totalRecords),
+	banners, err := s.bannerRepository.FindByActive(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetBannersActiveRow](
+			s.logger,
+			banner_errors.ErrFailedFindActiveBanners,
+			method,
+			span,
+
+			zap.Int("page", req.Page),
+			zap.Int("page_size", req.PageSize),
+			zap.String("search", req.Search),
+		)
+	}
+
+	var totalCount int
+
+	if len(banners) > 0 {
+		totalCount = int(banners[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedBannerActiveCache(ctx, req, banners, &totalCount)
+
+	logSuccess("Successfully fetched active banners",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return s.mapping.ToBannersResponseDeleteAt(Banners), totalRecords, nil
+	return banners, &totalCount, nil
 }
 
-func (s *bannerService) FindByTrashed(req *requests.FindAllBanner) ([]*response.BannerResponseDeleteAt, *int, *response.ErrorResponse) {
+func (s *bannerService) FindByTrashed(ctx context.Context, req *requests.FindAllBanner) ([]*db.GetBannersTrashedRow, *int, error) {
+	const method = "FindTrashedBanners"
+
 	page := req.Page
 	pageSize := req.PageSize
 	search := req.Search
 
-	s.logger.Debug("Fetching all Banners trashed",
-		zap.Int("page", page),
-		zap.Int("pageSize", pageSize),
-		zap.String("search", search))
-
 	if page <= 0 {
 		page = 1
 	}
-
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 
-	Banners, totalRecords, err := s.bannerRepository.FindByTrashed(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("page", page),
+		attribute.Int("pageSize", pageSize),
+		attribute.String("search", search))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve trashed Banners",
-			zap.Error(err),
-			zap.String("search", search),
-			zap.Int("page", page),
-			zap.Int("pageSize", pageSize))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, nil, banner_errors.ErrFailedFindTrashedBanners
+	if data, total, found := s.cache.GetCachedBannerTrashedCache(ctx, req); found {
+		logSuccess("Successfully retrieved trashed banner records from cache", zap.Int("totalRecords", *total), zap.Int("page", page), zap.Int("pageSize", pageSize))
+		return data, total, nil
 	}
 
-	s.logger.Debug("Successfully fetched trashed Banner",
-		zap.Int("totalRecords", *totalRecords),
+	banners, err := s.bannerRepository.FindByTrashed(ctx, req)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandlerErrorPagination[[]*db.GetBannersTrashedRow](
+			s.logger,
+			banner_errors.ErrFailedFindTrashedBanners,
+			method,
+			span,
+
+			zap.Int("page", req.Page),
+			zap.Int("page_size", req.PageSize),
+			zap.String("search", req.Search),
+		)
+	}
+
+	var totalCount int
+
+	if len(banners) > 0 {
+		totalCount = int(banners[0].TotalCount)
+	} else {
+		totalCount = 0
+	}
+
+	s.cache.SetCachedBannerTrashedCache(ctx, req, banners, &totalCount)
+
+	logSuccess("Successfully fetched trashed banners",
+		zap.Int("totalRecords", totalCount),
 		zap.Int("page", page),
 		zap.Int("pageSize", pageSize))
 
-	return s.mapping.ToBannersResponseDeleteAt(Banners), totalRecords, nil
+	return banners, &totalCount, nil
 }
 
-func (s *bannerService) FindById(BannerID int) (*response.BannerResponse, *response.ErrorResponse) {
-	s.logger.Debug("Fetching Banner by ID", zap.Int("BannerID", BannerID))
+func (s *bannerService) FindById(ctx context.Context, bannerID int) (*db.GetBannerRow, error) {
+	const method = "FindByIdBanner"
 
-	Banner, err := s.bannerRepository.FindById(BannerID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("bannerID", bannerID))
 
-	if err != nil {
-		s.logger.Error("Failed to retrieve Banner details",
-			zap.Error(err),
-			zap.Int("Banner_id", BannerID))
+	defer func() {
+		end(status)
+	}()
 
-		return nil, banner_errors.ErrBannerNotFoundRes
+	if data, found := s.cache.GetCachedBannerCache(ctx, bannerID); found {
+		logSuccess("Successfully retrieved banner from cache", zap.Int("bannerID", bannerID))
+		return data, nil
 	}
 
-	return s.mapping.ToBannerResponse(Banner), nil
+	res, err := s.bannerRepository.FindById(ctx, bannerID)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[*db.GetBannerRow](
+			s.logger,
+			banner_errors.ErrBannerNotFound,
+			method,
+			span,
+
+			zap.Int("banner_id", bannerID),
+		)
+	}
+
+	s.cache.SetCachedBannerCache(ctx, res)
+
+	logSuccess("Successfully fetched banner", zap.Int("bannerID", bannerID))
+	return res, nil
 }
 
-func (s *bannerService) CreateBanner(req *requests.CreateBannerRequest) (*response.BannerResponse, *response.ErrorResponse) {
-	s.logger.Debug("Creating new Banner")
+func (s *bannerService) CreateBanner(ctx context.Context, req *requests.CreateBannerRequest) (*db.CreateBannerRow, error) {
+	const method = "CreateBanner"
 
-	Banner, err := s.bannerRepository.CreateBanner(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	banner, err := s.bannerRepository.CreateBanner(ctx, req)
 	if err != nil {
-		s.logger.Error("Failed to create new Banner",
-			zap.Error(err),
-			zap.Any("request", req))
+		status = "error"
+		return errorhandler.HandleError[*db.CreateBannerRow](
+			s.logger,
+			banner_errors.ErrFailedCreateBanner,
+			method,
+			span,
 
-		return nil, banner_errors.ErrFailedCreateBanner
+			zap.Any("request", req),
+		)
 	}
 
-	return s.mapping.ToBannerResponse(Banner), nil
+	logSuccess("Successfully created banner", zap.Int("bannerID", int(banner.BannerID)))
+	return banner, nil
 }
 
-func (s *bannerService) UpdateBanner(req *requests.UpdateBannerRequest) (*response.BannerResponse, *response.ErrorResponse) {
-	s.logger.Debug("Updating Banner", zap.Int("BannerID", *req.BannerID))
+func (s *bannerService) UpdateBanner(ctx context.Context, req *requests.UpdateBannerRequest) (*db.UpdateBannerRow, error) {
+	const method = "UpdateBanner"
 
-	Banner, err := s.bannerRepository.UpdateBanner(req)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("bannerID", *req.BannerID))
 
+	defer func() {
+		end(status)
+	}()
+
+	banner, err := s.bannerRepository.UpdateBanner(ctx, req)
 	if err != nil {
-		s.logger.Error("Failed to update Banner",
-			zap.Error(err),
-			zap.Any("request", req))
+		status = "error"
+		return errorhandler.HandleError[*db.UpdateBannerRow](
+			s.logger,
+			banner_errors.ErrFailedUpdateBanner,
+			method,
+			span,
 
-		return nil, banner_errors.ErrFailedUpdateBanner
+			zap.Int("banner_id", *req.BannerID),
+		)
 	}
 
-	return s.mapping.ToBannerResponse(Banner), nil
+	s.cache.DeleteBannerCache(ctx, *req.BannerID)
+
+	logSuccess("Successfully updated banner", zap.Int("bannerID", *req.BannerID))
+	return banner, nil
 }
 
-func (s *bannerService) TrashedBanner(BannerID int) (*response.BannerResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Trashing Banner", zap.Int("BannerID", BannerID))
+func (s *bannerService) TrashedBanner(ctx context.Context, bannerID int) (*db.Banner, error) {
+	const method = "TrashedBanner"
 
-	Banner, err := s.bannerRepository.TrashedBanner(BannerID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("bannerID", bannerID))
 
+	defer func() {
+		end(status)
+	}()
+
+	banner, err := s.bannerRepository.TrashedBanner(ctx, bannerID)
 	if err != nil {
-		s.logger.Error("Failed to move Banner to trash",
-			zap.Error(err),
-			zap.Int("Banner_id", BannerID))
+		status = "error"
+		return errorhandler.HandleError[*db.Banner](
+			s.logger,
+			banner_errors.ErrFailedTrashedBanner,
+			method,
+			span,
 
-		return nil, banner_errors.ErrFailedTrashedBanner
+			zap.Int("banner_id", bannerID),
+		)
 	}
 
-	return s.mapping.ToBannerResponseDeleteAt(Banner), nil
+	s.cache.DeleteBannerCache(ctx, bannerID)
+
+	logSuccess("Successfully trashed banner", zap.Int("bannerID", bannerID))
+	return banner, nil
 }
 
-func (s *bannerService) RestoreBanner(BannerID int) (*response.BannerResponseDeleteAt, *response.ErrorResponse) {
-	s.logger.Debug("Restoring Banner", zap.Int("BannerID", BannerID))
+func (s *bannerService) RestoreBanner(ctx context.Context, bannerID int) (*db.Banner, error) {
+	const method = "RestoreBanner"
 
-	Banner, err := s.bannerRepository.RestoreBanner(BannerID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("bannerID", bannerID))
 
+	defer func() {
+		end(status)
+	}()
+
+	banner, err := s.bannerRepository.RestoreBanner(ctx, bannerID)
 	if err != nil {
-		s.logger.Error("Failed to restore Banner from trash",
-			zap.Error(err),
-			zap.Int("Banner_id", BannerID))
+		status = "error"
+		return errorhandler.HandleError[*db.Banner](
+			s.logger,
+			banner_errors.ErrFailedRestoreBanner,
+			method,
+			span,
 
-		return nil, banner_errors.ErrFailedRestoreBanner
+			zap.Int("banner_id", bannerID),
+		)
 	}
 
-	return s.mapping.ToBannerResponseDeleteAt(Banner), nil
+	s.cache.DeleteBannerCache(ctx, bannerID)
+
+	logSuccess("Successfully restored banner", zap.Int("bannerID", bannerID))
+	return banner, nil
 }
 
-func (s *bannerService) DeleteBannerPermanent(BannerID int) (bool, *response.ErrorResponse) {
-	s.logger.Debug("Deleting Banner permanently", zap.Int("BannerID", BannerID))
+func (s *bannerService) DeleteBannerPermanent(ctx context.Context, bannerID int) (bool, error) {
+	const method = "DeleteBannerPermanent"
 
-	success, err := s.bannerRepository.DeleteBannerPermanent(BannerID)
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("bannerID", bannerID))
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.bannerRepository.DeleteBannerPermanent(ctx, bannerID)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete Banner",
-			zap.Error(err),
-			zap.Int("Banner_id", BannerID))
-		return false, banner_errors.ErrFailedDeleteBanner
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			banner_errors.ErrFailedDeleteBanner,
+			method,
+			span,
+
+			zap.Int("banner_id", bannerID),
+		)
 	}
 
+	s.cache.DeleteBannerCache(ctx, bannerID)
+
+	logSuccess("Successfully deleted banner permanently", zap.Int("bannerID", bannerID))
 	return success, nil
 }
 
-func (s *bannerService) RestoreAllBanner() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Restoring all trashed Banners")
+func (s *bannerService) RestoreAllBanner(ctx context.Context) (bool, error) {
+	const method = "RestoreAllBanner"
 
-	success, err := s.bannerRepository.RestoreAllBanner()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.bannerRepository.RestoreAllBanner(ctx)
 	if err != nil {
-		s.logger.Error("Failed to restore all trashed Banners",
-			zap.Error(err))
-
-		return false, banner_errors.ErrFailedRestoreAllBanners
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			banner_errors.ErrFailedRestoreAllBanners,
+			method,
+			span,
+		)
 	}
 
+	logSuccess("Successfully restored all trashed banners")
 	return success, nil
 }
 
-func (s *bannerService) DeleteAllBannerPermanent() (bool, *response.ErrorResponse) {
-	s.logger.Debug("Permanently deleting all Banners")
+func (s *bannerService) DeleteAllBannerPermanent(ctx context.Context) (bool, error) {
+	const method = "DeleteAllBannerPermanent"
 
-	success, err := s.bannerRepository.DeleteAllBannerPermanent()
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method)
 
+	defer func() {
+		end(status)
+	}()
+
+	success, err := s.bannerRepository.DeleteAllBannerPermanent(ctx)
 	if err != nil {
-		s.logger.Error("Failed to permanently delete all trashed Banners",
-			zap.Error(err))
-
-		return false, banner_errors.ErrFailedDeleteAllBanners
+		status = "error"
+		return errorhandler.HandleError[bool](
+			s.logger,
+			banner_errors.ErrFailedDeleteAllBanners,
+			method,
+			span,
+		)
 	}
 
+	logSuccess("Successfully deleted all trashed banners permanently")
 	return success, nil
 }

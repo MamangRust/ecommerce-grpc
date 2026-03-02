@@ -31,6 +31,12 @@ type ApiResponseRole struct {
 	Data    *RoleResponse `json:"data"`
 }
 
+type ApiResponseRoleDeleteAt struct {
+	Status  string                `json:"status"`
+	Message string                `json:"message"`
+	Data    *RoleResponseDeleteAt `json:"data"`
+}
+
 type ApiResponsesRole struct {
 	Status  string          `json:"status"`
 	Message string          `json:"message"`

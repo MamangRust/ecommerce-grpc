@@ -2,7 +2,6 @@ package seeder
 
 import (
 	"context"
-	"database/sql"
 	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/logger"
 	"fmt"
@@ -28,78 +27,78 @@ func (r *merchantDetailSeeder) Seed() error {
 	details := []db.CreateMerchantDetailParams{
 		{
 			MerchantID:       1,
-			DisplayName:      sql.NullString{String: "Techno Store", Valid: true},
-			CoverImageUrl:    sql.NullString{String: "cover/techno.jpg", Valid: true},
-			LogoUrl:          sql.NullString{String: "logo/techno.png", Valid: true},
-			ShortDescription: sql.NullString{String: "Pusat elektronik terpercaya sejak 2010", Valid: true},
-			WebsiteUrl:       sql.NullString{String: "https://technostore.com", Valid: true},
+			DisplayName:      strPtr("Techno Store"),
+			CoverImageUrl:    strPtr("cover/techno.jpg"),
+			LogoUrl:          strPtr("logo/techno.png"),
+			ShortDescription: strPtr("Pusat elektronik terpercaya sejak 2010"),
+			WebsiteUrl:       strPtr("https://technostore.com"),
 		},
 		{
 			MerchantID:       2,
-			DisplayName:      sql.NullString{String: "Glow Beauty", Valid: true},
-			CoverImageUrl:    sql.NullString{String: "cover/beauty.jpg", Valid: true},
-			LogoUrl:          sql.NullString{String: "logo/beauty.png", Valid: true},
-			ShortDescription: sql.NullString{String: "Produk kecantikan alami dan aman", Valid: true},
-			WebsiteUrl:       sql.NullString{String: "https://glowbeauty.id", Valid: true},
+			DisplayName:      strPtr("Glow Beauty"),
+			CoverImageUrl:    strPtr("cover/beauty.jpg"),
+			LogoUrl:          strPtr("logo/beauty.png"),
+			ShortDescription: strPtr("Produk kecantikan alami dan aman"),
+			WebsiteUrl:       strPtr("https://glowbeauty.id"),
 		},
 		{
 			MerchantID:       3,
-			DisplayName:      sql.NullString{String: "Dapur Sehat", Valid: true},
-			CoverImageUrl:    sql.NullString{String: "cover/dapur.jpg", Valid: true},
-			LogoUrl:          sql.NullString{String: "logo/dapur.png", Valid: true},
-			ShortDescription: sql.NullString{String: "Makanan sehat dan organik", Valid: true},
-			WebsiteUrl:       sql.NullString{String: "https://dapsehat.id", Valid: true},
+			DisplayName:      strPtr("Dapur Sehat"),
+			CoverImageUrl:    strPtr("cover/dapur.jpg"),
+			LogoUrl:          strPtr("logo/dapur.png"),
+			ShortDescription: strPtr("Makanan sehat dan organik"),
+			WebsiteUrl:       strPtr("https://dapsehat.id"),
 		},
 		{
 			MerchantID:       4,
-			DisplayName:      sql.NullString{String: "Gadget Hub", Valid: true},
-			CoverImageUrl:    sql.NullString{String: "cover/gadget.jpg", Valid: true},
-			LogoUrl:          sql.NullString{String: "logo/gadget.png", Valid: true},
-			ShortDescription: sql.NullString{String: "Semua tentang gadget terbaru", Valid: true},
-			WebsiteUrl:       sql.NullString{String: "https://gadgethub.com", Valid: true},
+			DisplayName:      strPtr("Gadget Hub"),
+			CoverImageUrl:    strPtr("cover/gadget.jpg"),
+			LogoUrl:          strPtr("logo/gadget.png"),
+			ShortDescription: strPtr("Semua tentang gadget terbaru"),
+			WebsiteUrl:       strPtr("https://gadgethub.com"),
 		},
 		{
 			MerchantID:       5,
-			DisplayName:      sql.NullString{String: "Bayi Ceria", Valid: true},
-			CoverImageUrl:    sql.NullString{String: "cover/bayi.jpg", Valid: true},
-			LogoUrl:          sql.NullString{String: "logo/bayi.png", Valid: true},
-			ShortDescription: sql.NullString{String: "Produk terbaik untuk si kecil", Valid: true},
-			WebsiteUrl:       sql.NullString{String: "https://bayiceria.id", Valid: true},
+			DisplayName:      strPtr("Bayi Ceria"),
+			CoverImageUrl:    strPtr("cover/bayi.jpg"),
+			LogoUrl:          strPtr("logo/bayi.png"),
+			ShortDescription: strPtr("Produk terbaik untuk si kecil"),
+			WebsiteUrl:       strPtr("https://bayiceria.id"),
 		},
 		{
 			MerchantID:       6,
-			DisplayName:      sql.NullString{String: "Toko Sehat", Valid: true},
-			CoverImageUrl:    sql.NullString{String: "cover/sehat.jpg", Valid: true},
-			LogoUrl:          sql.NullString{String: "logo/sehat.png", Valid: true},
-			ShortDescription: sql.NullString{String: "Peralatan olahraga lengkap", Valid: true},
-			WebsiteUrl:       sql.NullString{String: "https://tokosehat.id", Valid: true},
+			DisplayName:      strPtr("Toko Sehat"),
+			CoverImageUrl:    strPtr("cover/sehat.jpg"),
+			LogoUrl:          strPtr("logo/sehat.png"),
+			ShortDescription: strPtr("Peralatan olahraga lengkap"),
+			WebsiteUrl:       strPtr("https://tokosehat.id"),
 		},
 		{
 			MerchantID:       7,
-			DisplayName:      sql.NullString{String: "Game World", Valid: true},
-			CoverImageUrl:    sql.NullString{String: "cover/game.jpg", Valid: true},
-			LogoUrl:          sql.NullString{String: "logo/game.png", Valid: true},
-			ShortDescription: sql.NullString{String: "Konsol dan game terbaik", Valid: true},
-			WebsiteUrl:       sql.NullString{String: "https://gameworld.com", Valid: true},
+			DisplayName:      strPtr("Game World"),
+			CoverImageUrl:    strPtr("cover/game.jpg"),
+			LogoUrl:          strPtr("logo/game.png"),
+			ShortDescription: strPtr("Konsol dan game terbaik"),
+			WebsiteUrl:       strPtr("https://gameworld.com"),
 		},
 		{
 			MerchantID:       8,
-			DisplayName:      sql.NullString{String: "Otomotif Mart", Valid: true},
-			CoverImageUrl:    sql.NullString{String: "cover/otomotif.jpg", Valid: true},
-			LogoUrl:          sql.NullString{String: "logo/otomotif.png", Valid: true},
-			ShortDescription: sql.NullString{String: "Aksesori kendaraan terpercaya", Valid: true},
-			WebsiteUrl:       sql.NullString{String: "https://otomotifmart.com", Valid: true},
+			DisplayName:      strPtr("Otomotif Mart"),
+			CoverImageUrl:    strPtr("cover/otomotif.jpg"),
+			LogoUrl:          strPtr("logo/otomotif.png"),
+			ShortDescription: strPtr("Aksesori kendaraan terpercaya"),
+			WebsiteUrl:       strPtr("https://otomotifmart.com"),
 		},
 	}
 
 	for i, detail := range details {
-		_, err := r.db.CreateMerchantDetail(r.ctx, detail)
-		if err != nil {
+		if _, err := r.db.CreateMerchantDetail(r.ctx, detail); err != nil {
 			r.logger.Error("failed to seed merchant detail", zap.Error(err))
 			return err
 		}
 
 		merchantDetailID := int32(i + 1)
+
 		socialMedia := []db.CreateMerchantSocialMediaLinkParams{
 			{
 				MerchantDetailID: merchantDetailID,
@@ -127,6 +126,5 @@ func (r *merchantDetailSeeder) Seed() error {
 	}
 
 	r.logger.Info("merchant detail & merchant social link successfully seeded")
-
 	return nil
 }

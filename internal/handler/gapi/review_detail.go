@@ -3,32 +3,26 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors"
 	reviewdetail_errors "ecommerce/pkg/errors/review_detail"
 	"math"
 
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type reviewDetailHandleGrpc struct {
 	pb.UnimplementedReviewDetailServiceServer
 	reviewDetailService service.ReviewDetailService
-	mapping             protomapper.ReviewDetailProtoMapper
-	mappingReview       protomapper.ReviewProtoMapper
 }
 
 func NewReviewDetailHandleGrpc(
 	reviewDetailService service.ReviewDetailService,
-	mapping protomapper.ReviewDetailProtoMapper,
-	mappingReview protomapper.ReviewProtoMapper,
 ) *reviewDetailHandleGrpc {
 	return &reviewDetailHandleGrpc{
 		reviewDetailService: reviewDetailService,
-		mapping:             mapping,
-		mappingReview:       mappingReview,
 	}
 }
 
@@ -50,10 +44,22 @@ func (s *reviewDetailHandleGrpc) FindAll(ctx context.Context, request *pb.FindAl
 		Search:   search,
 	}
 
-	Review, totalRecords, err := s.reviewDetailService.FindAll(&reqService)
-
+	reviewDetails, totalRecords, err := s.reviewDetailService.FindAllReviews(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoReviewDetails := make([]*pb.ReviewDetailsResponse, len(reviewDetails))
+	for i, reviewDetail := range reviewDetails {
+		protoReviewDetails[i] = &pb.ReviewDetailsResponse{
+			Id:        int32(reviewDetail.ReviewDetailID),
+			ReviewId:  int32(reviewDetail.ReviewID),
+			Type:      reviewDetail.Type,
+			Url:       reviewDetail.Url,
+			Caption:   *reviewDetail.Caption,
+			CreatedAt: reviewDetail.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt: reviewDetail.UpdatedAt.Time.Format("2006-01-02"),
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -65,8 +71,12 @@ func (s *reviewDetailHandleGrpc) FindAll(ctx context.Context, request *pb.FindAl
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationReviewDetail(paginationMeta, "success", "Successfully fetched Review", Review)
-	return so, nil
+	return &pb.ApiResponsePaginationReviewDetails{
+		Status:     "success",
+		Message:    "Successfully fetched review details",
+		Data:       protoReviewDetails,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) FindById(ctx context.Context, request *pb.FindByIdReviewDetailRequest) (*pb.ApiResponseReviewDetail, error) {
@@ -76,16 +86,26 @@ func (s *reviewDetailHandleGrpc) FindById(ctx context.Context, request *pb.FindB
 		return nil, reviewdetail_errors.ErrGrpcInvalidID
 	}
 
-	Review, err := s.reviewDetailService.FindById(id)
-
+	reviewDetail, err := s.reviewDetailService.FindById(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseReviewDetail("success", "Successfully fetched Review", Review)
+	protoReviewDetail := &pb.ReviewDetailsResponse{
+		Id:        int32(reviewDetail.ReviewDetailID),
+		ReviewId:  int32(reviewDetail.ReviewID),
+		Type:      reviewDetail.Type,
+		Url:       reviewDetail.Url,
+		Caption:   *reviewDetail.Caption,
+		CreatedAt: reviewDetail.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: reviewDetail.UpdatedAt.Time.Format("2006-01-02"),
+	}
 
-	return so, nil
-
+	return &pb.ApiResponseReviewDetail{
+		Status:  "success",
+		Message: "Successfully fetched review detail",
+		Data:    protoReviewDetail,
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAllReviewRequest) (*pb.ApiResponsePaginationReviewDetailsDeleteAt, error) {
@@ -106,10 +126,28 @@ func (s *reviewDetailHandleGrpc) FindByActive(ctx context.Context, request *pb.F
 		Search:   search,
 	}
 
-	Review, totalRecords, err := s.reviewDetailService.FindByActive(&reqService)
-
+	reviewDetails, totalRecords, err := s.reviewDetailService.FindByActive(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoReviewDetails := make([]*pb.ReviewDetailsResponseDeleteAt, len(reviewDetails))
+	for i, reviewDetail := range reviewDetails {
+		var deletedAt string
+		if reviewDetail.DeletedAt.Valid {
+			deletedAt = reviewDetail.DeletedAt.Time.Format("2006-01-02")
+		}
+
+		protoReviewDetails[i] = &pb.ReviewDetailsResponseDeleteAt{
+			Id:        int32(reviewDetail.ReviewDetailID),
+			ReviewId:  int32(reviewDetail.ReviewID),
+			Type:      reviewDetail.Type,
+			Url:       reviewDetail.Url,
+			Caption:   *reviewDetail.Caption,
+			CreatedAt: reviewDetail.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt: reviewDetail.UpdatedAt.Time.Format("2006-01-02"),
+			DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -121,9 +159,12 @@ func (s *reviewDetailHandleGrpc) FindByActive(ctx context.Context, request *pb.F
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationReviewDetailDeleteAt(paginationMeta, "success", "Successfully fetched active Review", Review)
-
-	return so, nil
+	return &pb.ApiResponsePaginationReviewDetailsDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched active review details",
+		Data:       protoReviewDetails,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAllReviewRequest) (*pb.ApiResponsePaginationReviewDetailsDeleteAt, error) {
@@ -144,10 +185,28 @@ func (s *reviewDetailHandleGrpc) FindByTrashed(ctx context.Context, request *pb.
 		Search:   search,
 	}
 
-	users, totalRecords, err := s.reviewDetailService.FindByTrashed(&reqService)
-
+	reviewDetails, totalRecords, err := s.reviewDetailService.FindByTrashed(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoReviewDetails := make([]*pb.ReviewDetailsResponseDeleteAt, len(reviewDetails))
+	for i, reviewDetail := range reviewDetails {
+		var deletedAt string
+		if reviewDetail.DeletedAt.Valid {
+			deletedAt = reviewDetail.DeletedAt.Time.Format("2006-01-02")
+		}
+
+		protoReviewDetails[i] = &pb.ReviewDetailsResponseDeleteAt{
+			Id:        int32(reviewDetail.ReviewDetailID),
+			ReviewId:  int32(reviewDetail.ReviewID),
+			Type:      reviewDetail.Type,
+			Url:       reviewDetail.Url,
+			Caption:   *reviewDetail.Caption,
+			CreatedAt: reviewDetail.CreatedAt.Time.Format("2006-01-02"),
+			UpdatedAt: reviewDetail.UpdatedAt.Time.Format("2006-01-02"),
+			DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+		}
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
@@ -159,9 +218,12 @@ func (s *reviewDetailHandleGrpc) FindByTrashed(ctx context.Context, request *pb.
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationReviewDetailDeleteAt(paginationMeta, "success", "Successfully fetched trashed Review", users)
-
-	return so, nil
+	return &pb.ApiResponsePaginationReviewDetailsDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched trashed review details",
+		Data:       protoReviewDetails,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) Create(ctx context.Context, request *pb.CreateReviewDetailRequest) (*pb.ApiResponseReviewDetail, error) {
@@ -176,13 +238,26 @@ func (s *reviewDetailHandleGrpc) Create(ctx context.Context, request *pb.CreateR
 		return nil, reviewdetail_errors.ErrGrpcValidateCreateReviewDetail
 	}
 
-	review, err := s.reviewDetailService.CreateReviewDetail(req)
+	reviewDetail, err := s.reviewDetailService.CreateReviewDetail(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseReviewDetail("success", "Successfully created Review Detail", review)
-	return so, nil
+	protoReviewDetail := &pb.ReviewDetailsResponse{
+		Id:        int32(reviewDetail.ReviewDetailID),
+		ReviewId:  int32(reviewDetail.ReviewID),
+		Type:      reviewDetail.Type,
+		Url:       reviewDetail.Url,
+		Caption:   *reviewDetail.Caption,
+		CreatedAt: reviewDetail.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: reviewDetail.UpdatedAt.Time.Format("2006-01-02"),
+	}
+
+	return &pb.ApiResponseReviewDetail{
+		Status:  "success",
+		Message: "Successfully created review detail",
+		Data:    protoReviewDetail,
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) Update(ctx context.Context, request *pb.UpdateReviewDetailRequest) (*pb.ApiResponseReviewDetail, error) {
@@ -203,13 +278,26 @@ func (s *reviewDetailHandleGrpc) Update(ctx context.Context, request *pb.UpdateR
 		return nil, reviewdetail_errors.ErrGrpcValidateUpdateReviewDetail
 	}
 
-	review, err := s.reviewDetailService.UpdateReviewDetail(req)
+	reviewDetail, err := s.reviewDetailService.UpdateReviewDetail(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseReviewDetail("success", "Successfully updated Review Detail", review)
-	return so, nil
+	protoReviewDetail := &pb.ReviewDetailsResponse{
+		Id:        int32(reviewDetail.ReviewDetailID),
+		ReviewId:  int32(reviewDetail.ReviewID),
+		Type:      reviewDetail.Type,
+		Url:       reviewDetail.Url,
+		Caption:   *reviewDetail.Caption,
+		CreatedAt: reviewDetail.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: reviewDetail.UpdatedAt.Time.Format("2006-01-02"),
+	}
+
+	return &pb.ApiResponseReviewDetail{
+		Status:  "success",
+		Message: "Successfully updated review detail",
+		Data:    protoReviewDetail,
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) TrashedReview(ctx context.Context, request *pb.FindByIdReviewRequest) (*pb.ApiResponseReviewDetailDeleteAt, error) {
@@ -219,15 +307,32 @@ func (s *reviewDetailHandleGrpc) TrashedReview(ctx context.Context, request *pb.
 		return nil, reviewdetail_errors.ErrGrpcInvalidID
 	}
 
-	Review, err := s.reviewDetailService.TrashedReviewDetail(id)
-
+	reviewDetail, err := s.reviewDetailService.TrashedReviewDetail(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseReviewDetailDeleteAt("success", "Successfully trashed Review", Review)
+	var deletedAt string
+	if reviewDetail.DeletedAt.Valid {
+		deletedAt = reviewDetail.DeletedAt.Time.Format("2006-01-02")
+	}
 
-	return so, nil
+	protoReviewDetail := &pb.ReviewDetailsResponseDeleteAt{
+		Id:        int32(reviewDetail.ReviewDetailID),
+		ReviewId:  int32(reviewDetail.ReviewID),
+		Type:      reviewDetail.Type,
+		Url:       reviewDetail.Url,
+		Caption:   *reviewDetail.Caption,
+		CreatedAt: reviewDetail.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: reviewDetail.UpdatedAt.Time.Format("2006-01-02"),
+		DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+	}
+
+	return &pb.ApiResponseReviewDetailDeleteAt{
+		Status:  "success",
+		Message: "Successfully trashed review detail",
+		Data:    protoReviewDetail,
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) RestoreReview(ctx context.Context, request *pb.FindByIdReviewRequest) (*pb.ApiResponseReviewDetailDeleteAt, error) {
@@ -237,15 +342,32 @@ func (s *reviewDetailHandleGrpc) RestoreReview(ctx context.Context, request *pb.
 		return nil, reviewdetail_errors.ErrGrpcInvalidID
 	}
 
-	Review, err := s.reviewDetailService.RestoreReviewDetail(id)
-
+	reviewDetail, err := s.reviewDetailService.RestoreReviewDetail(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseReviewDetailDeleteAt("success", "Successfully restored Review", Review)
+	var deletedAt string
+	if reviewDetail.DeletedAt.Valid {
+		deletedAt = reviewDetail.DeletedAt.Time.Format("2006-01-02")
+	}
 
-	return so, nil
+	protoReviewDetail := &pb.ReviewDetailsResponseDeleteAt{
+		Id:        int32(reviewDetail.ReviewDetailID),
+		ReviewId:  int32(reviewDetail.ReviewID),
+		Type:      reviewDetail.Type,
+		Url:       reviewDetail.Url,
+		Caption:   *reviewDetail.Caption,
+		CreatedAt: reviewDetail.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt: reviewDetail.UpdatedAt.Time.Format("2006-01-02"),
+		DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+	}
+
+	return &pb.ApiResponseReviewDetailDeleteAt{
+		Status:  "success",
+		Message: "Successfully restored review detail",
+		Data:    protoReviewDetail,
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) DeleteReviewPermanent(ctx context.Context, request *pb.FindByIdReviewRequest) (*pb.ApiResponseReviewDelete, error) {
@@ -255,37 +377,37 @@ func (s *reviewDetailHandleGrpc) DeleteReviewPermanent(ctx context.Context, requ
 		return nil, reviewdetail_errors.ErrGrpcInvalidID
 	}
 
-	_, err := s.reviewDetailService.DeleteReviewDetailPermanent(id)
-
+	_, err := s.reviewDetailService.DeleteReviewDetailPermanent(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mappingReview.ToProtoResponseReviewDelete("success", "Successfully deleted Review permanently")
-
-	return so, nil
+	return &pb.ApiResponseReviewDelete{
+		Status:  "success",
+		Message: "Successfully deleted review detail permanently",
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) RestoreAllReview(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseReviewAll, error) {
-	_, err := s.reviewDetailService.RestoreAllReviewDetail()
-
+	_, err := s.reviewDetailService.RestoreAllReviewDetail(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mappingReview.ToProtoResponseReviewAll("success", "Successfully restore all Review")
-
-	return so, nil
+	return &pb.ApiResponseReviewAll{
+		Status:  "success",
+		Message: "Successfully restored all review details",
+	}, nil
 }
 
 func (s *reviewDetailHandleGrpc) DeleteAllReviewPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseReviewAll, error) {
-	_, err := s.reviewDetailService.DeleteAllReviewDetailPermanent()
-
+	_, err := s.reviewDetailService.DeleteAllReviewDetailPermanent(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mappingReview.ToProtoResponseReviewAll("success", "Successfully delete Review permanen")
-
-	return so, nil
+	return &pb.ApiResponseReviewAll{
+		Status:  "success",
+		Message: "Successfully deleted all review details permanently",
+	}, nil
 }

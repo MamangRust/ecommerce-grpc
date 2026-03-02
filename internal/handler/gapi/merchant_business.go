@@ -3,32 +3,26 @@ package gapi
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	"ecommerce/internal/domain/response"
-	protomapper "ecommerce/internal/mapper/proto"
 	"ecommerce/internal/pb"
 	"ecommerce/internal/service"
+	"ecommerce/pkg/errors"
 	merchantbusiness_errors "ecommerce/pkg/errors/merchant_business"
 	"math"
 
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type merchantBusinessHandleGrpc struct {
 	pb.UnimplementedMerchantBusinessServiceServer
 	merchantBusinessService service.MerchantBusinessService
-	mapping                 protomapper.MerchantBusinessProtoMapper
-	mappingMerchant         protomapper.MerchantProtoMapper
 }
 
 func NewMerchantBusinessHandleGrpc(
 	merchantBusinessService service.MerchantBusinessService,
-	mapping protomapper.MerchantBusinessProtoMapper,
-	mappingMerchant protomapper.MerchantProtoMapper,
 ) *merchantBusinessHandleGrpc {
 	return &merchantBusinessHandleGrpc{
 		merchantBusinessService: merchantBusinessService,
-		mapping:                 mapping,
-		mappingMerchant:         mappingMerchant,
 	}
 }
 
@@ -50,14 +44,27 @@ func (s *merchantBusinessHandleGrpc) FindAll(ctx context.Context, request *pb.Fi
 		Search:   search,
 	}
 
-	merchant, totalRecords, err := s.merchantBusinessService.FindAll(&reqService)
-
+	merchants, totalRecords, err := s.merchantBusinessService.FindAllMerchants(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	var pbMerchants []*pb.MerchantBusinessResponse
+	for _, merchant := range merchants {
+		pbMerchants = append(pbMerchants, &pb.MerchantBusinessResponse{
+			Id:                int32(merchant.MerchantBusinessInfoID),
+			MerchantId:        int32(merchant.MerchantID),
+			BusinessType:      *merchant.BusinessType,
+			TaxId:             *merchant.TaxID,
+			EstablishedYear:   int32(*merchant.EstablishedYear),
+			NumberOfEmployees: int32(*merchant.NumberOfEmployees),
+			WebsiteUrl:        *merchant.WebsiteUrl,
+			CreatedAt:         merchant.CreatedAt.Time.String(),
+			UpdatedAt:         merchant.UpdatedAt.Time.String(),
+		})
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
-
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
@@ -65,8 +72,12 @@ func (s *merchantBusinessHandleGrpc) FindAll(ctx context.Context, request *pb.Fi
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationMerchantBusiness(paginationMeta, "success", "Successfully fetched merchant", merchant)
-	return so, nil
+	return &pb.ApiResponsePaginationMerchantBusiness{
+		Status:     "success",
+		Message:    "Successfully fetched merchant",
+		Data:       pbMerchants,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) FindById(ctx context.Context, request *pb.FindByIdMerchantBusinessRequest) (*pb.ApiResponseMerchantBusiness, error) {
@@ -76,16 +87,28 @@ func (s *merchantBusinessHandleGrpc) FindById(ctx context.Context, request *pb.F
 		return nil, merchantbusiness_errors.ErrGrpcInvalidMerchantBusinessId
 	}
 
-	merchant, err := s.merchantBusinessService.FindById(id)
-
+	merchant, err := s.merchantBusinessService.FindById(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseMerchantBusiness("success", "Successfully fetched merchant", merchant)
+	pbMerchant := &pb.MerchantBusinessResponse{
+		Id:                int32(merchant.MerchantBusinessInfoID),
+		MerchantId:        int32(merchant.MerchantID),
+		BusinessType:      *merchant.BusinessType,
+		TaxId:             *merchant.TaxID,
+		EstablishedYear:   int32(*merchant.EstablishedYear),
+		NumberOfEmployees: int32(*merchant.NumberOfEmployees),
+		WebsiteUrl:        *merchant.WebsiteUrl,
+		CreatedAt:         merchant.CreatedAt.Time.String(),
+		UpdatedAt:         merchant.UpdatedAt.Time.String(),
+	}
 
-	return so, nil
-
+	return &pb.ApiResponseMerchantBusiness{
+		Status:  "success",
+		Message: "Successfully fetched merchant",
+		Data:    pbMerchant,
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAllMerchantRequest) (*pb.ApiResponsePaginationMerchantBusinessDeleteAt, error) {
@@ -106,14 +129,28 @@ func (s *merchantBusinessHandleGrpc) FindByActive(ctx context.Context, request *
 		Search:   search,
 	}
 
-	merchant, totalRecords, err := s.merchantBusinessService.FindByActive(&reqService)
-
+	merchants, totalRecords, err := s.merchantBusinessService.FindByActive(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	var pbMerchants []*pb.MerchantBusinessResponseDeleteAt
+	for _, merchant := range merchants {
+		pbMerchants = append(pbMerchants, &pb.MerchantBusinessResponseDeleteAt{
+			Id:                int32(merchant.MerchantBusinessInfoID),
+			MerchantId:        int32(merchant.MerchantID),
+			BusinessType:      *merchant.BusinessType,
+			TaxId:             *merchant.TaxID,
+			EstablishedYear:   int32(*merchant.EstablishedYear),
+			NumberOfEmployees: int32(*merchant.NumberOfEmployees),
+			WebsiteUrl:        *merchant.WebsiteUrl,
+			CreatedAt:         merchant.CreatedAt.Time.String(),
+			UpdatedAt:         merchant.UpdatedAt.Time.String(),
+			DeletedAt:         &wrapperspb.StringValue{Value: merchant.DeletedAt.Time.String()},
+		})
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
-
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
@@ -121,9 +158,12 @@ func (s *merchantBusinessHandleGrpc) FindByActive(ctx context.Context, request *
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationMerchantBusinessDeleteAt(paginationMeta, "success", "Successfully fetched active merchant", merchant)
-
-	return so, nil
+	return &pb.ApiResponsePaginationMerchantBusinessDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched active merchant",
+		Data:       pbMerchants,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAllMerchantRequest) (*pb.ApiResponsePaginationMerchantBusinessDeleteAt, error) {
@@ -144,14 +184,28 @@ func (s *merchantBusinessHandleGrpc) FindByTrashed(ctx context.Context, request 
 		Search:   search,
 	}
 
-	users, totalRecords, err := s.merchantBusinessService.FindByTrashed(&reqService)
-
+	merchants, totalRecords, err := s.merchantBusinessService.FindByTrashed(ctx, &reqService)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
+	}
+
+	var pbUsers []*pb.MerchantBusinessResponseDeleteAt
+	for _, merchant := range merchants {
+		pbUsers = append(pbUsers, &pb.MerchantBusinessResponseDeleteAt{
+			Id:                int32(merchant.MerchantBusinessInfoID),
+			MerchantId:        int32(merchant.MerchantID),
+			BusinessType:      *merchant.BusinessType,
+			TaxId:             *merchant.TaxID,
+			EstablishedYear:   int32(*merchant.EstablishedYear),
+			NumberOfEmployees: int32(*merchant.NumberOfEmployees),
+			WebsiteUrl:        *merchant.WebsiteUrl,
+			CreatedAt:         merchant.CreatedAt.Time.String(),
+			UpdatedAt:         merchant.UpdatedAt.Time.String(),
+			DeletedAt:         &wrapperspb.StringValue{Value: merchant.DeletedAt.Time.String()},
+		})
 	}
 
 	totalPages := int(math.Ceil(float64(*totalRecords) / float64(pageSize)))
-
 	paginationMeta := &pb.PaginationMeta{
 		CurrentPage:  int32(page),
 		PageSize:     int32(pageSize),
@@ -159,9 +213,12 @@ func (s *merchantBusinessHandleGrpc) FindByTrashed(ctx context.Context, request 
 		TotalRecords: int32(*totalRecords),
 	}
 
-	so := s.mapping.ToProtoResponsePaginationMerchantBusinessDeleteAt(paginationMeta, "success", "Successfully fetched trashed merchant", users)
-
-	return so, nil
+	return &pb.ApiResponsePaginationMerchantBusinessDeleteAt{
+		Status:     "success",
+		Message:    "Successfully fetched trashed merchant",
+		Data:       pbUsers,
+		Pagination: paginationMeta,
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) Create(ctx context.Context, request *pb.CreateMerchantBusinessRequest) (*pb.ApiResponseMerchantBusiness, error) {
@@ -178,13 +235,28 @@ func (s *merchantBusinessHandleGrpc) Create(ctx context.Context, request *pb.Cre
 		return nil, merchantbusiness_errors.ErrGrpcValidateCreateMerchantBusiness
 	}
 
-	merchant, err := s.merchantBusinessService.CreateMerchant(req)
+	merchant, err := s.merchantBusinessService.CreateMerchantBusiness(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseMerchantBusiness("success", "Successfully created merchant business information", merchant)
-	return so, nil
+	pbMerchant := &pb.MerchantBusinessResponse{
+		Id:                int32(merchant.MerchantBusinessInfoID),
+		MerchantId:        int32(merchant.MerchantID),
+		BusinessType:      *merchant.BusinessType,
+		TaxId:             *merchant.TaxID,
+		EstablishedYear:   int32(*merchant.EstablishedYear),
+		NumberOfEmployees: int32(*merchant.NumberOfEmployees),
+		WebsiteUrl:        *merchant.WebsiteUrl,
+		CreatedAt:         merchant.CreatedAt.Time.String(),
+		UpdatedAt:         merchant.UpdatedAt.Time.String(),
+	}
+
+	return &pb.ApiResponseMerchantBusiness{
+		Status:  "success",
+		Message: "Successfully created merchant business information",
+		Data:    pbMerchant,
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) Update(ctx context.Context, request *pb.UpdateMerchantBusinessRequest) (*pb.ApiResponseMerchantBusiness, error) {
@@ -207,13 +279,28 @@ func (s *merchantBusinessHandleGrpc) Update(ctx context.Context, request *pb.Upd
 		return nil, merchantbusiness_errors.ErrGrpcValidateUpdateMerchantBusiness
 	}
 
-	merchant, err := s.merchantBusinessService.UpdateMerchant(req)
+	merchant, err := s.merchantBusinessService.UpdateMerchantBusiness(ctx, req)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseMerchantBusiness("success", "Successfully updated merchant business information", merchant)
-	return so, nil
+	pbMerchant := &pb.MerchantBusinessResponse{
+		Id:                int32(merchant.MerchantBusinessInfoID),
+		MerchantId:        int32(merchant.MerchantID),
+		BusinessType:      *merchant.BusinessType,
+		TaxId:             *merchant.TaxID,
+		EstablishedYear:   int32(*merchant.EstablishedYear),
+		NumberOfEmployees: int32(*merchant.NumberOfEmployees),
+		WebsiteUrl:        *merchant.WebsiteUrl,
+		CreatedAt:         merchant.CreatedAt.Time.String(),
+		UpdatedAt:         merchant.UpdatedAt.Time.String(),
+	}
+
+	return &pb.ApiResponseMerchantBusiness{
+		Status:  "success",
+		Message: "Successfully updated merchant business information",
+		Data:    pbMerchant,
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) TrashedMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantBusinessDeleteAt, error) {
@@ -223,15 +310,29 @@ func (s *merchantBusinessHandleGrpc) TrashedMerchant(ctx context.Context, reques
 		return nil, merchantbusiness_errors.ErrGrpcInvalidMerchantBusinessId
 	}
 
-	merchant, err := s.merchantBusinessService.TrashedMerchant(id)
-
+	merchant, err := s.merchantBusinessService.TrashedMerchantBusiness(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseMerchantBusinessDeleteAt("success", "Successfully trashed merchant", merchant)
+	pbMerchant := &pb.MerchantBusinessResponseDeleteAt{
+		Id:                int32(merchant.MerchantBusinessInfoID),
+		MerchantId:        int32(merchant.MerchantID),
+		BusinessType:      *merchant.BusinessType,
+		TaxId:             *merchant.TaxID,
+		EstablishedYear:   int32(*merchant.EstablishedYear),
+		NumberOfEmployees: int32(*merchant.NumberOfEmployees),
+		WebsiteUrl:        *merchant.WebsiteUrl,
+		CreatedAt:         merchant.CreatedAt.Time.String(),
+		UpdatedAt:         merchant.UpdatedAt.Time.String(),
+		DeletedAt:         &wrapperspb.StringValue{Value: merchant.DeletedAt.Time.String()},
+	}
 
-	return so, nil
+	return &pb.ApiResponseMerchantBusinessDeleteAt{
+		Status:  "success",
+		Message: "Successfully trashed merchant",
+		Data:    pbMerchant,
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) RestoreMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantBusinessDeleteAt, error) {
@@ -241,15 +342,29 @@ func (s *merchantBusinessHandleGrpc) RestoreMerchant(ctx context.Context, reques
 		return nil, merchantbusiness_errors.ErrGrpcInvalidMerchantBusinessId
 	}
 
-	merchant, err := s.merchantBusinessService.RestoreMerchant(id)
-
+	merchant, err := s.merchantBusinessService.RestoreMerchantBusiness(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mapping.ToProtoResponseMerchantBusinessDeleteAt("success", "Successfully restored merchant", merchant)
+	pbMerchant := &pb.MerchantBusinessResponseDeleteAt{
+		Id:                int32(merchant.MerchantBusinessInfoID),
+		MerchantId:        int32(merchant.MerchantID),
+		BusinessType:      *merchant.BusinessType,
+		TaxId:             *merchant.TaxID,
+		EstablishedYear:   int32(*merchant.EstablishedYear),
+		NumberOfEmployees: int32(*merchant.NumberOfEmployees),
+		WebsiteUrl:        *merchant.WebsiteUrl,
+		CreatedAt:         merchant.CreatedAt.Time.String(),
+		UpdatedAt:         merchant.UpdatedAt.Time.String(),
+		DeletedAt:         &wrapperspb.StringValue{Value: merchant.DeletedAt.Time.String()},
+	}
 
-	return so, nil
+	return &pb.ApiResponseMerchantBusinessDeleteAt{
+		Status:  "success",
+		Message: "Successfully restored merchant",
+		Data:    pbMerchant,
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) DeleteMerchantPermanent(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantDelete, error) {
@@ -259,37 +374,37 @@ func (s *merchantBusinessHandleGrpc) DeleteMerchantPermanent(ctx context.Context
 		return nil, merchantbusiness_errors.ErrGrpcInvalidMerchantBusinessId
 	}
 
-	_, err := s.merchantBusinessService.DeleteMerchantPermanent(id)
-
+	_, err := s.merchantBusinessService.DeleteMerchantBusinessPermanent(ctx, id)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mappingMerchant.ToProtoResponseMerchantDelete("success", "Successfully deleted merchant permanently")
-
-	return so, nil
+	return &pb.ApiResponseMerchantDelete{
+		Status:  "success",
+		Message: "Successfully deleted merchant permanently",
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
-	_, err := s.merchantBusinessService.RestoreAllMerchant()
-
+	_, err := s.merchantBusinessService.RestoreAllMerchantBusiness(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mappingMerchant.ToProtoResponseMerchantAll("success", "Successfully restore all merchant")
-
-	return so, nil
+	return &pb.ApiResponseMerchantAll{
+		Status:  "success",
+		Message: "Successfully restore all merchant",
+	}, nil
 }
 
 func (s *merchantBusinessHandleGrpc) DeleteAllMerchantPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
-	_, err := s.merchantBusinessService.DeleteAllMerchantPermanent()
-
+	_, err := s.merchantBusinessService.DeleteAllMerchantBusinessPermanent(ctx)
 	if err != nil {
-		return nil, response.ToGrpcErrorFromErrorResponse(err)
+		return nil, errors.ToGrpcError(err)
 	}
 
-	so := s.mappingMerchant.ToProtoResponseMerchantAll("success", "Successfully delete merchant permanen")
-
-	return so, nil
+	return &pb.ApiResponseMerchantAll{
+		Status:  "success",
+		Message: "Successfully delete all merchant permanently",
+	}, nil
 }

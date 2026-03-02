@@ -2,56 +2,50 @@ package repository
 
 import (
 	"context"
-	"ecommerce/internal/domain/record"
 	"ecommerce/internal/domain/requests"
-	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
 	refreshtoken_errors "ecommerce/pkg/errors/refresh_token_errors"
 	"time"
 )
 
 type refreshTokenRepository struct {
-	db      *db.Queries
-	ctx     context.Context
-	mapping recordmapper.RefreshTokenRecordMapping
+	db *db.Queries
 }
 
-func NewRefreshTokenRepository(db *db.Queries, ctx context.Context, mapping recordmapper.RefreshTokenRecordMapping) *refreshTokenRepository {
+func NewRefreshTokenRepository(db *db.Queries) *refreshTokenRepository {
 	return &refreshTokenRepository{
-		db:      db,
-		ctx:     ctx,
-		mapping: mapping,
+		db: db,
 	}
 }
 
-func (r *refreshTokenRepository) FindByToken(token string) (*record.RefreshTokenRecord, error) {
-	res, err := r.db.FindRefreshTokenByToken(r.ctx, token)
+func (r *refreshTokenRepository) FindByToken(ctx context.Context, token string) (*db.RefreshToken, error) {
+	res, err := r.db.FindRefreshTokenByToken(ctx, token)
 
 	if err != nil {
 		return nil, refreshtoken_errors.ErrTokenNotFound
 	}
 
-	return r.mapping.ToRefreshTokenRecord(res), nil
+	return res, nil
 }
 
-func (r *refreshTokenRepository) FindByUserId(user_id int) (*record.RefreshTokenRecord, error) {
-	res, err := r.db.FindRefreshTokenByUserId(r.ctx, int32(user_id))
+func (r *refreshTokenRepository) FindByUserId(ctx context.Context, user_id int) (*db.RefreshToken, error) {
+	res, err := r.db.FindRefreshTokenByUserId(ctx, int32(user_id))
 
 	if err != nil {
 		return nil, refreshtoken_errors.ErrFindByUserID
 	}
 
-	return r.mapping.ToRefreshTokenRecord(res), nil
+	return res, nil
 }
 
-func (r *refreshTokenRepository) CreateRefreshToken(req *requests.CreateRefreshToken) (*record.RefreshTokenRecord, error) {
+func (r *refreshTokenRepository) CreateRefreshToken(ctx context.Context, req *requests.CreateRefreshToken) (*db.RefreshToken, error) {
 	layout := "2006-01-02 15:04:05"
 	expirationTime, err := time.Parse(layout, req.ExpiresAt)
 	if err != nil {
 		return nil, refreshtoken_errors.ErrParseDate
 	}
 
-	res, err := r.db.CreateRefreshToken(r.ctx, db.CreateRefreshTokenParams{
+	res, err := r.db.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
 		UserID:     int32(req.UserId),
 		Token:      req.Token,
 		Expiration: expirationTime,
@@ -61,17 +55,17 @@ func (r *refreshTokenRepository) CreateRefreshToken(req *requests.CreateRefreshT
 		return nil, refreshtoken_errors.ErrCreateRefreshToken
 	}
 
-	return r.mapping.ToRefreshTokenRecord(res), nil
+	return res, nil
 }
 
-func (r *refreshTokenRepository) UpdateRefreshToken(req *requests.UpdateRefreshToken) (*record.RefreshTokenRecord, error) {
+func (r *refreshTokenRepository) UpdateRefreshToken(ctx context.Context, req *requests.UpdateRefreshToken) (*db.RefreshToken, error) {
 	layout := "2006-01-02 15:04:05"
 	expirationTime, err := time.Parse(layout, req.ExpiresAt)
 	if err != nil {
 		return nil, refreshtoken_errors.ErrParseDate
 	}
 
-	res, err := r.db.UpdateRefreshTokenByUserId(r.ctx, db.UpdateRefreshTokenByUserIdParams{
+	res, err := r.db.UpdateRefreshTokenByUserId(ctx, db.UpdateRefreshTokenByUserIdParams{
 		UserID:     int32(req.UserId),
 		Token:      req.Token,
 		Expiration: expirationTime,
@@ -80,11 +74,11 @@ func (r *refreshTokenRepository) UpdateRefreshToken(req *requests.UpdateRefreshT
 		return nil, refreshtoken_errors.ErrUpdateRefreshToken
 	}
 
-	return r.mapping.ToRefreshTokenRecord(res), nil
+	return res, nil
 }
 
-func (r *refreshTokenRepository) DeleteRefreshToken(token string) error {
-	err := r.db.DeleteRefreshToken(r.ctx, token)
+func (r *refreshTokenRepository) DeleteRefreshToken(ctx context.Context, token string) error {
+	err := r.db.DeleteRefreshToken(ctx, token)
 
 	if err != nil {
 		return refreshtoken_errors.ErrDeleteRefreshToken
@@ -93,8 +87,8 @@ func (r *refreshTokenRepository) DeleteRefreshToken(token string) error {
 	return nil
 }
 
-func (r *refreshTokenRepository) DeleteRefreshTokenByUserId(user_id int) error {
-	err := r.db.DeleteRefreshTokenByUserId(r.ctx, int32(user_id))
+func (r *refreshTokenRepository) DeleteRefreshTokenByUserId(ctx context.Context, user_id int) error {
+	err := r.db.DeleteRefreshTokenByUserId(ctx, int32(user_id))
 
 	if err != nil {
 		return refreshtoken_errors.ErrDeleteByUserID

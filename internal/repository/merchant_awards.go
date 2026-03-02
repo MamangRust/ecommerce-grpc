@@ -3,59 +3,45 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"ecommerce/internal/domain/record"
 	"ecommerce/internal/domain/requests"
-	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
 	merchantaward_errors "ecommerce/pkg/errors/merchant_award"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type merchantAwardRepository struct {
-	db      *db.Queries
-	ctx     context.Context
-	mapping recordmapper.MerchantAwardMapping
+	db *db.Queries
 }
 
 func NewMerchantAwardRepository(
 	db *db.Queries,
-	ctx context.Context,
-	mapping recordmapper.MerchantAwardMapping,
 ) *merchantAwardRepository {
 	return &merchantAwardRepository{
-		db:      db,
-		ctx:     ctx,
-		mapping: mapping,
+		db: db,
 	}
 }
 
-func (r *merchantAwardRepository) FindAllMerchants(req *requests.FindAllMerchant) ([]*record.MerchantAwardRecord, *int, error) {
+func (r *merchantAwardRepository) FindAllMerchants(ctx context.Context, req *requests.FindAllMerchant) ([]*db.GetMerchantCertificationsAndAwardsRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetMerchantCertificationsAndAwardsParams{
-		Column1: req.Search,
+		Column1: &req.Search,
 		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetMerchantCertificationsAndAwards(r.ctx, reqDb)
+	res, err := r.db.GetMerchantCertificationsAndAwards(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, merchantaward_errors.ErrFindAllMerchantAwards
+		return nil, merchantaward_errors.ErrFindAllMerchantAwards
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToMerchantAwardsRecordPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *merchantAwardRepository) FindByActive(req *requests.FindAllMerchant) ([]*record.MerchantAwardRecord, *int, error) {
+func (r *merchantAwardRepository) FindByActive(ctx context.Context, req *requests.FindAllMerchant) ([]*db.GetMerchantCertificationsAndAwardsActiveRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetMerchantCertificationsAndAwardsActiveParams{
@@ -64,24 +50,16 @@ func (r *merchantAwardRepository) FindByActive(req *requests.FindAllMerchant) ([
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetMerchantCertificationsAndAwardsActive(r.ctx, reqDb)
+	res, err := r.db.GetMerchantCertificationsAndAwardsActive(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, merchantaward_errors.ErrFindByActiveMerchantAwards
+		return nil, merchantaward_errors.ErrFindByActiveMerchantAwards
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToMerchantAwardsRecordActivePagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *merchantAwardRepository) FindByTrashed(req *requests.FindAllMerchant) ([]*record.MerchantAwardRecord, *int, error) {
+func (r *merchantAwardRepository) FindByTrashed(ctx context.Context, req *requests.FindAllMerchant) ([]*db.GetMerchantCertificationsAndAwardsTrashedRow, error) {
 	offset := (req.Page - 1) * req.PageSize
 
 	reqDb := db.GetMerchantCertificationsAndAwardsTrashedParams{
@@ -90,93 +68,91 @@ func (r *merchantAwardRepository) FindByTrashed(req *requests.FindAllMerchant) (
 		Offset:  int32(offset),
 	}
 
-	res, err := r.db.GetMerchantCertificationsAndAwardsTrashed(r.ctx, reqDb)
+	res, err := r.db.GetMerchantCertificationsAndAwardsTrashed(ctx, reqDb)
 
 	if err != nil {
-		return nil, nil, merchantaward_errors.ErrFindByTrashedMerchantAwards
+		return nil, merchantaward_errors.ErrFindByTrashedMerchantAwards
 	}
 
-	var totalCount int
-
-	if len(res) > 0 {
-		totalCount = int(res[0].TotalCount)
-	} else {
-		totalCount = 0
-	}
-
-	return r.mapping.ToMerchantAwardsRecordTrashedPagination(res), &totalCount, nil
+	return res, nil
 }
 
-func (r *merchantAwardRepository) FindById(user_id int) (*record.MerchantAwardRecord, error) {
-	res, err := r.db.GetMerchantCertificationOrAward(r.ctx, int32(user_id))
+func (r *merchantAwardRepository) FindById(ctx context.Context, user_id int) (*db.GetMerchantCertificationOrAwardRow, error) {
+	res, err := r.db.GetMerchantCertificationOrAward(ctx, int32(user_id))
 
 	if err != nil {
 		return nil, merchantaward_errors.ErrFindByIdMerchantAward
 	}
 
-	return r.mapping.ToMerchantAwardRecord(res), nil
+	return res, nil
 }
 
-func (r *merchantAwardRepository) CreateMerchantAward(request *requests.CreateMerchantCertificationOrAwardRequest) (*record.MerchantAwardRecord, error) {
+func (r *merchantAwardRepository) CreateMerchantAward(
+	ctx context.Context,
+	request *requests.CreateMerchantCertificationOrAwardRequest,
+) (*db.CreateMerchantCertificationOrAwardRow, error) {
+
 	req := db.CreateMerchantCertificationOrAwardParams{
-		MerchantID:     int32(request.MerchantID),
-		Title:          request.Title,
-		Description:    sql.NullString{String: request.Description, Valid: request.Description != ""},
-		IssuedBy:       sql.NullString{String: request.IssuedBy, Valid: request.IssuedBy != ""},
-		IssueDate:      parseDateToNullTime(request.IssueDate),
-		ExpiryDate:     parseDateToNullTime(request.ExpiryDate),
-		CertificateUrl: sql.NullString{String: request.CertificateUrl, Valid: request.CertificateUrl != ""},
+		MerchantID: int32(request.MerchantID),
+		Title:      request.Title,
+
+		Description:    stringPtr(request.Description),
+		IssuedBy:       stringPtr(request.IssuedBy),
+		CertificateUrl: stringPtr(request.CertificateUrl),
+
+		IssueDate:  parseDateToPgDate(request.IssueDate),
+		ExpiryDate: parseDateToPgDate(request.ExpiryDate),
 	}
 
-	award, err := r.db.CreateMerchantCertificationOrAward(r.ctx, req)
+	award, err := r.db.CreateMerchantCertificationOrAward(ctx, req)
 	if err != nil {
 		return nil, merchantaward_errors.ErrCreateMerchantAward
 	}
 
-	return r.mapping.ToMerchantAwardRecord(award), nil
+	return award, nil
 }
 
-func (r *merchantAwardRepository) UpdateMerchantAward(request *requests.UpdateMerchantCertificationOrAwardRequest) (*record.MerchantAwardRecord, error) {
+func (r *merchantAwardRepository) UpdateMerchantAward(ctx context.Context, request *requests.UpdateMerchantCertificationOrAwardRequest) (*db.UpdateMerchantCertificationOrAwardRow, error) {
 	req := db.UpdateMerchantCertificationOrAwardParams{
 		MerchantCertificationID: int32(*request.MerchantCertificationID),
 		Title:                   request.Title,
-		Description:             sql.NullString{String: request.Description, Valid: request.Description != ""},
-		IssuedBy:                sql.NullString{String: request.IssuedBy, Valid: request.IssuedBy != ""},
-		IssueDate:               parseDateToNullTime(request.IssueDate),
-		ExpiryDate:              parseDateToNullTime(request.ExpiryDate),
-		CertificateUrl:          sql.NullString{String: request.CertificateUrl, Valid: request.CertificateUrl != ""},
+		Description:             stringPtr(request.Description),
+		IssuedBy:                stringPtr(request.IssuedBy),
+		CertificateUrl:          stringPtr(request.CertificateUrl),
+		IssueDate:               parseDateToPgDate(request.IssueDate),
+		ExpiryDate:              parseDateToPgDate(request.ExpiryDate),
 	}
 
-	res, err := r.db.UpdateMerchantCertificationOrAward(r.ctx, req)
+	res, err := r.db.UpdateMerchantCertificationOrAward(ctx, req)
 	if err != nil {
 		return nil, merchantaward_errors.ErrUpdateMerchantAward
 	}
 
-	return r.mapping.ToMerchantAwardRecord(res), nil
+	return res, nil
 }
 
-func (r *merchantAwardRepository) TrashedMerchantAward(merchant_id int) (*record.MerchantAwardRecord, error) {
-	res, err := r.db.TrashMerchantCertificationOrAward(r.ctx, int32(merchant_id))
+func (r *merchantAwardRepository) TrashedMerchantAward(ctx context.Context, merchant_id int) (*db.MerchantCertificationsAndAward, error) {
+	res, err := r.db.TrashMerchantCertificationOrAward(ctx, int32(merchant_id))
 
 	if err != nil {
 		return nil, merchantaward_errors.ErrTrashedMerchantAward
 	}
 
-	return r.mapping.ToMerchantAwardRecord(res), nil
+	return res, nil
 }
 
-func (r *merchantAwardRepository) RestoreMerchantAward(merchant_id int) (*record.MerchantAwardRecord, error) {
-	res, err := r.db.RestoreMerchantCertificationOrAward(r.ctx, int32(merchant_id))
+func (r *merchantAwardRepository) RestoreMerchantAward(ctx context.Context, merchant_id int) (*db.MerchantCertificationsAndAward, error) {
+	res, err := r.db.RestoreMerchantCertificationOrAward(ctx, int32(merchant_id))
 
 	if err != nil {
 		return nil, merchantaward_errors.ErrRestoreMerchantAward
 	}
 
-	return r.mapping.ToMerchantAwardRecord(res), nil
+	return res, nil
 }
 
-func (r *merchantAwardRepository) DeleteMerchantPermanent(Merchant_id int) (bool, error) {
-	err := r.db.DeleteMerchantCertificationOrAwardPermanently(r.ctx, int32(Merchant_id))
+func (r *merchantAwardRepository) DeleteMerchantPermanent(ctx context.Context, Merchant_id int) (bool, error) {
+	err := r.db.DeleteMerchantCertificationOrAwardPermanently(ctx, int32(Merchant_id))
 
 	if err != nil {
 		return false, merchantaward_errors.ErrDeleteMerchantAwardPermanent
@@ -185,8 +161,8 @@ func (r *merchantAwardRepository) DeleteMerchantPermanent(Merchant_id int) (bool
 	return true, nil
 }
 
-func (r *merchantAwardRepository) RestoreAllMerchantAward() (bool, error) {
-	err := r.db.RestoreAllMerchantCertificationsAndAwards(r.ctx)
+func (r *merchantAwardRepository) RestoreAllMerchantAward(ctx context.Context) (bool, error) {
+	err := r.db.RestoreAllMerchantCertificationsAndAwards(ctx)
 
 	if err != nil {
 		return false, merchantaward_errors.ErrRestoreAllMerchantAwards
@@ -194,8 +170,8 @@ func (r *merchantAwardRepository) RestoreAllMerchantAward() (bool, error) {
 	return true, nil
 }
 
-func (r *merchantAwardRepository) DeleteAllMerchantAwardPermanent() (bool, error) {
-	err := r.db.DeleteAllPermanentMerchantCertificationsAndAwards(r.ctx)
+func (r *merchantAwardRepository) DeleteAllMerchantAwardPermanent(ctx context.Context) (bool, error) {
+	err := r.db.DeleteAllPermanentMerchantCertificationsAndAwards(ctx)
 
 	if err != nil {
 		return false, merchantaward_errors.ErrDeleteAllMerchantAwardsPermanent
@@ -214,4 +190,27 @@ func parseDateToNullTime(dateStr string) sql.NullTime {
 	}
 
 	return sql.NullTime{Time: t, Valid: true}
+}
+
+func stringPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func parseDateToPgDate(dateStr string) pgtype.Date {
+	if dateStr == "" {
+		return pgtype.Date{Valid: false}
+	}
+
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return pgtype.Date{Valid: false}
+	}
+
+	return pgtype.Date{
+		Time:  t,
+		Valid: true,
+	}
 }

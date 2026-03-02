@@ -9,13 +9,21 @@
 --   - Supports pagination
 -- Returns: List of review details with total_count metadata
 -- name: GetReviewDetails :many
-SELECT 
-    rd.*,
-    COUNT(*) OVER() AS total_count
+SELECT
+    review_detail_id,
+    review_id,
+    type,
+    url,
+    caption,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
 FROM review_details rd
-WHERE LOWER(COALESCE(caption, '')) LIKE LOWER(CONCAT('%', $1::text, '%'))
-LIMIT $2 OFFSET $3;
-
+WHERE
+    LOWER(COALESCE(caption, '')) LIKE LOWER(CONCAT('%', $1::text, '%'))
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetReviewDetailsActive: Retrieves active (non-deleted) review details
 -- Parameters:
@@ -28,14 +36,23 @@ LIMIT $2 OFFSET $3;
 --   - Supports pagination
 -- Returns: List of active review details with total_count metadata
 -- name: GetReviewDetailsActive :many
-SELECT 
-    rd.*,
-    COUNT(*) OVER() AS total_count
+SELECT
+    review_detail_id,
+    review_id,
+    type,
+    url,
+    caption,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM review_details rd
-WHERE deleted_at IS NULL
-  AND LOWER(COALESCE(caption, '')) LIKE LOWER(CONCAT('%', $1::text, '%'))
-LIMIT $2 OFFSET $3;
-
+WHERE
+    deleted_at IS NULL
+    AND LOWER(COALESCE(caption, '')) LIKE LOWER(CONCAT('%', $1::text, '%'))
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetTrashedReviewDetails: Retrieves trashed (soft-deleted) review details
 -- Parameters:
@@ -48,14 +65,23 @@ LIMIT $2 OFFSET $3;
 --   - Supports pagination
 -- Returns: List of trashed review details with total_count metadata
 -- name: GetReviewDetailsTrashed :many
-SELECT 
-    rd.*,
-    COUNT(*) OVER() AS total_count
+SELECT
+    review_detail_id,
+    review_id,
+    type,
+    url,
+    caption,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM review_details rd
-WHERE deleted_at IS NOT NULL
-  AND LOWER(COALESCE(caption, '')) LIKE LOWER(CONCAT('%', $1::text, '%'))
-LIMIT $2 OFFSET $3;
-
+WHERE
+    deleted_at IS NOT NULL
+    AND LOWER(COALESCE(caption, '')) LIKE LOWER(CONCAT('%', $1::text, '%'))
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetReviewDetail: Retrieves a single review detail that is not soft-deleted
 -- Parameters:
@@ -64,11 +90,18 @@ LIMIT $2 OFFSET $3;
 --   - Returns the review detail where deleted_at IS NULL
 -- Returns: A single review_details record
 -- name: GetReviewDetail :one
-SELECT *
+SELECT
+    review_detail_id,
+    review_id,
+    type,
+    url,
+    caption,
+    created_at,
+    updated_at
 FROM review_details
-WHERE review_detail_id = $1
-AND deleted_at IS NULL;
-
+WHERE
+    review_detail_id = $1
+    AND deleted_at IS NULL;
 
 -- GetReviewDetailTrashed: Retrieves a single review detail that is not soft-deleted
 -- Parameters:
@@ -79,9 +112,9 @@ AND deleted_at IS NULL;
 -- name: GetReviewDetailTrashed :one
 SELECT *
 FROM review_details
-WHERE review_detail_id = $1
-AND deleted_at IS NOT NULL;
-
+WHERE
+    review_detail_id = $1
+    AND deleted_at IS NOT NULL;
 
 -- CreateReviewDetail: Inserts a new review detail
 -- Parameters:
@@ -91,10 +124,17 @@ AND deleted_at IS NOT NULL;
 --   $4: caption - Optional caption
 -- Returns: The inserted review detail record
 -- name: CreateReviewDetail :one
-INSERT INTO review_details (review_id, type, url, caption)
+INSERT INTO
+    review_details (review_id, type, url, caption)
 VALUES ($1, $2, $3, $4)
-RETURNING *;
-
+RETURNING
+    review_detail_id,
+    review_id,
+    type,
+    url,
+    caption,
+    created_at,
+    updated_at;
 
 -- UpdateReviewDetail: Updates an existing review detail
 -- Parameters:
@@ -105,14 +145,20 @@ RETURNING *;
 -- Returns: The updated review detail record
 -- name: UpdateReviewDetail :one
 UPDATE review_details
-SET 
+SET
     type = $1,
     url = $2,
     caption = $3
-WHERE 
+WHERE
     review_detail_id = $4
-RETURNING *;
-
+RETURNING
+    review_detail_id,
+    review_id,
+    type,
+    url,
+    caption,
+    created_at,
+    updated_at;
 
 -- TrashReviewDetail: Soft deletes a review detail
 -- Parameters:
@@ -122,11 +168,20 @@ RETURNING *;
 -- Returns: The soft-deleted review detail
 -- name: TrashReviewDetail :one
 UPDATE review_details
-SET deleted_at = CURRENT_TIMESTAMP
-WHERE review_detail_id = $1
-AND deleted_at IS NOT NULL
-RETURNING *;
-
+SET
+    deleted_at = CURRENT_TIMESTAMP
+WHERE
+    review_detail_id = $1
+    AND deleted_at IS NOT NULL
+RETURNING
+    review_detail_id,
+    review_id,
+    type,
+    url,
+    caption,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreReviewDetail: Restores a soft-deleted review detail
 -- Parameters:
@@ -136,11 +191,20 @@ RETURNING *;
 -- Returns: The restored review detail
 -- name: RestoreReviewDetail :one
 UPDATE review_details
-SET deleted_at = NULL
-WHERE review_detail_id = $1
-AND deleted_at IS NOT NULL
-RETURNING *;
-
+SET
+    deleted_at = NULL
+WHERE
+    review_detail_id = $1
+    AND deleted_at IS NOT NULL
+RETURNING
+    review_detail_id,
+    review_id,
+    type,
+    url,
+    caption,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeletePermanentReviewDetail: Permanently deletes a soft-deleted review detail
 -- Parameters:
@@ -149,9 +213,10 @@ RETURNING *;
 --   - Only deletes if deleted_at IS NOT NULL
 -- Returns: No return value (exec command)
 -- name: DeletePermanentReviewDetail :exec
-DELETE FROM review_details WHERE review_detail_id = $1
-AND deleted_at IS NOT NULL;
-
+DELETE FROM review_details
+WHERE
+    review_detail_id = $1
+    AND deleted_at IS NOT NULL;
 
 -- RestoreAllReviewDetails: Restores all soft-deleted review details
 -- Parameters: None
@@ -160,9 +225,10 @@ AND deleted_at IS NOT NULL;
 -- Returns: No return value (exec command)
 -- name: RestoreAllReviewDetails :exec
 UPDATE review_details
-SET deleted_at = NULL
-WHERE deleted_at IS NOT NULL;
-
+SET
+    deleted_at = NULL
+WHERE
+    deleted_at IS NOT NULL;
 
 -- DeleteAllPermanentReviewDetails: Permanently deletes all trashed review details
 -- Parameters: None
@@ -170,7 +236,4 @@ WHERE deleted_at IS NOT NULL;
 --   - Deletes all records where deleted_at IS NOT NULL
 -- Returns: No return value (exec command)
 -- name: DeleteAllPermanentReviewDetails :exec
-DELETE FROM review_details
-WHERE deleted_at IS NOT NULL;
-
-
+DELETE FROM review_details WHERE deleted_at IS NOT NULL;

@@ -1,8 +1,6 @@
 package repository
 
 import (
-	"context"
-	recordmapper "ecommerce/internal/mapper/record"
 	db "ecommerce/pkg/database/schema"
 )
 
@@ -31,33 +29,31 @@ type Repositories struct {
 }
 
 type Deps struct {
-	DB           *db.Queries
-	Ctx          context.Context
-	MapperRecord *recordmapper.RecordMapper
+	DB *db.Queries
 }
 
-func NewRepositories(deps Deps) *Repositories {
+func NewRepositories(db *db.Queries) *Repositories {
 	return &Repositories{
-		User:               NewUserRepository(deps.DB, deps.Ctx, deps.MapperRecord.UserRecordMapper),
-		Role:               NewRoleRepository(deps.DB, deps.Ctx, deps.MapperRecord.RoleRecordMapper),
-		UserRole:           NewUserRoleRepository(deps.DB, deps.Ctx, deps.MapperRecord.UserRoleRecordMapper),
-		Category:           NewCategoryRepository(deps.DB, deps.Ctx, deps.MapperRecord.CategoryRecordMapper),
-		RefreshToken:       NewRefreshTokenRepository(deps.DB, deps.Ctx, deps.MapperRecord.RefreshTokenRecordMapper),
-		Product:            NewProductRepository(deps.DB, deps.Ctx, deps.MapperRecord.ProductRecordMapper),
-		Merchant:           NewMerchantRepository(deps.DB, deps.Ctx, deps.MapperRecord.MerchantRecordMapper),
-		OrderItem:          NewOrderItemRepository(deps.DB, deps.Ctx, deps.MapperRecord.OrderItemRecordMapper),
-		Order:              NewOrderRepository(deps.DB, deps.Ctx, deps.MapperRecord.OrderRecordMapper),
-		Transaction:        NewTransactionRepository(deps.DB, deps.Ctx, deps.MapperRecord.TransactionRecordMapper),
-		Cart:               NewCartRepository(deps.DB, deps.Ctx, deps.MapperRecord.CartRecordMapping),
-		Shipping:           NewShippingAddressRepository(deps.DB, deps.Ctx, deps.MapperRecord.ShippingAddressMapping),
-		Review:             NewReviewRepository(deps.DB, deps.Ctx, deps.MapperRecord.ReviewRecordMapping),
-		Slider:             NewSliderRepository(deps.DB, deps.Ctx, deps.MapperRecord.SliderMapping),
-		Banner:             NewBannerRepository(deps.DB, deps.Ctx, deps.MapperRecord.BannerMapping),
-		MerchantAward:      NewMerchantAwardRepository(deps.DB, deps.Ctx, deps.MapperRecord.MerchantAwardMapping),
-		MerchantBusiness:   NewMerchantBusinessRepository(deps.DB, deps.Ctx, deps.MapperRecord.MerchantBusinessMapping),
-		MerchantDetail:     NewMerchantDetailRepository(deps.DB, deps.Ctx, deps.MapperRecord.MerchantDetailMapping),
-		MerchantSocialLink: NewMerchantSocialMediaLinkRepository(deps.DB, deps.Ctx),
-		MerchantPolicies:   NewMerchantPolicyRepository(deps.DB, deps.Ctx, deps.MapperRecord.MerchantPolicyMapping),
-		ReviewDetail:       NewReviewDetailRepository(deps.DB, deps.Ctx, deps.MapperRecord.ReviewDetailRecordMapping),
+		User:               NewUserRepository(db),
+		Role:               NewRoleRepository(db),
+		UserRole:           NewUserRoleRepository(db),
+		Cart:               NewCartRepository(db),
+		RefreshToken:       NewRefreshTokenRepository(db),
+		Category:           NewCategoryRepository(db),
+		Product:            NewProductRepository(db),
+		Merchant:           NewMerchantRepository(db),
+		OrderItem:          NewOrderItemRepository(db),
+		Order:              NewOrderRepository(db),
+		Transaction:        NewTransactionRepository(db),
+		Shipping:           NewShippingAddressRepository(db),
+		Review:             NewReviewRepository(db),
+		Slider:             NewSliderRepository(db),
+		Banner:             NewBannerRepository(db),
+		MerchantAward:      NewMerchantAwardRepository(db),
+		MerchantBusiness:   NewMerchantBusinessRepository(db),
+		MerchantDetail:     NewMerchantDetailRepository(db),
+		MerchantSocialLink: NewMerchantSocialMediaLinkRepository(db),
+		MerchantPolicies:   NewMerchantPolicyRepository(db),
+		ReviewDetail:       NewReviewDetailRepository(db),
 	}
 }

@@ -1,22 +1,29 @@
 package api
 
 import (
-	response_api "ecommerce/internal/mapper/response/api"
+	shippingaddress_cache "ecommerce/internal/cache/api/shipping_address"
+	"ecommerce/internal/domain/requests"
+	response_api "ecommerce/internal/mapper"
 	"ecommerce/internal/pb"
-	shippingaddress_errors "ecommerce/pkg/errors/shipping_address_errors"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/logger"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type shippingAddressHandleApi struct {
-	client  pb.ShippingServiceClient
-	logger  logger.LoggerInterface
-	mapping response_api.ShippingAddressResponseMapper
+	client     pb.ShippingServiceClient
+	logger     logger.LoggerInterface
+	mapping    response_api.ShippingAddressResponseMapper
+	apiHandler errors.ApiHandler
+	cache      shippingaddress_cache.ShippingAddressMencache
 }
 
 func NewHandlerShippingAddress(
@@ -24,27 +31,61 @@ func NewHandlerShippingAddress(
 	client pb.ShippingServiceClient,
 	logger logger.LoggerInterface,
 	mapping response_api.ShippingAddressResponseMapper,
+	apiHandler errors.ApiHandler,
+	cache shippingaddress_cache.ShippingAddressMencache,
 ) *shippingAddressHandleApi {
 	shippingHandler := &shippingAddressHandleApi{
-		client:  client,
-		logger:  logger,
-		mapping: mapping,
+		client:     client,
+		logger:     logger,
+		mapping:    mapping,
+		apiHandler: apiHandler,
+		cache:      cache,
 	}
 
-	myrouter := router.Group("/api/shipping-address")
+	routerShipping := router.Group("/api/shipping-address")
 
-	myrouter.GET("", shippingHandler.FindAllShipping)
-	myrouter.GET("/:id", shippingHandler.FindById)
-	myrouter.GET("/order/:id", shippingHandler.FindByOrder)
-	myrouter.GET("/active", shippingHandler.FindByActive)
-	myrouter.GET("/trashed", shippingHandler.FindByTrashed)
+	routerShipping.GET(
+		"",
+		apiHandler.Handle("findAll", shippingHandler.FindAllShipping),
+	)
+	routerShipping.GET(
+		"/:id",
+		apiHandler.Handle("findById", shippingHandler.FindById),
+	)
+	routerShipping.GET(
+		"/order/:id",
+		apiHandler.Handle("findByOrder", shippingHandler.FindByOrder),
+	)
+	routerShipping.GET(
+		"/active",
+		apiHandler.Handle("findByActive", shippingHandler.FindByActive),
+	)
+	routerShipping.GET(
+		"/trashed",
+		apiHandler.Handle("findByTrashed", shippingHandler.FindByTrashed),
+	)
 
-	myrouter.POST("/trashed/:id", shippingHandler.TrashedShippingAddress)
-	myrouter.POST("/restore/:id", shippingHandler.RestoreShippingAddress)
-	router.DELETE("/permanent/:id", shippingHandler.DeleteShippingAddressPermanent)
+	routerShipping.POST(
+		"/trashed/:id",
+		apiHandler.Handle("trashed", shippingHandler.TrashedShippingAddress),
+	)
+	routerShipping.POST(
+		"/restore/:id",
+		apiHandler.Handle("restore", shippingHandler.RestoreShippingAddress),
+	)
+	routerShipping.DELETE(
+		"/permanent/:id",
+		apiHandler.Handle("deletePermanent", shippingHandler.DeleteShippingAddressPermanent),
+	)
 
-	myrouter.POST("/restore/all", shippingHandler.RestoreAllShippingAddress)
-	myrouter.POST("/permanent/all", shippingHandler.DeleteAllShippingAddressPermanent)
+	routerShipping.POST(
+		"/restore/all",
+		apiHandler.Handle("restoreAll", shippingHandler.RestoreAllShippingAddress),
+	)
+	routerShipping.POST(
+		"/permanent/all",
+		apiHandler.Handle("deleteAllPermanent", shippingHandler.DeleteAllShippingAddressPermanent),
+	)
 
 	return shippingHandler
 
@@ -77,22 +118,33 @@ func (h *shippingAddressHandleApi) FindAllShipping(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllShippingRequest{
+	req := &requests.FindAllShippingAddress{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetShippingAddressAllCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllShippingRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindAll(ctx, req)
-
+	res, err := h.client.FindAll(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch shipping address", zap.Error(err))
-		return shippingaddress_errors.ErrApiFailedFindAllShippingAddresses(c)
+		return h.handleGrpcError(err, "FindAllShipping")
 	}
 
-	so := h.mapping.ToApiResponsePaginationShippingAddress(res)
+	apiResponse := h.mapping.ToApiResponsePaginationShippingAddress(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetShippingAddressAllCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -108,28 +160,31 @@ func (h *shippingAddressHandleApi) FindAllShipping(c echo.Context) error {
 // @Router /api/shipping-address/{id} [get]
 func (h *shippingAddressHandleApi) FindById(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
-
 	if err != nil {
-		h.logger.Debug("Invalid shipping address ID", zap.Error(err))
-		return shippingaddress_errors.ErrApiInvalidIdShippingAddress(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
+
+	cachedData, found := h.cache.GetCachedShippingAddressCache(ctx, id)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	req := &pb.FindByIdShippingRequest{
 		Id: int32(id),
 	}
 
 	res, err := h.client.FindById(ctx, req)
-
 	if err != nil {
-		h.logger.Error("Failed to fetch shipping address details", zap.Error(err))
-		return shippingaddress_errors.ErrApiFailedFindShippingAddressById(c)
+		return h.handleGrpcError(err, "FindById")
 	}
 
-	so := h.mapping.ToApiResponseShippingAddress(res)
+	apiResponse := h.mapping.ToApiResponseShippingAddress(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetCachedShippingAddressCache(ctx, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -145,28 +200,31 @@ func (h *shippingAddressHandleApi) FindById(c echo.Context) error {
 // @Router /api/shipping-address/order/{order_id} [get]
 func (h *shippingAddressHandleApi) FindByOrder(c echo.Context) error {
 	orderID, err := strconv.Atoi(c.Param("order_id"))
-
 	if err != nil {
-		h.logger.Debug("Invalid order ID", zap.Error(err))
-		return shippingaddress_errors.ErrApiInvalidOrderIdShippingAddress(c)
+		return errors.NewBadRequestError("order_id is required")
 	}
 
 	ctx := c.Request().Context()
+
+	cachedData, found := h.cache.GetCachedShippingAddressByOrderCache(ctx, orderID)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	req := &pb.FindByIdShippingRequest{
 		Id: int32(orderID),
 	}
 
 	res, err := h.client.FindByOrder(ctx, req)
-
 	if err != nil {
-		h.logger.Error("Failed to fetch shipping address details", zap.Error(err))
-		return shippingaddress_errors.ErrApiFailedFindShippingAddressByOrder(c)
+		return h.handleGrpcError(err, "FindByOrder")
 	}
 
-	so := h.mapping.ToApiResponseShippingAddress(res)
+	apiResponse := h.mapping.ToApiResponseShippingAddress(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetCachedShippingAddressByOrderCache(ctx, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -196,22 +254,33 @@ func (h *shippingAddressHandleApi) FindByActive(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllShippingRequest{
+	req := &requests.FindAllShippingAddress{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetShippingAddressActiveCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllShippingRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByActive(ctx, req)
-
+	res, err := h.client.FindByActive(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch active shipping address", zap.Error(err))
-		return shippingaddress_errors.ErrApiFailedFindActiveShippingAddresses(c)
+		return h.handleGrpcError(err, "FindByActive")
 	}
 
-	so := h.mapping.ToApiResponsePaginationShippingAddressDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationShippingAddressDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetShippingAddressActiveCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -242,22 +311,33 @@ func (h *shippingAddressHandleApi) FindByTrashed(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllShippingRequest{
+	req := &requests.FindAllShippingAddress{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetShippingAddressTrashedCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllShippingRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByTrashed(ctx, req)
-
+	res, err := h.client.FindByTrashed(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch archived shipping address", zap.Error(err))
-		return shippingaddress_errors.ErrApiFailedFindTrashedShippingAddresses(c)
+		return h.handleGrpcError(err, "FindByTrashed")
 	}
 
-	so := h.mapping.ToApiResponsePaginationShippingAddressDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationShippingAddressDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetShippingAddressTrashedCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -276,8 +356,7 @@ func (h *shippingAddressHandleApi) TrashedShippingAddress(c echo.Context) error 
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid shipping address ID format", zap.Error(err))
-		return shippingaddress_errors.ErrApiInvalidIdShippingAddress(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -289,8 +368,7 @@ func (h *shippingAddressHandleApi) TrashedShippingAddress(c echo.Context) error 
 	res, err := h.client.TrashedShipping(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to archive shipping address", zap.Error(err))
-		return shippingaddress_errors.ErrApiFailedTrashShippingAddress(c)
+		return h.handleGrpcError(err, "TrashedShipping")
 	}
 
 	so := h.mapping.ToApiResponseShippingAddressDeleteAt(res)
@@ -314,8 +392,7 @@ func (h *shippingAddressHandleApi) RestoreShippingAddress(c echo.Context) error 
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid shipping address ID", zap.Error(err))
-		return shippingaddress_errors.ErrApiInvalidIdShippingAddress(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -327,8 +404,7 @@ func (h *shippingAddressHandleApi) RestoreShippingAddress(c echo.Context) error 
 	res, err := h.client.RestoreShipping(ctx, req)
 
 	if err != nil {
-		h.logger.Debug("Failed to restore shipping address", zap.Error(err))
-		return shippingaddress_errors.ErrApiFailedRestoreShippingAddress(c)
+		return h.handleGrpcError(err, "RestoreShipping")
 	}
 
 	so := h.mapping.ToApiResponseShippingAddressDeleteAt(res)
@@ -352,8 +428,7 @@ func (h *shippingAddressHandleApi) DeleteShippingAddressPermanent(c echo.Context
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid shipping address ID", zap.Error(err))
-		return shippingaddress_errors.ErrApiInvalidIdShippingAddress(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -365,9 +440,7 @@ func (h *shippingAddressHandleApi) DeleteShippingAddressPermanent(c echo.Context
 	res, err := h.client.DeleteShippingPermanent(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to permanently delete shipping address", zap.Error(err))
-
-		return shippingaddress_errors.ErrApiFailedDeleteShippingAddressPermanent(c)
+		return h.handleGrpcError(err, "DeleteShipping")
 	}
 
 	so := h.mapping.ToApiResponseShippingAddressDelete(res)
@@ -391,8 +464,7 @@ func (h *shippingAddressHandleApi) RestoreAllShippingAddress(c echo.Context) err
 	res, err := h.client.RestoreAllShipping(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk shipping address restoration failed", zap.Error(err))
-		return shippingaddress_errors.ErrApiFailedRestoreAllShippingAddresses(c)
+		return h.handleGrpcError(err, "RestoreAll")
 	}
 
 	so := h.mapping.ToApiResponseShippingAddressAll(res)
@@ -418,8 +490,7 @@ func (h *shippingAddressHandleApi) DeleteAllShippingAddressPermanent(c echo.Cont
 	res, err := h.client.DeleteAllShippingPermanent(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk shipping address deletion failed", zap.Error(err))
-		return shippingaddress_errors.ErrApiFailedDeleteAllPermanentShippingAddresses(c)
+		return h.handleGrpcError(err, "DeleteAllShipping")
 	}
 
 	so := h.mapping.ToApiResponseShippingAddressAll(res)
@@ -427,4 +498,82 @@ func (h *shippingAddressHandleApi) DeleteAllShippingAddressPermanent(c echo.Cont
 	h.logger.Debug("Successfully deleted all shipping addresses permanently")
 
 	return c.JSON(http.StatusOK, so)
+}
+
+func (h *shippingAddressHandleApi) handleGrpcError(err error, operation string) *errors.AppError {
+	st, ok := status.FromError(err)
+	if !ok {
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return errors.NewNotFoundError("Shipping Address").WithInternal(err)
+
+	case codes.AlreadyExists:
+		return errors.NewConflictError("Shipping Address already exists").WithInternal(err)
+
+	case codes.InvalidArgument:
+		return errors.NewBadRequestError(st.Message()).WithInternal(err)
+
+	case codes.PermissionDenied:
+		return errors.ErrForbidden.WithInternal(err)
+
+	case codes.Unauthenticated:
+		return errors.ErrUnauthorized.WithInternal(err)
+
+	case codes.ResourceExhausted:
+		return errors.ErrTooManyRequests.WithInternal(err)
+
+	case codes.Unavailable:
+		return errors.NewServiceUnavailableError("Shipping Address service").WithInternal(err)
+
+	case codes.DeadlineExceeded:
+		return errors.ErrTimeout.WithInternal(err)
+
+	default:
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+}
+
+func (h *shippingAddressHandleApi) parseValidationErrors(err error) []errors.ValidationError {
+	var validationErrs []errors.ValidationError
+
+	if ve, ok := err.(validator.ValidationErrors); ok {
+		for _, fe := range ve {
+			validationErrs = append(validationErrs, errors.ValidationError{
+				Field:   fe.Field(),
+				Message: h.getValidationMessage(fe),
+			})
+		}
+		return validationErrs
+	}
+
+	return []errors.ValidationError{
+		{
+			Field:   "general",
+			Message: err.Error(),
+		},
+	}
+}
+
+func (h *shippingAddressHandleApi) getValidationMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return fmt.Sprintf("Must be at least %s", fe.Param())
+	case "max":
+		return fmt.Sprintf("Must be at most %s", fe.Param())
+	case "gte":
+		return fmt.Sprintf("Must be greater than or equal to %s", fe.Param())
+	case "lte":
+		return fmt.Sprintf("Must be less than or equal to %s", fe.Param())
+	case "oneof":
+		return fmt.Sprintf("Must be one of: %s", fe.Param())
+	default:
+		return fmt.Sprintf("Validation failed on '%s' tag", fe.Tag())
+	}
 }

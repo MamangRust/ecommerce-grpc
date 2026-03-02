@@ -1,18 +1,23 @@
 package api
 
 import (
+	slider_cache "ecommerce/internal/cache/api/slider"
 	"ecommerce/internal/domain/requests"
-	response_api "ecommerce/internal/mapper/response/api"
+	response_api "ecommerce/internal/mapper"
 	"ecommerce/internal/pb"
-	"ecommerce/pkg/errors/slider_errors"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/logger"
 	"ecommerce/pkg/upload_image"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -21,6 +26,8 @@ type sliderHandleApi struct {
 	logger       logger.LoggerInterface
 	mapping      response_api.SliderResponseMapper
 	upload_image upload_image.ImageUploads
+	apiHandler   errors.ApiHandler
+	cache        slider_cache.SliderMencache
 }
 
 func NewHandlerSlider(
@@ -29,29 +36,63 @@ func NewHandlerSlider(
 	logger logger.LoggerInterface,
 	mapping response_api.SliderResponseMapper,
 	upload_image upload_image.ImageUploads,
+	apiHandler errors.ApiHandler,
+	cache slider_cache.SliderMencache,
 ) *sliderHandleApi {
 	sliderHandler := &sliderHandleApi{
 		client:       client,
 		logger:       logger,
 		mapping:      mapping,
 		upload_image: upload_image,
+		apiHandler:   apiHandler,
+		cache:        cache,
 	}
 
 	routerSlider := router.Group("/api/slider")
 
-	routerSlider.GET("", sliderHandler.FindAllSlider)
-	routerSlider.GET("/active", sliderHandler.FindByActive)
-	routerSlider.GET("/trashed", sliderHandler.FindByTrashed)
+	routerSlider.GET(
+		"",
+		apiHandler.Handle("findAll", sliderHandler.FindAllSlider),
+	)
+	routerSlider.GET(
+		"/active",
+		apiHandler.Handle("findByActive", sliderHandler.FindByActive),
+	)
+	routerSlider.GET(
+		"/trashed",
+		apiHandler.Handle("findByTrashed", sliderHandler.FindByTrashed),
+	)
 
-	routerSlider.POST("/create", sliderHandler.Create)
-	routerSlider.POST("/update/:id", sliderHandler.Update)
+	routerSlider.POST(
+		"/create",
+		apiHandler.Handle("create", sliderHandler.Create),
+	)
+	routerSlider.POST(
+		"/update/:id",
+		apiHandler.Handle("update", sliderHandler.Update),
+	)
 
-	routerSlider.POST("/trashed/:id", sliderHandler.TrashedSlider)
-	routerSlider.POST("/restore/:id", sliderHandler.RestoreSlider)
-	routerSlider.DELETE("/permanent/:id", sliderHandler.DeleteSliderPermanent)
+	routerSlider.POST(
+		"/trashed/:id",
+		apiHandler.Handle("trashed", sliderHandler.TrashedSlider),
+	)
+	routerSlider.POST(
+		"/restore/:id",
+		apiHandler.Handle("restore", sliderHandler.RestoreSlider),
+	)
+	routerSlider.DELETE(
+		"/permanent/:id",
+		apiHandler.Handle("deletePermanent", sliderHandler.DeleteSliderPermanent),
+	)
 
-	routerSlider.POST("/restore/all", sliderHandler.RestoreAllSlider)
-	routerSlider.POST("/permanent/all", sliderHandler.DeleteAllSliderPermanent)
+	routerSlider.POST(
+		"/restore/all",
+		apiHandler.Handle("restoreAll", sliderHandler.RestoreAllSlider),
+	)
+	routerSlider.POST(
+		"/permanent/all",
+		apiHandler.Handle("deleteAllPermanent", sliderHandler.DeleteAllSliderPermanent),
+	)
 
 	return sliderHandler
 
@@ -84,23 +125,33 @@ func (h *sliderHandleApi) FindAllSlider(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllSliderRequest{
+	req := &requests.FindAllSlider{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetSliderAllCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllSliderRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindAll(ctx, req)
-
+	res, err := h.client.FindAll(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch sliders", zap.Error(err))
-
-		return slider_errors.ErrApiFailedFindAllSliders(c)
+		return h.handleGrpcError(err, "FindAllSlider")
 	}
 
-	so := h.mapping.ToApiResponsePaginationSlider(res)
+	apiResponse := h.mapping.ToApiResponsePaginationSlider(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetSliderAllCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -130,23 +181,33 @@ func (h *sliderHandleApi) FindByActive(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllSliderRequest{
+	req := &requests.FindAllSlider{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetSliderActiveCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllSliderRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByActive(ctx, req)
-
+	res, err := h.client.FindByActive(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch active sliders", zap.Error(err))
-
-		return slider_errors.ErrApiFailedFindActiveSliders(c)
+		return h.handleGrpcError(err, "FindByActive")
 	}
 
-	so := h.mapping.ToApiResponsePaginationSliderDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationSliderDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetSliderActiveCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -177,22 +238,33 @@ func (h *sliderHandleApi) FindByTrashed(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllSliderRequest{
+	req := &requests.FindAllSlider{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetSliderTrashedCache(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllSliderRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByTrashed(ctx, req)
-
+	res, err := h.client.FindByTrashed(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch archived sliders", zap.Error(err))
-		return slider_errors.ErrApiFailedFindTrashedSliders(c)
+		return h.handleGrpcError(err, "FindByTrashed")
 	}
 
-	so := h.mapping.ToApiResponsePaginationSliderDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationSliderDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetSliderTrashedCache(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -211,7 +283,7 @@ func (h *sliderHandleApi) FindByTrashed(c echo.Context) error {
 func (h *sliderHandleApi) Create(c echo.Context) error {
 	formData, err := h.parseSliderForm(c, true)
 	if err != nil {
-		return slider_errors.ErrApiFailedCreateSlider(c)
+		return h.handleGrpcError(err, "Create")
 	}
 
 	ctx := c.Request().Context()
@@ -224,12 +296,7 @@ func (h *sliderHandleApi) Create(c echo.Context) error {
 	res, err := h.client.Create(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Slider creation failed",
-			zap.Error(err),
-			zap.Any("request", req),
-		)
-
-		return slider_errors.ErrApiFailedCreateSlider(c)
+		return h.handleGrpcError(err, "Create")
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -252,12 +319,12 @@ func (h *sliderHandleApi) Create(c echo.Context) error {
 func (h *sliderHandleApi) Update(c echo.Context) error {
 	sliderID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return slider_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	formData, err := h.parseSliderForm(c, true)
 	if err != nil {
-		return slider_errors.ErrApiInvalidBody(c)
+		return h.handleGrpcError(err, "Updates")
 	}
 
 	ctx := c.Request().Context()
@@ -271,12 +338,7 @@ func (h *sliderHandleApi) Update(c echo.Context) error {
 	res, err := h.client.Update(ctx, req)
 
 	if err != nil {
-		h.logger.Error("slider update failed",
-			zap.Error(err),
-			zap.Any("request", req),
-		)
-
-		return slider_errors.ErrApiFailedUpdateSlider(c)
+		return h.handleGrpcError(err, "Update")
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -298,8 +360,7 @@ func (h *sliderHandleApi) TrashedSlider(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid slider ID format", zap.Error(err))
-		return slider_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -311,8 +372,7 @@ func (h *sliderHandleApi) TrashedSlider(c echo.Context) error {
 	res, err := h.client.TrashedSlider(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to archive slider", zap.Error(err))
-		return slider_errors.ErrApiFailedTrashSlider(c)
+		return h.handleGrpcError(err, "Trashed")
 	}
 
 	so := h.mapping.ToApiResponseSliderDeleteAt(res)
@@ -336,8 +396,7 @@ func (h *sliderHandleApi) RestoreSlider(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid slider ID format", zap.Error(err))
-		return slider_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -349,8 +408,7 @@ func (h *sliderHandleApi) RestoreSlider(c echo.Context) error {
 	res, err := h.client.RestoreSlider(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to restore slider", zap.Error(err))
-		return slider_errors.ErrApiFailedRestoreSlider(c)
+		return h.handleGrpcError(err, "Restore")
 	}
 
 	so := h.mapping.ToApiResponseSliderDeleteAt(res)
@@ -374,8 +432,7 @@ func (h *sliderHandleApi) DeleteSliderPermanent(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid slider ID format", zap.Error(err))
-		return slider_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -387,8 +444,7 @@ func (h *sliderHandleApi) DeleteSliderPermanent(c echo.Context) error {
 	res, err := h.client.DeleteSliderPermanent(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to permanently delete slider", zap.Error(err))
-		return slider_errors.ErrApiFailedDeleteSliderPermanent(c)
+		return h.handleGrpcError(err, "DeleteSlider")
 	}
 
 	so := h.mapping.ToApiResponseSliderDelete(res)
@@ -414,8 +470,7 @@ func (h *sliderHandleApi) RestoreAllSlider(c echo.Context) error {
 	res, err := h.client.RestoreAllSlider(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk slider restoration failed", zap.Error(err))
-		return slider_errors.ErrApiFailedRestoreAllSliders(c)
+		return h.handleGrpcError(err, "RestoreAll")
 	}
 
 	so := h.mapping.ToApiResponseSliderAll(res)
@@ -443,8 +498,7 @@ func (h *sliderHandleApi) DeleteAllSliderPermanent(c echo.Context) error {
 	res, err := h.client.DeleteAllSliderPermanent(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk slider deletion failed", zap.Error(err))
-		return slider_errors.ErrApiFailedDeleteAllPermanentSliders(c)
+		return h.handleGrpcError(err, "DeleteAll")
 	}
 
 	so := h.mapping.ToApiResponseSliderAll(res)
@@ -459,14 +513,14 @@ func (h *sliderHandleApi) parseSliderForm(c echo.Context, requireImage bool) (re
 
 	formData.Nama = strings.TrimSpace(c.FormValue("name"))
 	if formData.Nama == "" {
-		return formData, slider_errors.ErrApiInvalidName(c)
+		return formData, errors.NewBadRequestError("name is required")
 	}
 
 	file, err := c.FormFile("image_slider")
 	if err != nil {
 		if requireImage {
 			h.logger.Debug("Image upload error", zap.Error(err))
-			return formData, slider_errors.ErrApiImageRequired(c)
+			return formData, errors.NewBadRequestError("image_slider is required")
 		}
 		return formData, nil
 	}
@@ -478,4 +532,82 @@ func (h *sliderHandleApi) parseSliderForm(c echo.Context, requireImage bool) (re
 
 	formData.FilePath = imagePath
 	return formData, nil
+}
+
+func (h *sliderHandleApi) handleGrpcError(err error, operation string) *errors.AppError {
+	st, ok := status.FromError(err)
+	if !ok {
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return errors.NewNotFoundError("Slider").WithInternal(err)
+
+	case codes.AlreadyExists:
+		return errors.NewConflictError("Slider already exists").WithInternal(err)
+
+	case codes.InvalidArgument:
+		return errors.NewBadRequestError(st.Message()).WithInternal(err)
+
+	case codes.PermissionDenied:
+		return errors.ErrForbidden.WithInternal(err)
+
+	case codes.Unauthenticated:
+		return errors.ErrUnauthorized.WithInternal(err)
+
+	case codes.ResourceExhausted:
+		return errors.ErrTooManyRequests.WithInternal(err)
+
+	case codes.Unavailable:
+		return errors.NewServiceUnavailableError("Slider service").WithInternal(err)
+
+	case codes.DeadlineExceeded:
+		return errors.ErrTimeout.WithInternal(err)
+
+	default:
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+}
+
+func (h *sliderHandleApi) parseValidationErrors(err error) []errors.ValidationError {
+	var validationErrs []errors.ValidationError
+
+	if ve, ok := err.(validator.ValidationErrors); ok {
+		for _, fe := range ve {
+			validationErrs = append(validationErrs, errors.ValidationError{
+				Field:   fe.Field(),
+				Message: h.getValidationMessage(fe),
+			})
+		}
+		return validationErrs
+	}
+
+	return []errors.ValidationError{
+		{
+			Field:   "general",
+			Message: err.Error(),
+		},
+	}
+}
+
+func (h *sliderHandleApi) getValidationMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return fmt.Sprintf("Must be at least %s", fe.Param())
+	case "max":
+		return fmt.Sprintf("Must be at most %s", fe.Param())
+	case "gte":
+		return fmt.Sprintf("Must be greater than or equal to %s", fe.Param())
+	case "lte":
+		return fmt.Sprintf("Must be less than or equal to %s", fe.Param())
+	case "oneof":
+		return fmt.Sprintf("Must be one of: %s", fe.Param())
+	default:
+		return fmt.Sprintf("Validation failed on '%s' tag", fe.Tag())
+	}
 }

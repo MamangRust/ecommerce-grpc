@@ -13,14 +13,26 @@
 --   - Includes total result count via window function
 -- name: GetOrderItems :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at,
+    COUNT(*) OVER () AS total_count
 FROM order_items
-WHERE deleted_at IS NULL
-  AND ($1::TEXT IS NULL OR order_id::TEXT ILIKE '%' || $1 || '%' OR product_id::TEXT ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR order_id::TEXT ILIKE '%' || $1 || '%'
+        OR product_id::TEXT ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetOrderItemsActive: Retrieves active order items (duplicate-safe with GetOrderItems)
 -- Purpose: Lists active (non-deleted) order items with pagination and optional search
@@ -35,15 +47,27 @@ LIMIT $2 OFFSET $3;
 --   - Used when clarity between active/trashed context is required
 -- name: GetOrderItemsActive :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM order_items
-WHERE deleted_at IS NULL
-  AND ($1::TEXT IS NULL OR order_id::TEXT ILIKE '%' || $1 || '%' OR product_id::TEXT ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NULL
+    AND (
+        $1::TEXT IS NULL
+        OR order_id::TEXT ILIKE '%' || $1 || '%'
+        OR product_id::TEXT ILIKE '%' || $1 || '%'
+    )
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- GetOrderItemsTrashed: Retrieves soft-deleted order items with pagination
 -- Purpose: Allows review and management of trashed order items
@@ -59,17 +83,28 @@ LIMIT $2 OFFSET $3;
 --   - Enables optional keyword search and pagination
 --   - Sorted by deletion date for recent trash activity review
 -- name: GetOrderItemsTrashed :many
--- name: GetOrderItemsTrashed :many
 SELECT
-    *,
-    COUNT(*) OVER() AS total_count
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at,
+    deleted_at,
+    COUNT(*) OVER () AS total_count
 FROM order_items
-WHERE deleted_at IS NOT NULL
-  AND ($1::TEXT IS NULL OR order_id::TEXT ILIKE '%' || $1 || '%' OR product_id::TEXT ILIKE '%' || $1 || '%')
+WHERE
+    deleted_at IS NOT NULL
+    AND (
+        $1::TEXT IS NULL
+        OR order_id::TEXT ILIKE '%' || $1 || '%'
+        OR product_id::TEXT ILIKE '%' || $1 || '%'
+    )
 ORDER BY deleted_at DESC
-LIMIT $2 OFFSET $3;
-
-
+LIMIT $2
+OFFSET
+    $3;
 
 -- CalculateTotalPrice: Calculates total price of active order items for a specific order
 -- Purpose: Provides the aggregated monetary value of an order
@@ -83,8 +118,9 @@ LIMIT $2 OFFSET $3;
 -- name: CalculateTotalPrice :one
 SELECT COALESCE(SUM(quantity * price), 0)::int AS total_price
 FROM order_items
-WHERE order_id = $1 AND deleted_at IS NULL;
-
+WHERE
+    order_id = $1
+    AND deleted_at IS NULL;
 
 -- CreateOrderItem: Inserts a new order item record
 -- Purpose: Adds a product to a specific order
@@ -98,10 +134,22 @@ WHERE order_id = $1 AND deleted_at IS NULL;
 -- Business Logic:
 --   - Assumes quantity and price are validated in application layer
 -- name: CreateOrderItem :one
-INSERT INTO order_items (order_id, product_id, quantity, price)
+INSERT INTO
+    order_items (
+        order_id,
+        product_id,
+        quantity,
+        price
+    )
 VALUES ($1, $2, $3, $4)
-RETURNING *;
-
+RETURNING
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at;
 
 -- GetOrderItemsByOrder: Retrieves active order items for a specific order
 -- Purpose: Fetches all non-deleted order items under one order
@@ -112,11 +160,33 @@ RETURNING *;
 -- Business Logic:
 --   - Excludes soft-deleted entries
 -- name: GetOrderItemsByOrder :many
-SELECT *
+SELECT
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at
 FROM order_items
-WHERE order_id = $1
-  AND deleted_at IS NULL;
+WHERE
+    order_id = $1
+    AND deleted_at IS NULL;
 
+-- name: GetOrderItemsByOrderTrashed :many
+SELECT
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at,
+    deleted_at
+FROM order_items
+WHERE
+    order_id = $1
+    AND deleted_at IS NOT NULL;
 
 -- UpdateOrderItem: Updates quantity and price of an existing order item
 -- Purpose: Allows modification of product details in an order
@@ -131,13 +201,21 @@ WHERE order_id = $1
 --   - Automatically updates `updated_at` timestamp
 -- name: UpdateOrderItem :one
 UPDATE order_items
-SET quantity = $2,
+SET
+    quantity = $2,
     price = $3,
     updated_at = CURRENT_TIMESTAMP
-WHERE order_item_id = $1
-  AND deleted_at IS NULL
-  RETURNING *;
-
+WHERE
+    order_item_id = $1
+    AND deleted_at IS NULL
+RETURNING
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at;
 
 -- TrashOrderItem: Soft-deletes a specific order item
 -- Purpose: Marks an item as deleted without removing it from DB
@@ -154,8 +232,15 @@ SET
 WHERE
     order_id = $1
     AND deleted_at IS NULL
-    RETURNING *;    
-
+RETURNING
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- RestoreOrderItem: Restores a previously trashed order item
 -- Purpose: Undoes a soft-delete action
@@ -172,8 +257,15 @@ SET
 WHERE
     order_id = $1
     AND deleted_at IS NOT NULL
-  RETURNING *;
-
+RETURNING
+    order_item_id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at,
+    deleted_at;
 
 -- DeleteOrderItemPermanently: Permanently deletes a trashed order item
 -- Purpose: Removes the record entirely from the database
@@ -184,8 +276,10 @@ WHERE
 --   - Only deletes if already soft-deleted
 --   - Irreversible action
 -- name: DeleteOrderItemPermanently :exec
-DELETE FROM order_items WHERE order_id = $1 AND deleted_at IS NOT NULL;
-
+DELETE FROM order_items
+WHERE
+    order_id = $1
+    AND deleted_at IS NOT NULL;
 
 -- RestoreAllOrdersItem: Restores all soft-deleted order items
 -- Purpose: Mass recovery of trashed items
@@ -200,7 +294,6 @@ SET
 WHERE
     deleted_at IS NOT NULL;
 
-
 -- DeleteAllPermanentOrdersItem: Permanently deletes all trashed order items
 -- Purpose: Performs hard delete of all soft-deleted items
 -- Parameters: None
@@ -208,6 +301,4 @@ WHERE
 -- Business Logic:
 --   - Used for data cleanup or archival enforcement
 -- name: DeleteAllPermanentOrdersItem :exec
-DELETE FROM order_items 
-WHERE
-    deleted_at IS NOT NULL;
+DELETE FROM order_items WHERE deleted_at IS NOT NULL;

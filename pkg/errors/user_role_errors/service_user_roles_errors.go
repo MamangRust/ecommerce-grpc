@@ -1,11 +1,11 @@
 package userrole_errors
 
 import (
-	"ecommerce/internal/domain/response"
+	"ecommerce/pkg/errors"
 	"net/http"
 )
 
 var (
-	ErrFailedAssignRoleToUser = response.NewErrorResponse("Failed to assign role to user", http.StatusInternalServerError)
-	ErrFailedRemoveRole       = response.NewErrorResponse("Failed to remove role from user", http.StatusInternalServerError)
+	ErrFailedAssignRoleToUser = errors.NewErrorResponse("Failed to assign role to user", http.StatusInternalServerError)
+	ErrFailedRemoveRole       = errors.NewErrorResponse("Failed to remove role from user", http.StatusInternalServerError)
 )

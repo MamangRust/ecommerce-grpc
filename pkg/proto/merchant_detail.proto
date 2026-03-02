@@ -92,6 +92,33 @@ message MerchantDetailResponseDeleteAt {
     string updated_at = 10;
     google.protobuf.StringValue deleted_at = 11;
 }
+
+message MerchantDetailCoreResponse {
+    int32 id = 1;
+    int32 merchant_id = 2;
+    string display_name = 3;
+    string cover_image_url = 4;
+    string logo_url = 5;
+    string short_description = 6;
+    string website_url = 7;
+    string created_at = 8;
+    string updated_at = 9;
+}
+
+
+message MerchantDetailCoreResponseDeleteAt {
+    int32 id = 1;
+    int32 merchant_id = 2;
+    string display_name = 3;
+    string cover_image_url = 4;
+    string logo_url = 5;
+    string short_description = 6;
+    string website_url = 7;
+    string created_at = 8;
+    string updated_at = 9;
+    google.protobuf.StringValue deleted_at = 10;
+}
+
   
 
 message ApiResponseMerchantDetail {
@@ -105,6 +132,19 @@ message ApiResponseMerchantDetailDeleteAt {
     string status = 1;
     string message = 2;
     MerchantDetailResponseDeleteAt data = 3;
+}
+
+message ApiResponseMerchantDetailCore {
+    string status = 1;
+    string message = 2;
+    MerchantDetailCoreResponse data = 3;
+}
+  
+
+message ApiResponseMerchantDetailDeleteAtCore {
+    string status = 1;
+    string message = 2;
+    MerchantDetailCoreResponseDeleteAt data = 3;
 }
 
 message ApiResponsesMerchantDetail {
@@ -138,10 +178,10 @@ service MerchantDetailService{
     rpc FindByTrashed(FindAllMerchantRequest) returns (ApiResponsePaginationMerchantDetailDeleteAt) {}
 
 
-    rpc Create(CreateMerchantDetailRequest) returns (ApiResponseMerchantDetail);
-    rpc Update(UpdateMerchantDetailRequest) returns (ApiResponseMerchantDetail);
-    rpc TrashedMerchantDetail(FindByIdMerchantDetailRequest) returns (ApiResponseMerchantDetailDeleteAt);
-    rpc RestoreMerchantDetail(FindByIdMerchantDetailRequest) returns (ApiResponseMerchantDetailDeleteAt);
+    rpc Create(CreateMerchantDetailRequest) returns (ApiResponseMerchantDetailCore);
+    rpc Update(UpdateMerchantDetailRequest) returns (ApiResponseMerchantDetailCore);
+    rpc TrashedMerchantDetail(FindByIdMerchantDetailRequest) returns (ApiResponseMerchantDetailDeleteAtCore);
+    rpc RestoreMerchantDetail(FindByIdMerchantDetailRequest) returns (ApiResponseMerchantDetailDeleteAtCore);
     rpc DeleteMerchantDetailPermanent(FindByIdMerchantDetailRequest) returns (ApiResponseMerchantDelete);
 
     rpc RestoreAllMerchantDetail(google.protobuf.Empty) returns (ApiResponseMerchantAll){}

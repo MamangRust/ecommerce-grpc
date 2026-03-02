@@ -1,16 +1,20 @@
 package api
 
 import (
+	merchantpolicies_cache "ecommerce/internal/cache/api/merchant_policies"
 	"ecommerce/internal/domain/requests"
-	response_api "ecommerce/internal/mapper/response/api"
+	response_api "ecommerce/internal/mapper"
 	"ecommerce/internal/pb"
-	merchantpolicy_errors "ecommerce/pkg/errors/merchant_policy_errors"
+	"ecommerce/pkg/errors"
 	"ecommerce/pkg/logger"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -19,6 +23,8 @@ type merchantPoliciesHandleApi struct {
 	logger          logger.LoggerInterface
 	mapping         response_api.MerchantPolicyResponseMapper
 	mappingMerchant response_api.MerchantResponseMapper
+	apiHandler      errors.ApiHandler
+	cache           merchantpolicies_cache.MerchantPoliciesMencache
 }
 
 func NewHandlerMerchantPolicies(
@@ -27,30 +33,34 @@ func NewHandlerMerchantPolicies(
 	logger logger.LoggerInterface,
 	mapping response_api.MerchantPolicyResponseMapper,
 	mappingMerchant response_api.MerchantResponseMapper,
+	apiHandler errors.ApiHandler,
+	cache merchantpolicies_cache.MerchantPoliciesMencache,
 ) *merchantPoliciesHandleApi {
 	merchantPoliciesHandler := &merchantPoliciesHandleApi{
 		client:          client,
 		logger:          logger,
 		mapping:         mapping,
 		mappingMerchant: mappingMerchant,
+		apiHandler:      apiHandler,
+		cache:           cache,
 	}
 
-	routercategory := router.Group("/api/merchant-policy")
+	routerMerchantPolicy := router.Group("/api/merchant-policy")
 
-	routercategory.GET("", merchantPoliciesHandler.FindAllMerchantPolicy)
-	routercategory.GET("/:id", merchantPoliciesHandler.FindById)
-	routercategory.GET("/active", merchantPoliciesHandler.FindByActive)
-	routercategory.GET("/trashed", merchantPoliciesHandler.FindByTrashed)
+	routerMerchantPolicy.GET("", apiHandler.Handle("findAll", merchantPoliciesHandler.FindAllMerchantPolicy))
+	routerMerchantPolicy.GET("/:id", apiHandler.Handle("findById", merchantPoliciesHandler.FindById))
+	routerMerchantPolicy.GET("/active", apiHandler.Handle("findByActive", merchantPoliciesHandler.FindByActive))
+	routerMerchantPolicy.GET("/trashed", apiHandler.Handle("findByTrashed", merchantPoliciesHandler.FindByTrashed))
 
-	routercategory.POST("/create", merchantPoliciesHandler.Create)
-	routercategory.POST("/update/:id", merchantPoliciesHandler.Update)
+	routerMerchantPolicy.POST("/create", apiHandler.Handle("create", merchantPoliciesHandler.Create))
+	routerMerchantPolicy.POST("/update/:id", apiHandler.Handle("update", merchantPoliciesHandler.Update))
 
-	routercategory.POST("/trashed/:id", merchantPoliciesHandler.TrashedMerchant)
-	routercategory.POST("/restore/:id", merchantPoliciesHandler.RestoreMerchant)
-	routercategory.DELETE("/permanent/:id", merchantPoliciesHandler.DeleteMerchantPermanent)
+	routerMerchantPolicy.POST("/trashed/:id", apiHandler.Handle("trashed", merchantPoliciesHandler.TrashedMerchant))
+	routerMerchantPolicy.POST("/restore/:id", apiHandler.Handle("restore", merchantPoliciesHandler.RestoreMerchant))
+	routerMerchantPolicy.DELETE("/permanent/:id", apiHandler.Handle("deletePermanent", merchantPoliciesHandler.DeleteMerchantPermanent))
 
-	routercategory.POST("/restore/all", merchantPoliciesHandler.RestoreAllMerchant)
-	routercategory.POST("/permanent/all", merchantPoliciesHandler.DeleteAllMerchantPermanent)
+	routerMerchantPolicy.POST("/restore/all", apiHandler.Handle("restoreAll", merchantPoliciesHandler.RestoreAllMerchant))
+	routerMerchantPolicy.POST("/permanent/all", apiHandler.Handle("deleteAllPermanent", merchantPoliciesHandler.DeleteAllMerchantPermanent))
 
 	return merchantPoliciesHandler
 }
@@ -82,22 +92,33 @@ func (h *merchantPoliciesHandleApi) FindAllMerchantPolicy(c echo.Context) error 
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllMerchantRequest{
+	req := &requests.FindAllMerchant{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetCachedMerchantPolicyAll(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllMerchantRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindAll(ctx, req)
-
+	res, err := h.client.FindAll(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch merchants", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedFindAllMerchantPolicy(c)
+		return h.handleGrpcError(err, "FindAll")
 	}
 
-	so := h.mapping.ToApiResponsePaginationMerchantPolicies(res)
+	apiResponse := h.mapping.ToApiResponsePaginationMerchantPolicies(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetCachedMerchantPolicyAll(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -113,28 +134,31 @@ func (h *merchantPoliciesHandleApi) FindAllMerchantPolicy(c echo.Context) error 
 // @Router /api/merchant-policy/{id} [get]
 func (h *merchantPoliciesHandleApi) FindById(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
-
 	if err != nil {
-		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return merchantpolicy_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
+
+	cachedData, found := h.cache.GetCachedMerchantPolicy(ctx, id)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
 
 	req := &pb.FindByIdMerchantPoliciesRequest{
 		Id: int32(id),
 	}
 
 	res, err := h.client.FindById(ctx, req)
-
 	if err != nil {
-		h.logger.Error("Failed to fetch merchant details", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedFindByIdMerchantPolicy(c)
+		return h.handleGrpcError(err, "FindById")
 	}
 
-	so := h.mapping.ToApiResponseMerchantPolicies(res)
+	apiResponse := h.mapping.ToApiResponseMerchantPolicies(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetCachedMerchantPolicy(ctx, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -164,22 +188,33 @@ func (h *merchantPoliciesHandleApi) FindByActive(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllMerchantRequest{
+	req := &requests.FindAllMerchant{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetCachedMerchantPolicyActive(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllMerchantRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByActive(ctx, req)
-
+	res, err := h.client.FindByActive(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch active merchants", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedFindByActiveMerchantPolicy(c)
+		return h.handleGrpcError(err, "FindByActive")
 	}
 
-	so := h.mapping.ToApiResponsePaginationMerchantPoliciesDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationMerchantPoliciesDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetCachedMerchantPolicyActive(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -207,22 +242,33 @@ func (h *merchantPoliciesHandleApi) FindByTrashed(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	req := &pb.FindAllMerchantRequest{
+	req := &requests.FindAllMerchant{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+	}
+
+	cachedData, found := h.cache.GetCachedMerchantPolicyTrashed(ctx, req)
+	if found {
+		return c.JSON(http.StatusOK, cachedData)
+	}
+
+	grpcReq := &pb.FindAllMerchantRequest{
 		Page:     int32(page),
 		PageSize: int32(pageSize),
 		Search:   search,
 	}
 
-	res, err := h.client.FindByTrashed(ctx, req)
-
+	res, err := h.client.FindByTrashed(ctx, grpcReq)
 	if err != nil {
-		h.logger.Error("Failed to fetch archived merchants", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedFindByTrashedMerchantPolicy(c)
+		return h.handleGrpcError(err, "FindByTrashed")
 	}
 
-	so := h.mapping.ToApiResponsePaginationMerchantPoliciesDeleteAt(res)
+	apiResponse := h.mapping.ToApiResponsePaginationMerchantPoliciesDeleteAt(res)
 
-	return c.JSON(http.StatusOK, so)
+	h.cache.SetCachedMerchantPolicyTrashed(ctx, req, apiResponse)
+
+	return c.JSON(http.StatusOK, apiResponse)
 }
 
 // @Security Bearer
@@ -240,13 +286,12 @@ func (h *merchantPoliciesHandleApi) Create(c echo.Context) error {
 	var body requests.CreateMerchantPolicyRequest
 
 	if err := c.Bind(&body); err != nil {
-		h.logger.Debug("Invalid request format", zap.Error(err))
-		return merchantpolicy_errors.ErrApiBindCreateMerchantPolicy(c)
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
 	}
 
 	if err := body.Validate(); err != nil {
-		h.logger.Debug("Validation failed", zap.Error(err))
-		return merchantpolicy_errors.ErrValidateCreateMerchantPolicy(c)
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
@@ -260,11 +305,13 @@ func (h *merchantPoliciesHandleApi) Create(c echo.Context) error {
 
 	res, err := h.client.Create(ctx, req)
 	if err != nil {
-		h.logger.Error("Merchant policy creation failed", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedCreateMerchantPolicy(c)
+		return h.handleGrpcError(err, "Create")
 	}
 
 	so := h.mapping.ToApiResponseMerchantPolicies(res)
+
+	h.cache.SetCachedMerchantPolicy(ctx, so)
+
 	return c.JSON(http.StatusOK, so)
 }
 
@@ -285,20 +332,18 @@ func (h *merchantPoliciesHandleApi) Update(c echo.Context) error {
 
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
-		h.logger.Debug("Invalid id parameter", zap.Error(err))
-		return merchantpolicy_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	var body requests.UpdateMerchantPolicyRequest
 
 	if err := c.Bind(&body); err != nil {
-		h.logger.Debug("Invalid request format", zap.Error(err))
-		return merchantpolicy_errors.ErrApiBindUpdateMerchantPolicy(c)
+		return errors.NewBadRequestError("Invalid request format").WithInternal(err)
 	}
 
 	if err := body.Validate(); err != nil {
-		h.logger.Debug("Validation failed", zap.Error(err))
-		return merchantpolicy_errors.ErrValidateUpdateMerchantPolicy(c)
+		validations := h.parseValidationErrors(err)
+		return errors.NewValidationError(validations)
 	}
 
 	ctx := c.Request().Context()
@@ -312,11 +357,15 @@ func (h *merchantPoliciesHandleApi) Update(c echo.Context) error {
 
 	res, err := h.client.Update(ctx, req)
 	if err != nil {
-		h.logger.Error("Merchant policy update failed", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedUpdateMerchantPolicy(c)
+		return h.handleGrpcError(err, "Update")
 	}
 
 	so := h.mapping.ToApiResponseMerchantPolicies(res)
+
+	h.cache.DeleteMerchantPolicyCache(ctx, idInt)
+
+	h.cache.SetCachedMerchantPolicy(ctx, so)
+
 	return c.JSON(http.StatusOK, so)
 }
 
@@ -336,8 +385,7 @@ func (h *merchantPoliciesHandleApi) TrashedMerchant(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return merchantpolicy_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -349,11 +397,12 @@ func (h *merchantPoliciesHandleApi) TrashedMerchant(c echo.Context) error {
 	res, err := h.client.TrashedMerchantPolicies(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to archive merchant", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedTrashMerchantPolicy(c)
+		return h.handleGrpcError(err, "Trashed")
 	}
 
 	so := h.mapping.ToApiResponseMerchantPoliciesDeleteAt(res)
+
+	h.cache.DeleteMerchantPolicyCache(ctx, id)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -374,8 +423,7 @@ func (h *merchantPoliciesHandleApi) RestoreMerchant(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return merchantpolicy_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -387,11 +435,12 @@ func (h *merchantPoliciesHandleApi) RestoreMerchant(c echo.Context) error {
 	res, err := h.client.RestoreMerchantPolicies(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to restore merchant", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedRestoreMerchantPolicy(c)
+		return h.handleGrpcError(err, "Restore")
 	}
 
 	so := h.mapping.ToApiResponseMerchantPoliciesDeleteAt(res)
+
+	h.cache.DeleteMerchantPolicyCache(ctx, id)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -412,8 +461,7 @@ func (h *merchantPoliciesHandleApi) DeleteMerchantPermanent(c echo.Context) erro
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		h.logger.Debug("Invalid merchant ID format", zap.Error(err))
-		return merchantpolicy_errors.ErrApiInvalidId(c)
+		return errors.NewBadRequestError("id is required")
 	}
 
 	ctx := c.Request().Context()
@@ -425,11 +473,12 @@ func (h *merchantPoliciesHandleApi) DeleteMerchantPermanent(c echo.Context) erro
 	res, err := h.client.DeleteMerchantPoliciesPermanent(ctx, req)
 
 	if err != nil {
-		h.logger.Error("Failed to delete merchant", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedDeleteMerchantPolicy(c)
+		return h.handleGrpcError(err, "DeletePermanent")
 	}
 
 	so := h.mappingMerchant.ToApiResponseMerchantDelete(res)
+
+	h.cache.DeleteMerchantPolicyCache(ctx, id)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -452,8 +501,7 @@ func (h *merchantPoliciesHandleApi) RestoreAllMerchant(c echo.Context) error {
 	res, err := h.client.RestoreAllMerchantPolicies(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk merchant restoration failed", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedRestoreAllMerchantPolicies(c)
+		return h.handleGrpcError(err, "RestoreAll")
 	}
 
 	so := h.mappingMerchant.ToApiResponseMerchantAll(res)
@@ -481,8 +529,7 @@ func (h *merchantPoliciesHandleApi) DeleteAllMerchantPermanent(c echo.Context) e
 	res, err := h.client.DeleteAllMerchantPoliciesPermanent(ctx, &emptypb.Empty{})
 
 	if err != nil {
-		h.logger.Error("Bulk merchant deletion failed", zap.Error(err))
-		return merchantpolicy_errors.ErrApiFailedDeleteAllMerchantPolicies(c)
+		return h.handleGrpcError(err, "DeleteAll")
 	}
 
 	so := h.mappingMerchant.ToApiResponseMerchantAll(res)
@@ -490,4 +537,82 @@ func (h *merchantPoliciesHandleApi) DeleteAllMerchantPermanent(c echo.Context) e
 	h.logger.Debug("Successfully deleted all merchant permanently")
 
 	return c.JSON(http.StatusOK, so)
+}
+
+func (h *merchantPoliciesHandleApi) handleGrpcError(err error, operation string) *errors.AppError {
+	st, ok := status.FromError(err)
+	if !ok {
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return errors.NewNotFoundError("Merchant Policy").WithInternal(err)
+
+	case codes.AlreadyExists:
+		return errors.NewConflictError("Merchant Policy already exists").WithInternal(err)
+
+	case codes.InvalidArgument:
+		return errors.NewBadRequestError(st.Message()).WithInternal(err)
+
+	case codes.PermissionDenied:
+		return errors.ErrForbidden.WithInternal(err)
+
+	case codes.Unauthenticated:
+		return errors.ErrUnauthorized.WithInternal(err)
+
+	case codes.ResourceExhausted:
+		return errors.ErrTooManyRequests.WithInternal(err)
+
+	case codes.Unavailable:
+		return errors.NewServiceUnavailableError("Merchant Policy service").WithInternal(err)
+
+	case codes.DeadlineExceeded:
+		return errors.ErrTimeout.WithInternal(err)
+
+	default:
+		return errors.NewInternalError(err).WithMessage("Failed to " + operation)
+	}
+}
+
+func (h *merchantPoliciesHandleApi) parseValidationErrors(err error) []errors.ValidationError {
+	var validationErrs []errors.ValidationError
+
+	if ve, ok := err.(validator.ValidationErrors); ok {
+		for _, fe := range ve {
+			validationErrs = append(validationErrs, errors.ValidationError{
+				Field:   fe.Field(),
+				Message: h.getValidationMessage(fe),
+			})
+		}
+		return validationErrs
+	}
+
+	return []errors.ValidationError{
+		{
+			Field:   "general",
+			Message: err.Error(),
+		},
+	}
+}
+
+func (h *merchantPoliciesHandleApi) getValidationMessage(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return fmt.Sprintf("Must be at least %s", fe.Param())
+	case "max":
+		return fmt.Sprintf("Must be at most %s", fe.Param())
+	case "gte":
+		return fmt.Sprintf("Must be greater than or equal to %s", fe.Param())
+	case "lte":
+		return fmt.Sprintf("Must be less than or equal to %s", fe.Param())
+	case "oneof":
+		return fmt.Sprintf("Must be one of: %s", fe.Param())
+	default:
+		return fmt.Sprintf("Validation failed on '%s' tag", fe.Tag())
+	}
 }
