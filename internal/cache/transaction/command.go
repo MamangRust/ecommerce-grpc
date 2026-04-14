@@ -18,3 +18,7 @@ func (t *transactionCommandCache) DeleteTransactionCache(ctx context.Context, tr
 	key := fmt.Sprintf(transactionByIdCacheKey, transactionID)
 	cache.DeleteFromCache(ctx, t.store, key)
 }
+
+func (t *transactionCommandCache) InvalidateTransactionCache(ctx context.Context) {
+	t.store.InvalidateCache(ctx, "transaction:*")
+}

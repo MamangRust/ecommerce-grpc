@@ -80,4 +80,5 @@ type TransactionQueryCache interface {
 
 type TransactionCommandCache interface {
 	DeleteTransactionCache(ctx context.Context, transactionID int)
+	InvalidateTransactionCache(ctx context.Context)
 }

@@ -17,3 +17,7 @@ func NewShippingAddressCommandCache(store *cache.CacheStore) *shippingAddressCom
 func (shippingAddressCommandCache *shippingAddressCommandCache) DeleteShippingAddressCache(ctx context.Context, shipping_id int) {
 	cache.DeleteFromCache(ctx, shippingAddressCommandCache.store, fmt.Sprintf(shippingAddressByIdCacheKey, shipping_id))
 }
+
+func (shippingAddressCommandCache *shippingAddressCommandCache) InvalidateShippingAddressCache(ctx context.Context) {
+	shippingAddressCommandCache.store.InvalidateCache(ctx, "shipping_address:*")
+}

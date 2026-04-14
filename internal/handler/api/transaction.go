@@ -1360,6 +1360,7 @@ func (h *transactionHandleApi) Create(c echo.Context) error {
 
 	so := h.mapping.ToApiResponseTransaction(res)
 
+	h.cache.InvalidateTransactionCache(ctx)
 	h.cache.SetCachedTransactionCache(ctx, so)
 
 	return c.JSON(http.StatusOK, so)
@@ -1414,7 +1415,7 @@ func (h *transactionHandleApi) Update(c echo.Context) error {
 
 	so := h.mapping.ToApiResponseTransaction(res)
 
-	h.cache.DeleteTransactionCache(ctx, idInt)
+	h.cache.InvalidateTransactionCache(ctx)
 	h.cache.SetCachedTransactionCache(ctx, so)
 
 	return c.JSON(http.StatusOK, so)
@@ -1453,7 +1454,7 @@ func (h *transactionHandleApi) TrashedTransaction(c echo.Context) error {
 
 	so := h.mapping.ToApiResponseTransactionDeleteAt(res)
 
-	h.cache.DeleteTransactionCache(ctx, id)
+	h.cache.InvalidateTransactionCache(ctx)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -1491,7 +1492,7 @@ func (h *transactionHandleApi) RestoreTransaction(c echo.Context) error {
 
 	so := h.mapping.ToApiResponseTransactionDeleteAt(res)
 
-	h.cache.DeleteTransactionCache(ctx, id)
+	h.cache.InvalidateTransactionCache(ctx)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -1529,7 +1530,7 @@ func (h *transactionHandleApi) DeleteTransactionPermanent(c echo.Context) error 
 
 	so := h.mapping.ToApiResponseTransactionDelete(res)
 
-	h.cache.DeleteTransactionCache(ctx, id)
+	h.cache.InvalidateTransactionCache(ctx)
 
 	return c.JSON(http.StatusOK, so)
 }
@@ -1555,6 +1556,8 @@ func (h *transactionHandleApi) RestoreAllTransaction(c echo.Context) error {
 
 	so := h.mapping.ToApiResponseTransactionAll(res)
 
+	h.cache.InvalidateTransactionCache(ctx)
+
 	return c.JSON(http.StatusOK, so)
 }
 
@@ -1578,6 +1581,8 @@ func (h *transactionHandleApi) DeleteAllTransactionPermanent(c echo.Context) err
 	}
 
 	so := h.mapping.ToApiResponseTransactionAll(res)
+
+	h.cache.InvalidateTransactionCache(ctx)
 
 	return c.JSON(http.StatusOK, so)
 }

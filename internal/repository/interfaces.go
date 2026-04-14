@@ -3,7 +3,8 @@ package repository
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	db "ecommerce/pkg/database/schema"
+
+	db "github.com/MamangRust/monolith-ecommerce-shared/errors/database/schema"
 )
 
 // go generate mockgen -source =interfaces.go -destination=mocks/mock.go
@@ -12,8 +13,8 @@ type UserRepository interface {
 	FindByActive(ctx context.Context, req *requests.FindAllUsers) ([]*db.GetUsersActiveRow, error)
 	FindByTrashed(ctx context.Context, req *requests.FindAllUsers) ([]*db.GetUserTrashedRow, error)
 	FindById(ctx context.Context, user_id int) (*db.GetUserByIDRow, error)
-	FindByIdWithPassword(ctx context.Context, user_id int) (*db.GetUserByIDWithPasswordRow, error)
 	FindByEmail(ctx context.Context, email string) (*db.GetUserByEmailRow, error)
+	FindByIdWithPassword(ctx context.Context, user_id int) (*db.GetUserByIDWithPasswordRow, error)
 	FindByEmailWithPassword(ctx context.Context, email string) (*db.GetUserByEmailWithPasswordRow, error)
 	CreateUser(ctx context.Context, request *requests.CreateUserRequest) (*db.CreateUserRow, error)
 	UpdateUser(ctx context.Context, request *requests.UpdateUserRequest) (*db.UpdateUserRow, error)
@@ -31,6 +32,7 @@ type RoleRepository interface {
 	FindById(ctx context.Context, role_id int) (*db.Role, error)
 	FindByName(ctx context.Context, name string) (*db.Role, error)
 	FindByUserId(ctx context.Context, user_id int) ([]*db.Role, error)
+
 	CreateRole(ctx context.Context, request *requests.CreateRoleRequest) (*db.Role, error)
 	UpdateRole(ctx context.Context, request *requests.UpdateRoleRequest) (*db.Role, error)
 	TrashedRole(ctx context.Context, role_id int) (*db.Role, error)
@@ -96,26 +98,24 @@ type CartRepository interface {
 type CategoryRepository interface {
 	GetMonthlyTotalPrice(ctx context.Context, req *requests.MonthTotalPrice) ([]*db.GetMonthlyTotalPriceRow, error)
 	GetYearlyTotalPrices(ctx context.Context, year int) ([]*db.GetYearlyTotalPriceRow, error)
+	GetMonthPrice(ctx context.Context, year int) ([]*db.GetMonthlyCategoryRow, error)
+	GetYearPrice(ctx context.Context, year int) ([]*db.GetYearlyCategoryRow, error)
+
 	GetMonthlyTotalPriceById(
 		ctx context.Context,
 		req *requests.MonthTotalPriceCategory,
 	) ([]*db.GetMonthlyTotalPriceByIdRow, error)
-
 	GetYearlyTotalPricesById(ctx context.Context, req *requests.YearTotalPriceCategory) ([]*db.GetYearlyTotalPriceByIdRow, error)
+	GetMonthPriceById(ctx context.Context, req *requests.MonthPriceId) ([]*db.GetMonthlyCategoryByIdRow, error)
+	GetYearPriceById(ctx context.Context, req *requests.YearPriceId) ([]*db.GetYearlyCategoryByIdRow, error)
+
 	GetMonthlyTotalPriceByMerchant(
 		ctx context.Context,
 		req *requests.MonthTotalPriceMerchant,
 	) ([]*db.GetMonthlyTotalPriceByMerchantRow, error)
 	GetYearlyTotalPricesByMerchant(ctx context.Context, req *requests.YearTotalPriceMerchant) ([]*db.GetYearlyTotalPriceByMerchantRow, error)
-
-	GetMonthPrice(ctx context.Context, year int) ([]*db.GetMonthlyCategoryRow, error)
-	GetYearPrice(ctx context.Context, year int) ([]*db.GetYearlyCategoryRow, error)
-
 	GetMonthPriceByMerchant(ctx context.Context, req *requests.MonthPriceMerchant) ([]*db.GetMonthlyCategoryByMerchantRow, error)
 	GetYearPriceByMerchant(ctx context.Context, req *requests.YearPriceMerchant) ([]*db.GetYearlyCategoryByMerchantRow, error)
-
-	GetMonthPriceById(ctx context.Context, req *requests.MonthPriceId) ([]*db.GetMonthlyCategoryByIdRow, error)
-	GetYearPriceById(ctx context.Context, req *requests.YearPriceId) ([]*db.GetYearlyCategoryByIdRow, error)
 
 	FindAllCategory(ctx context.Context, req *requests.FindAllCategory) ([]*db.GetCategoriesRow, error)
 
@@ -415,6 +415,16 @@ type OrderRepository interface {
 		year int,
 	) ([]*db.GetYearlyTotalRevenueRow, error)
 
+	GetMonthlyOrder(
+		ctx context.Context,
+		year int,
+	) ([]*db.GetMonthlyOrderRow, error)
+
+	GetYearlyOrder(
+		ctx context.Context,
+		year int,
+	) ([]*db.GetYearlyOrderRow, error)
+
 	GetMonthlyTotalRevenueById(
 		ctx context.Context,
 		req *requests.MonthTotalRevenueOrder,
@@ -434,16 +444,6 @@ type OrderRepository interface {
 		ctx context.Context,
 		req *requests.YearTotalRevenueMerchant,
 	) ([]*db.GetYearlyTotalRevenueByMerchantRow, error)
-
-	GetMonthlyOrder(
-		ctx context.Context,
-		year int,
-	) ([]*db.GetMonthlyOrderRow, error)
-
-	GetYearlyOrder(
-		ctx context.Context,
-		year int,
-	) ([]*db.GetYearlyOrderRow, error)
 
 	GetMonthlyOrderByMerchant(
 		ctx context.Context,
@@ -644,16 +644,6 @@ type TransactionRepository interface {
 		year int,
 	) ([]*db.GetYearlyTransactionMethodsSuccessRow, error)
 
-	GetMonthlyTransactionMethodByMerchantSuccess(
-		ctx context.Context,
-		req *requests.MonthMethodTransactionMerchant,
-	) ([]*db.GetMonthlyTransactionMethodsByMerchantSuccessRow, error)
-
-	GetYearlyTransactionMethodByMerchantSuccess(
-		ctx context.Context,
-		req *requests.YearMethodTransactionMerchant,
-	) ([]*db.GetYearlyTransactionMethodsByMerchantSuccessRow, error)
-
 	GetMonthlyTransactionMethodFailed(
 		ctx context.Context,
 		req *requests.MonthMethodTransaction,
@@ -663,6 +653,16 @@ type TransactionRepository interface {
 		ctx context.Context,
 		year int,
 	) ([]*db.GetYearlyTransactionMethodsFailedRow, error)
+
+	GetMonthlyTransactionMethodByMerchantSuccess(
+		ctx context.Context,
+		req *requests.MonthMethodTransactionMerchant,
+	) ([]*db.GetMonthlyTransactionMethodsByMerchantSuccessRow, error)
+
+	GetYearlyTransactionMethodByMerchantSuccess(
+		ctx context.Context,
+		req *requests.YearMethodTransactionMerchant,
+	) ([]*db.GetYearlyTransactionMethodsByMerchantSuccessRow, error)
 
 	GetMonthlyTransactionMethodByMerchantFailed(
 		ctx context.Context,
@@ -754,6 +754,11 @@ type ShippingAddressRepository interface {
 		shipping_id int,
 	) (*db.GetShippingAddressByOrderIDRow, error)
 
+	FindTrashedByOrder(
+		ctx context.Context,
+		order_id int,
+	) (*db.ShippingAddress, error)
+
 	FindById(
 		ctx context.Context,
 		shipping_id int,
@@ -803,6 +808,11 @@ type SliderRepository interface {
 		ctx context.Context,
 		req *requests.FindAllSlider,
 	) ([]*db.GetSlidersTrashedRow, error)
+
+	FindById(
+		ctx context.Context,
+		slider_id int,
+	) (*db.GetSliderByIDRow, error)
 
 	CreateSlider(
 		ctx context.Context,

@@ -496,7 +496,7 @@ SET
     deleted_at = CURRENT_TIMESTAMP
 WHERE
     review_detail_id = $1
-    AND deleted_at IS NOT NULL
+    AND deleted_at IS NULL
 RETURNING
     review_detail_id,
     review_id,

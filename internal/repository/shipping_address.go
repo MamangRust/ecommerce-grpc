@@ -94,6 +94,16 @@ func (r *shippingAdddressRepository) FindByOrder(ctx context.Context, order_id i
 	return res, nil
 }
 
+func (r *shippingAdddressRepository) FindTrashedByOrder(ctx context.Context, order_id int) (*db.ShippingAddress, error) {
+	res, err := r.db.GetShippingAddressByOrderIDTrashed(ctx, int32(order_id))
+
+	if err != nil {
+		return nil, shippingaddress_errors.ErrFindShippingAddressByOrder
+	}
+
+	return res, nil
+}
+
 func (r *shippingAdddressRepository) CreateShippingAddress(ctx context.Context, request *requests.CreateShippingAddressRequest) (*db.CreateShippingAddressRow, error) {
 	req := db.CreateShippingAddressParams{
 		OrderID:        int32(*request.OrderID),

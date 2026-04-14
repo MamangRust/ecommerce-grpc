@@ -303,7 +303,7 @@ func (s *merchantBusinessHandleGrpc) Update(ctx context.Context, request *pb.Upd
 	}, nil
 }
 
-func (s *merchantBusinessHandleGrpc) TrashedMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantBusinessDeleteAt, error) {
+func (s *merchantBusinessHandleGrpc) TrashedMerchantBusiness(ctx context.Context, request *pb.FindByIdMerchantBusinessRequest) (*pb.ApiResponseMerchantBusinessDeleteAt, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -335,7 +335,7 @@ func (s *merchantBusinessHandleGrpc) TrashedMerchant(ctx context.Context, reques
 	}, nil
 }
 
-func (s *merchantBusinessHandleGrpc) RestoreMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantBusinessDeleteAt, error) {
+func (s *merchantBusinessHandleGrpc) RestoreMerchantBusiness(ctx context.Context, request *pb.FindByIdMerchantBusinessRequest) (*pb.ApiResponseMerchantBusinessDeleteAt, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -367,7 +367,7 @@ func (s *merchantBusinessHandleGrpc) RestoreMerchant(ctx context.Context, reques
 	}, nil
 }
 
-func (s *merchantBusinessHandleGrpc) DeleteMerchantPermanent(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantDelete, error) {
+func (s *merchantBusinessHandleGrpc) DeleteMerchantBusinessPermanent(ctx context.Context, request *pb.FindByIdMerchantBusinessRequest) (*pb.ApiResponseMerchantDelete, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -385,7 +385,7 @@ func (s *merchantBusinessHandleGrpc) DeleteMerchantPermanent(ctx context.Context
 	}, nil
 }
 
-func (s *merchantBusinessHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
+func (s *merchantBusinessHandleGrpc) RestoreAllMerchantBusiness(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
 	_, err := s.merchantBusinessService.RestoreAllMerchantBusiness(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
@@ -397,7 +397,7 @@ func (s *merchantBusinessHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *
 	}, nil
 }
 
-func (s *merchantBusinessHandleGrpc) DeleteAllMerchantPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
+func (s *merchantBusinessHandleGrpc) DeleteAllMerchantBusinessPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
 	_, err := s.merchantBusinessService.DeleteAllMerchantBusinessPermanent(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)

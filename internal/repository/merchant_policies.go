@@ -11,7 +11,7 @@ type merchantPolicyRepository struct {
 	db *db.Queries
 }
 
-func NewMerchantPolicyRepository(db *db.Queries) *merchantPolicyRepository {
+func NewMerchantPoliciesRepository(db *db.Queries) *merchantPolicyRepository {
 	return &merchantPolicyRepository{
 		db: db,
 	}

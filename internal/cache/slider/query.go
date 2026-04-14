@@ -115,3 +115,23 @@ func (s *sliderQueryCache) SetSliderTrashedCache(ctx context.Context, req *reque
 	payload := &sliderTrashedCacheResponseDB{Data: data, Total: total}
 	cache.SetToCache(ctx, s.store, key, payload, ttlDefault)
 }
+
+func (s *sliderQueryCache) GetSliderCache(ctx context.Context, slider_id int) (*db.GetSliderByIDRow, bool) {
+	key := fmt.Sprintf(sliderIdKey, slider_id)
+	result, found := cache.GetFromCache[db.GetSliderByIDRow](ctx, s.store, key)
+
+	if !found || result == nil {
+		return nil, false
+	}
+
+	return result, true
+}
+
+func (s *sliderQueryCache) SetSliderCache(ctx context.Context, data *db.GetSliderByIDRow) {
+	if data == nil {
+		return
+	}
+
+	key := fmt.Sprintf(sliderIdKey, int(data.SliderID))
+	cache.SetToCache(ctx, s.store, key, data, ttlDefault)
+}

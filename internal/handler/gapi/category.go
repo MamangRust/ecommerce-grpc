@@ -683,9 +683,11 @@ func (s *categoryHandleGrpc) FindYearPriceById(ctx context.Context, req *pb.Find
 }
 
 func (s *categoryHandleGrpc) Create(ctx context.Context, request *pb.CreateCategoryRequest) (*pb.ApiResponseCategory, error) {
+	slug := request.GetSlugCategory()
 	req := &requests.CreateCategoryRequest{
 		Name:          request.GetName(),
 		Description:   request.GetDescription(),
+		SlugCategory:  &slug,
 		ImageCategory: request.GetImageCategory(),
 	}
 
@@ -722,10 +724,12 @@ func (s *categoryHandleGrpc) Update(ctx context.Context, request *pb.UpdateCateg
 		return nil, category_errors.ErrGrpcCategoryInvalidId
 	}
 
+	slug := request.GetSlugCategory()
 	req := &requests.UpdateCategoryRequest{
 		CategoryID:    &id,
 		Name:          request.GetName(),
 		Description:   request.GetDescription(),
+		SlugCategory:  &slug,
 		ImageCategory: request.GetImageCategory(),
 	}
 

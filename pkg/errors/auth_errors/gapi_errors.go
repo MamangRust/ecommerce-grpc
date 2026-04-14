@@ -1,13 +1,12 @@
 package auth_errors
 
 import (
-	"ecommerce/pkg/errors"
+	"github.com/MamangRust/monolith-ecommerce-shared/errors"
 
 	"google.golang.org/grpc/codes"
 )
 
 var ErrGrpcLogin = errors.NewGrpcError(
-
 	"login failed: invalid argument provided",
 	int(codes.InvalidArgument),
 )

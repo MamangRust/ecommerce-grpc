@@ -311,7 +311,7 @@ func (s *merchantAwardHandleGrpc) Update(ctx context.Context, request *pb.Update
 	}, nil
 }
 
-func (s *merchantAwardHandleGrpc) TrashedMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantAwardDeleteAt, error) {
+func (s *merchantAwardHandleGrpc) TrashedMerchantAward(ctx context.Context, request *pb.FindByIdMerchantAwardRequest) (*pb.ApiResponseMerchantAwardDeleteAt, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -344,7 +344,7 @@ func (s *merchantAwardHandleGrpc) TrashedMerchant(ctx context.Context, request *
 	}, nil
 }
 
-func (s *merchantAwardHandleGrpc) RestoreMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantAwardDeleteAt, error) {
+func (s *merchantAwardHandleGrpc) RestoreMerchantAward(ctx context.Context, request *pb.FindByIdMerchantAwardRequest) (*pb.ApiResponseMerchantAwardDeleteAt, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -377,7 +377,7 @@ func (s *merchantAwardHandleGrpc) RestoreMerchant(ctx context.Context, request *
 	}, nil
 }
 
-func (s *merchantAwardHandleGrpc) DeleteMerchantPermanent(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantDelete, error) {
+func (s *merchantAwardHandleGrpc) DeleteMerchantAwardPermanent(ctx context.Context, request *pb.FindByIdMerchantAwardRequest) (*pb.ApiResponseMerchantDelete, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -395,7 +395,7 @@ func (s *merchantAwardHandleGrpc) DeleteMerchantPermanent(ctx context.Context, r
 	}, nil
 }
 
-func (s *merchantAwardHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
+func (s *merchantAwardHandleGrpc) RestoreAllMerchantAward(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
 	_, err := s.merchantAwardService.RestoreAllMerchantAward(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
@@ -407,7 +407,7 @@ func (s *merchantAwardHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *emp
 	}, nil
 }
 
-func (s *merchantAwardHandleGrpc) DeleteAllMerchantPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
+func (s *merchantAwardHandleGrpc) DeleteAllMerchantAwardPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
 	_, err := s.merchantAwardService.DeleteAllMerchantAwardPermanent(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)

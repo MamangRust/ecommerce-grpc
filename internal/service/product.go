@@ -223,7 +223,6 @@ func (s *productService) FindByCategory(ctx context.Context, req *requests.FindA
 			product_errors.ErrFailedFindProductsByCategory,
 			method,
 			span,
-
 			zap.String("search", search),
 			zap.Int("page", page),
 			zap.Int("pageSize", pageSize),

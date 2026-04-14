@@ -79,10 +79,10 @@ WHERE
     deleted_at IS NULL
     AND (
         $1::TEXT IS NULL
-        OR p.name ILIKE '%' || $1 || '%'
-        OR p.description ILIKE '%' || $1 || '%'
-        OR p.brand ILIKE '%' || $1 || '%'
-        OR p.slug_product ILIKE '%' || $1 || '%'
+        OR name ILIKE '%' || $1 || '%'
+        OR description ILIKE '%' || $1 || '%'
+        OR brand ILIKE '%' || $1 || '%'
+        OR slug_product ILIKE '%' || $1 || '%'
     )
 ORDER BY created_at DESC
 LIMIT $2
@@ -125,10 +125,10 @@ WHERE
     deleted_at IS NOT NULL
     AND (
         $1::TEXT IS NULL
-        OR p.name ILIKE '%' || $1 || '%'
-        OR p.description ILIKE '%' || $1 || '%'
-        OR p.brand ILIKE '%' || $1 || '%'
-        OR p.slug_product ILIKE '%' || $1 || '%'
+        OR name ILIKE '%' || $1 || '%'
+        OR description ILIKE '%' || $1 || '%'
+        OR brand ILIKE '%' || $1 || '%'
+        OR slug_product ILIKE '%' || $1 || '%'
     )
 ORDER BY created_at DESC
 LIMIT $2
@@ -179,9 +179,9 @@ WITH
             p.deleted_at IS NULL
             AND p.merchant_id = $1
             AND (
-                p.name ILIKE '%' || COALESCE($2, '') || '%'
-                OR p.description ILIKE '%' || COALESCE($2, '') || '%'
-                OR $2 IS NULL
+                p.name ILIKE '%' || COALESCE($2::TEXT, '') || '%'
+                OR p.description ILIKE '%' || COALESCE($2::TEXT, '') || '%'
+                OR $2::TEXT IS NULL
             )
             AND (
                 c.category_id = NULLIF($3, 0)
@@ -246,19 +246,13 @@ WITH
             p.deleted_at IS NULL
             AND c.name = $1
             AND (
-                $2 IS NULL
+                $2::TEXT IS NULL
                 OR p.name ILIKE '%' || $2 || '%'
                 OR p.description ILIKE '%' || $2 || '%'
             )
             AND (
-                (
-                    $3 IS NULL
-                    OR p.price >= $3
-                )
-                AND (
-                    $4 IS NULL
-                    OR p.price <= $4
-                )
+                p.price >= COALESCE(NULLIF($3::INTEGER, 0), 0)
+                AND p.price <= COALESCE(NULLIF($4::INTEGER, 0), 999999999)
             )
     )
 SELECT (

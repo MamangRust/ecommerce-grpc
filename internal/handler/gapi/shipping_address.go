@@ -344,7 +344,39 @@ func (s *shippingAddressHandleGrpc) RestoreAllShipping(ctx context.Context, _ *e
 	}, nil
 }
 
-func (s *shippingAddressHandleGrpc) DeleteShippingAddressPermanently(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseShippingAll, error) {
+func (s *shippingAddressHandleGrpc) FindByOrder(ctx context.Context, request *pb.FindByIdShippingRequest) (*pb.ApiResponseShipping, error) {
+	id := int(request.GetId())
+
+	if id == 0 {
+		return nil, shippingaddress_errors.ErrGrpcInvalidID
+	}
+
+	shipping, err := s.shippingService.FindByOrder(ctx, id)
+	if err != nil {
+		return nil, errors.ToGrpcError(err)
+	}
+
+	protoShipping := &pb.ShippingResponse{
+		Id:             int32(shipping.ShippingAddressID),
+		OrderId:        int32(shipping.OrderID),
+		Alamat:         shipping.Alamat,
+		Provinsi:       shipping.Provinsi,
+		Negara:         shipping.Negara,
+		Kota:           shipping.Kota,
+		ShippingMethod: shipping.ShippingMethod,
+		ShippingCost:   int32(shipping.ShippingCost),
+		CreatedAt:      shipping.CreatedAt.Time.Format("2006-01-02"),
+		UpdatedAt:      shipping.UpdatedAt.Time.Format("2006-01-02"),
+	}
+
+	return &pb.ApiResponseShipping{
+		Status:  "success",
+		Message: "Successfully fetched shipping address",
+		Data:    protoShipping,
+	}, nil
+}
+
+func (s *shippingAddressHandleGrpc) DeleteAllShippingPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseShippingAll, error) {
 	_, err := s.shippingService.DeleteAllPermanentShippingAddress(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)

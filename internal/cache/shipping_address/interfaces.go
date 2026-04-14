@@ -25,4 +25,5 @@ type ShippingAddressQueryCache interface {
 
 type ShippingAddressCommandCache interface {
 	DeleteShippingAddressCache(ctx context.Context, shipping_id int)
+	InvalidateShippingAddressCache(ctx context.Context)
 }

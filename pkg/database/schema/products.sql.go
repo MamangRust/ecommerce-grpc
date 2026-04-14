@@ -471,10 +471,10 @@ WHERE
     deleted_at IS NULL
     AND (
         $1::TEXT IS NULL
-        OR p.name ILIKE '%' || $1 || '%'
-        OR p.description ILIKE '%' || $1 || '%'
-        OR p.brand ILIKE '%' || $1 || '%'
-        OR p.slug_product ILIKE '%' || $1 || '%'
+        OR name ILIKE '%' || $1 || '%'
+        OR description ILIKE '%' || $1 || '%'
+        OR brand ILIKE '%' || $1 || '%'
+        OR slug_product ILIKE '%' || $1 || '%'
     )
 ORDER BY created_at DESC
 LIMIT $2
@@ -586,19 +586,13 @@ WITH
             p.deleted_at IS NULL
             AND c.name = $1
             AND (
-                $2 IS NULL
+                $2::TEXT IS NULL
                 OR p.name ILIKE '%' || $2 || '%'
                 OR p.description ILIKE '%' || $2 || '%'
             )
             AND (
-                (
-                    $3 IS NULL
-                    OR p.price >= $3
-                )
-                AND (
-                    $4 IS NULL
-                    OR p.price <= $4
-                )
+                p.price >= COALESCE(NULLIF($3::INTEGER, 0), 0)
+                AND p.price <= COALESCE(NULLIF($4::INTEGER, 0), 999999999)
             )
     )
 SELECT (
@@ -613,12 +607,12 @@ OFFSET
 `
 
 type GetProductsByCategoryNameParams struct {
-	Name    string      `json:"name"`
-	Column2 interface{} `json:"column_2"`
-	Column3 interface{} `json:"column_3"`
-	Column4 interface{} `json:"column_4"`
-	Limit   int32       `json:"limit"`
-	Offset  int32       `json:"offset"`
+	Name    string `json:"name"`
+	Column2 string `json:"column_2"`
+	Column3 int32  `json:"column_3"`
+	Column4 int32  `json:"column_4"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
 }
 
 type GetProductsByCategoryNameRow struct {
@@ -731,9 +725,9 @@ WITH
             p.deleted_at IS NULL
             AND p.merchant_id = $1
             AND (
-                p.name ILIKE '%' || COALESCE($2, '') || '%'
-                OR p.description ILIKE '%' || COALESCE($2, '') || '%'
-                OR $2 IS NULL
+                p.name ILIKE '%' || COALESCE($2::TEXT, '') || '%'
+                OR p.description ILIKE '%' || COALESCE($2::TEXT, '') || '%'
+                OR $2::TEXT IS NULL
             )
             AND (
                 c.category_id = NULLIF($3, 0)
@@ -757,7 +751,7 @@ OFFSET
 
 type GetProductsByMerchantParams struct {
 	MerchantID int32       `json:"merchant_id"`
-	Column2    *string     `json:"column_2"`
+	Column2    string      `json:"column_2"`
 	Column3    interface{} `json:"column_3"`
 	Column4    interface{} `json:"column_4"`
 	Column5    interface{} `json:"column_5"`
@@ -874,10 +868,10 @@ WHERE
     deleted_at IS NOT NULL
     AND (
         $1::TEXT IS NULL
-        OR p.name ILIKE '%' || $1 || '%'
-        OR p.description ILIKE '%' || $1 || '%'
-        OR p.brand ILIKE '%' || $1 || '%'
-        OR p.slug_product ILIKE '%' || $1 || '%'
+        OR name ILIKE '%' || $1 || '%'
+        OR description ILIKE '%' || $1 || '%'
+        OR brand ILIKE '%' || $1 || '%'
+        OR slug_product ILIKE '%' || $1 || '%'
     )
 ORDER BY created_at DESC
 LIMIT $2

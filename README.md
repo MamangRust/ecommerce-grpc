@@ -1,379 +1,203 @@
-# E-Commerce gRPC Backend
+# E-Commerce gRPC  Monolith
 
-This project is a backend implementation for an e-commerce platform designed to support all major business processes in digital commerce, from user management to payment transactions. The system is built with a modular approach, where each service has a specific responsibility but remains efficiently connected through inter-service communication.
+A high-performance, scalable e-commerce backend implementation utilizing a  monolith architecture. This system is engineered to handle comprehensive digital commerce workflows—from user lifecycle management to complex transactional processing—leveraging gRPC for efficient inter-module communication and strong type safety.
 
-The project architecture leverages **gRPC** as the communication protocol between services. With gRPC and Protobuf, data exchange between components is faster, lighter, and more extensible. This allows the system to be **scalable** as the number of users, products, and transactions grows significantly.
+## System Overview
 
-All critical data—from user details and product catalogs to transaction records—is stored consistently in a database, making this platform a **reliable, secure, and production-ready** foundation for modern e-commerce applications.
+The project is designed with a focus on high throughput and low-latency communication. By utilizing gRPC and Protocol Buffers, the system ensures optimized data serialization and robust service-to-service contracts. The architecture follows a  monolith pattern, enabling clear domain boundaries while maintaining a unified deployment model for operational simplicity.
 
----
+### Architecture Topology
 
-## 🎯 Core Features
+The following diagram illustrates the high-level system architecture and the flow of requests from external clients to the persistence layer.
 
-- **🔐 Authentication & User Management**
-  Supports registration, login, and **JWT-based** authorization. The system also allows for user role management (e.g., customer, merchant, or admin).
+```mermaid
+graph TD
+    subgraph Client_Interface [Entry Points]
+        API_GW[REST Gateway - Echo]
+        GRPC_CLI[gRPC Client Interface]
+    end
 
-- **📦 Product & Category Management**
-  Admins and merchants can add, modify, or delete products. Products are categorized to simplify search and stock management.
+    subgraph Core_Engine [ Monolith Core]
+        GRPC_SRV[gRPC Server Engine]
+        
+        subgraph Domain_Services [Domain Logic Layers]
+            Auth[Auth Service]
+            Product[Product Service]
+            Order[Order Service]
+            Transaction[Transaction Service]
+            Merchant[Merchant Service]
+            Review[Review Service]
+        end
+    end
 
-- **🏬 Merchant Management**
-  Merchants can create accounts, manage their stores, and add their product catalogs.
+    subgraph Persistence_Layer [Data Infrastructure]
+        PG_DB[(PostgreSQL)]
+        VAL_CACHE[(Redis / Local Cache)]
+    end
 
-- **🛒 Shopping Cart**
-  Users can add products to their cart, update quantities, and save items before placing an order.
+    subgraph Observability_Stack [Telemetry & Monitoring]
+        ZAP[Zap Structured Logging]
+        PYRO[Pyroscope Profiling]
+        METRICS[k6 Performance Metrics]
+    end
 
-- **📑 Order Processing**
-  Supports the full workflow from checkout to order recording. Each order is logged with product details, quantity, price, status, and shipping information.
+    API_GW -- gRPC call --> GRPC_SRV
+    GRPC_CLI -- Direct call --> GRPC_SRV
+    GRPC_SRV --> Domain_Services
+    Domain_Services --> PG_DB
+    Domain_Services --> VAL_CACHE
+    
+    GRPC_SRV -. Interceptors .-> Observability_Stack
+    API_GW -. Middlewares .-> Observability_Stack
+```
 
-- **💳 Transactions & Payments**
-  The system records payments made by users for their orders. This process is designed to be **integrated with merchants** and recorded transparently.
+## Core Domain Capabilities
 
-- **⭐ Product Reviews**
-  After an order is completed, users can leave reviews and ratings for the products they purchased, making the platform more interactive and building consumer trust.
+- **Identity and Access Management**: Implementation of JWT-based authentication with secure token rotation and role-based access control (RBAC) supporting Customer, Merchant, and Administrator roles.
+- **Product Lifecycle Management**: Comprehensive SKU management system with hierarchical categorization and merchant-specific catalog controls.
+- **Merchant Ecosystem**: Multi-tenant merchant support including business verification, policy management, and social integration.
+- **Transactional Consistency**: Robust order processing pipeline ensuring atomic transactions across order creation, inventory adjustments, and payment confirmation.
+- **Observability and Profiling**: Integrated telemetry including structured logging and continuous profiling via Pyroscope interceptors for both REST and gRPC layers.
 
----
+## Technical Specifications
 
-## 🧰 Tech Stack
+| Component | Technology | Role |
+| :--- | :--- | :--- |
+| Runtime | Go (Golang) | core implementation language |
+| Interface | Echo Framework | REST API gateway |
+| Transport | gRPC | internal service communication |
+| Database | PostgreSQL | relational data persistence |
+| Data Access | SQLC | type-safe SQL query generation |
+| Migrations | Goose | database schema version control |
+| Logging | Uber Zap | structured high-performance logging |
+| Profiling | Pyroscope | continuous performance profiling |
+| Documentation | Swaggo | OpenAPI/Swagger documentation generation |
 
-![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
-![gRPC](https://img.shields.io/badge/gRPC-000000?style=for-the-badge&logo=grpc&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Echo](https://img.shields.io/badge/Echo-000000?style=for-the-badge&logo=echo&logoColor=white)
-![Zap](https://img.shields.io/badge/Zap%20Logger-000000?style=for-the-badge)
-![SQLC](https://img.shields.io/badge/SQLC-000000?style=for-the-badge)
-![Goose](https://img.shields.io/badge/Goose-000000?style=for-the-badge)
-![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)
+## Data Architecture
 
-- 🐹 **Go (Golang)** — Implementation language.
-- 🌐 **Echo** — Minimalist web framework for building REST APIs.
-- 🪵 **Zap Logger** — Structured, high-performance logging for applications.
-- 📦 **SQLC** — Generates type-safe Go code from SQL queries.
-- 🚀 **gRPC** — High-performance RPC for internal service communication.
-- 🧳 **Goose** — Migration tool for managing database schema changes.
-- 🐳 **Docker** — Containerization platform for consistent development environments.
-- 📄 **Swaggo** — Generates Swagger 2.0 documentation for Echo routes.
-- 🔗 **Docker Compose** — Manages multi-container Docker applications.
-
----
-
-## 🏛️ Architecture
-
-### Entity-Relationship Diagram (ERD)
-
-The following ERD illustrates the database schema for this project.
+The persistence layer is modeled to ensure referential integrity and optimized query performance. The following ERD describes the core entity relationships within the schema.
 
 ```mermaid
 erDiagram
-    users {
-        INT user_id PK
-        VARCHAR firstname
-        VARCHAR lastname
-        VARCHAR email UK
-        VARCHAR password
-    }
+    USERS ||--o{ USER_ROLES : "possesses"
+    ROLES ||--o{ USER_ROLES : "defines"
+    USERS ||--o{ REFRESH_TOKENS : "maintains"
+    USERS ||--o{ MERCHANTS : "operates"
+    USERS ||--o{ CARTS : "manages"
+    USERS ||--o{ ORDERS : "executes"
+    USERS ||--o{ REVIEWS : "submits"
 
-    roles {
-        INT role_id PK
-        VARCHAR role_name UK
-    }
+    MERCHANTS ||--o{ PRODUCTS : "distributes"
+    MERCHANTS ||--o{ ORDERS : "fulfills"
+    MERCHANTS ||--o{ TRANSACTIONS : "processes"
+    MERCHANTS ||--o{ MERCHANT_BUSINESS_INFO : "details"
+    MERCHANTS ||--o{ MERCHANT_POLICIES : "governs"
 
-    user_roles {
-        INT user_role_id PK
-        INT user_id FK
-        INT role_id FK
-    }
+    CATEGORIES ||--o{ PRODUCTS : "classifies"
+    PRODUCTS ||--o{ CARTS : "added_to"
+    PRODUCTS ||--o{ ORDER_ITEMS : "included_in"
+    PRODUCTS ||--o{ REVIEWS : "rated_by"
 
-    refresh_tokens {
-        INT refresh_token_id PK
-        INT user_id FK
-        VARCHAR token UK
-        TIMESTAMP expiration
-    }
+    ORDERS ||--o{ ORDER_ITEMS : "consists_of"
+    ORDERS ||--o{ SHIPPING_ADDRESSES : "targets"
+    ORDERS ||--o{ TRANSACTIONS : "associated_with"
 
-    merchants {
-        INT merchant_id PK
-        INT user_id FK
-        VARCHAR name
-        TEXT description
-        VARCHAR status
-    }
-
-    categories {
-        INT category_id PK
-        VARCHAR name
-        VARCHAR slug_category UK
-    }
-
-    products {
-        INT product_id PK
-        INT merchant_id FK
-        INT category_id FK
-        VARCHAR name
-        INT price
-        INT count_in_stock
-        VARCHAR slug_product UK
-    }
-
-    carts {
-        INT cart_id PK
-        INT user_id FK
-        INT product_id FK
-        INT quantity
-    }
-
-    orders {
-        INT order_id PK
-        INT user_id FK
-        INT merchant_id FK
-        INT total_price
-    }
-
-    order_items {
-        INT order_item_id PK
-        INT order_id FK
-        INT product_id FK
-        INT quantity
-        INT price
-    }
-
-    shipping_addresses {
-        INT shipping_address_id PK
-        INT order_id FK
-        TEXT alamat
-        VARCHAR courier
-        DECIMAL shipping_cost
-    }
-
-    transactions {
-        INT transaction_id PK
-        INT order_id FK
-        INT merchant_id FK
-        VARCHAR payment_method
-        INT amount
-        VARCHAR payment_status
-    }
-
-    reviews {
-        INT review_id PK
-        INT user_id FK
-        INT product_id FK
-        TEXT comment
-        INT rating
-    }
-
-    review_details {
-        INT review_detail_id PK
-        INT review_id FK
-        VARCHAR type
-        TEXT url
-    }
-
-    merchant_business_information {
-        INT merchant_business_info_id PK
-        INT merchant_id FK
-        VARCHAR business_type
-        VARCHAR tax_id
-    }
-
-    merchant_certifications_and_awards {
-        INT merchant_certification_id PK
-        INT merchant_id FK
-        VARCHAR title
-        VARCHAR issued_by
-    }
-
-    merchant_policies {
-        INT merchant_policy_id PK
-        INT merchant_id FK
-        VARCHAR policy_type
-        VARCHAR title
-    }
-
-    merchant_details {
-        INT merchant_detail_id PK
-        INT merchant_id FK
-        VARCHAR display_name
-    }
-
-    merchant_social_media_links {
-        INT merchant_social_id PK
-        INT merchant_detail_id FK
-        VARCHAR platform
-        TEXT url
-    }
-
-    sliders {
-        INT slider_id PK
-        VARCHAR name
-        VARCHAR image
-    }
-
-    banners {
-        INT banner_id PK
-        VARCHAR name
-        DATE start_date
-        DATE end_date
-        BOOLEAN is_active
-    }
-
-    users ||--o{ user_roles : "has"
-    roles ||--o{ user_roles : "has"
-    users ||--o{ refresh_tokens : "has"
-    users ||--o{ merchants : "owns"
-    users ||--o{ carts : "has"
-    users ||--o{ orders : "places"
-    users ||--o{ reviews : "writes"
-
-    merchants ||--o{ products : "sells"
-    merchants ||--o{ orders : "receives"
-    merchants ||--o{ transactions : "processes"
-    merchants ||--o{ merchant_business_information : "has"
-    merchants ||--o{ merchant_certifications_and_awards : "has"
-    merchants ||--o{ merchant_policies : "defines"
-    merchants ||--o{ merchant_details : "has"
-
-    merchant_details ||--o{ merchant_social_media_links : "has"
-
-    categories ||--o{ products : "contains"
-
-    products ||--o{ carts : "added to"
-    products ||--o{ order_items : "included in"
-    products ||--o{ reviews : "has"
-
-    orders ||--o{ order_items : "contains"
-    orders ||--o{ shipping_addresses : "ships to"
-    orders ||--o{ transactions : "has"
-
-    reviews ||--o{ review_details : "has"
+    REVIEWS ||--o{ REVIEW_DETAILS : "enriched_by"
 ```
 
-## 🚀 Getting Started
+## Operational Procedures
 
-To get started with this project, follow these steps:
+### Prerequisites
 
-### 1. Clone the Repository
+- Go Toolchain (v1.20+)
+- Docker and Docker Compose
+- Just / Make task runners
+- Protoc compiler (for proto regeneration)
 
-```bash
-git clone https://github.com/MamangRust/ecommerce-grpc.git
-cd ecommerce-grpc
-```
+### Local Environment Setup
 
-### 2. Prerequisites
+1. **Clone and initialize**:
+   ```bash
+   git clone https://github.com/MamangRust/ecommerce-grpc.git
+   cd ecommerce-grpc
+   ```
 
-- Go (version 1.20+)
-- Docker & Docker Compose
-- `make`
-- `protoc`
+2. **Configuration**:
+   Copy `.env.example` to `.env` and configure accordingly. For containerized execution, refer to `docker.env`.
 
-### 3. Configuration
+3. **Containerized Execution (Recommended)**:
+   ```bash
+   just docker-up
+   ```
+   This initializes all infrastructure components, including PostgreSQL, the gRPC core server, and the REST gateway.
 
-Copy the `.env.example` file to `.env` and adjust the environment variables if necessary. To run with Docker, use `docker.env`.
+### Core Commands
 
-## ⚙️ How to Run
+| Command | Description |
+| :--- | :--- |
+| `just migrate` | Execute pending database migrations |
+| `just generate-proto` | Compile Protocol Buffer definitions |
+| `just sqlc-generate` | Generate Go code from SQL queries |
+| `just test-all` | Run comprehensive test suite (Go + Hurl) |
+| `just run-server` | Start the gRPC backend engine |
+| `just run-client` | Start the REST API gateway |
 
-You can run this project using Docker (recommended) or locally with Go.
+## Performance Benchmarks
 
-### 1. Running with Docker
+The system has been subjected to rigorous stress testing using k6 to identify throughput capacity and latency thresholds.
 
-The easiest way to get started is with Docker Compose. This command will build the images, run the database, apply migrations, and start the gRPC server and HTTP client.
+### User Domain Service
 
-```bash
-# Run all services in the background
-make docker-up
+| Metric | Smoke | Load (1k VUs) | Stress (1.5k VUs) | Spike |
+| :--- | :--- | :--- | :--- | :--- |
+| Throughput | Baseline | 2172 req/s | 2490 req/s | 2157 req/s |
+| Error Rate | 0.0% | 25.0% | 25.0% | 25.0% |
+| p95 Latency | <10ms | 667ms | 578ms | 387ms |
 
-# Stop all services
-make docker-down
-```
+### Transaction Domain Service
 
-Services that will be running:
-- `postgres`: PostgreSQL database on port `5432`.
-- `server`: gRPC server on port `50051`.
-- `client`: HTTP client (Gateway) on port `5000`.
+| Metric | Smoke | Capability (900 VUs) | Load (1k VUs) | Stress (1.5k VUs) |
+| :--- | :--- | :--- | :--- | :--- |
+| Throughput | Baseline | 2584 req/s | 4254 req/s | 2776 req/s |
+| Error Rate | 0.0% | 0.0% | 0.65% | 0.01% |
+| p95 Latency | <135ms | 417ms | 346ms | 1.14s |
 
-### 2. Running Locally
+## Observability and Monitoring
 
-If you are not using Docker, you can run each part manually.
+The system implements a multi-layered observability strategy:
 
-```bash
-# 1. Apply database migrations
-make migrate
+- **Structured Logging**: Unified logging via Uber's Zap, ensuring all requests are traceable with unique context IDs.
+- **Continuous Profiling**: Pyroscope interceptors are integrated into the gRPC unary chain and REST middleware to monitor CPU and Memory consumption in real-time.
+- **Request Interceptors**: Automated telemetry for gRPC methods, including latency tracking and error rate monitoring.
 
-# 2. Run the gRPC server
-make run-server
+## Performance & Simulation Visualizations
 
-# 3. (In another terminal) Run the HTTP client/gateway
-make run-client
-```
+Detailed trajectory analysis of system behavior under various load profiles: Smoke, Capability, Load, Stress, and Spike tests.
 
-### Other `make` Commands
+### User Domain
 
-- `make generate-proto`: Regenerate Go code from `.proto` files.
-- `make lint`: Run the linter on the code.
-- `make test`: Run unit tests.
-- `make sqlc-generate`: Regenerate code from SQL queries using `sqlc`.
+| Profile | Behavior Metrics |
+| :--- | :--- |
+| **Capability** | <img src="./images/user/user_capability.png" width="600" alt="User Capability Analysis" /> |
+| **Load** | <img src="./images/user/user_load_test.png" width="600" alt="User Load Analysis" /> |
+| **Stress** | <img src="./images/user/user_rampling.png" width="600" alt="User Stress Analysis" /> |
+| **Spike** | <img src="./images/user/user_spike.png" width="600" alt="User Spike Analysis" /> |
 
----
+### Role Domain
 
-## 📊 Performance & Scalability Summary (k6)
+| Profile | Behavior Metrics |
+| :--- | :--- |
+| **Capability** | <img src="./images/role/role_capability.png" width="600" alt="Role Capability Analysis" /> |
+| **Load** | <img src="./images/role/role_load_test.png" width="600" alt="Role Load Analysis" /> |
+| **Stress** | <img src="./images/role/role_rampling.png" width="600" alt="Role Stress Analysis" /> |
+| **Spike** | <img src="./images/role/role_spike.png" width="600" alt="Role Spike Analysis" /> |
 
-### User Module
+### Transaction Domain
 
-| Test Type  | VUs  | Throughput (req/s) | Error Rate | p95 Latency | Notes                                   |
-| ---------- | ---- | ------------------ | ---------- | ----------- | --------------------------------------- |
-| Smoke      | 1    | –                  | 0%         | <10 ms      | Acceptable under low load               |
-| Capability | 222  | ~599               | 25%        | 167 ms      | GET /user/41 consistently failing       |
-| Load       | 1000 | ~2172              | 25%        | 667 ms      | Latency and error thresholds breached   |
-| Stress     | 1500 | ~2490              | 25%        | 578 ms      | Errors consistent across endpoints      |
-| Spike      | 1000 | ~2157              | 25%        | 387 ms      | Fast spike exposes same failure pattern |
+| Profile | Behavior Metrics |
+| :--- | :--- |
+| **Capability** | <img src="./images/transaction/transaction_capablity.png" width="600" alt="Transaction Capability Analysis" /> |
+| **Load** | <img src="./images/transaction/transaction_load-test.png" width="600" alt="Transaction Load Analysis" /> |
+| **Stress** | <img src="./images/transaction/transaction_rampling.png" width="600" alt="Transaction Stress Analysis" /> |
+| **Spike** | <img src="./images/transaction/transaction_spike.png" width="600" alt="Transaction Spike Analysis" /> |
 
-### Role Module
-
-| Test Type  | VUs  | Throughput (req/s) | Error Rate | p95 Latency | Notes                                  |
-| ---------- | ---- | ------------------ | ---------- | ----------- | -------------------------------------- |
-| Smoke      | 1    | –                  | 0%         | <5 ms       | Acceptable under low load              |
-| Capability | 169  | ~600               | 0%         | 225 ms      | Stable even at max concurrent VUs      |
-| Load       | 1000 | ~3879              | 0.18%      | 411 ms      | Minor latency spike, nearly error-free |
-| Stress     | 1500 | ~4125              | 0%         | 408 ms      | Stable under prolonged high load       |
-| Spike      | 1000 | ~3629              | 0%         | 307 ms      | Handles sudden spike smoothly          |
-
-### Transaction Module
-
-| Test Type  | VUs  | Throughput (req/s) | Error Rate | p95 Latency | Notes                                               |
-| ---------- | ---- | ------------------ | ---------- | ----------- | --------------------------------------------------- |
-| Smoke      | 1    | –                  | 0%         | <135 ms     | Acceptable under low load                           |
-| Capability | 900  | ~2584              | 0%         | 417 ms      | Stable, no failures observed                        |
-| Load       | 1000 | ~4254              | 0.65%      | 346 ms      | Small fraction of requests failing                  |
-| Stress     | 1500 | ~2776              | 0.01%      | 1.14 s      | Stress exposes long-tail latency for some endpoints |
-| Spike      | 1500 | ~1539              | 0.02%      | 1.46 s      | Spike test shows high iteration duration            |
-
----
-
-## 📈 Performance Test Visualizations
-
-### User Module
-
-| Test Type       | Visualization                                                                                                    |
-| --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Capability Test | <img src="./images/user/user_capability.png" alt="User module capability test results" width="500" />            |
-| Load Test       | <img src="./images/user/user_load_test.png" alt="User module load test results near capacity" width="500" />     |
-| Stress Test     | <img src="./images/user/user_rampling.png" alt="User module stress test behavior beyond capacity" width="500" /> |
-| Spike Test      | <img src="./images/user/user_spike.png" alt="User module spike test results" width="500" />                      |
-
-### Role Module
-
-| Test Type       | Visualization                                                                                                    |
-| --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Capability Test | <img src="./images/role/role_capability.png" alt="Role module capability test results" width="500" />            |
-| Load Test       | <img src="./images/role/role_load_test.png" alt="Role module load test results near capacity" width="500" />     |
-| Stress Test     | <img src="./images/role/role_rampling.png" alt="Role module stress test behavior beyond capacity" width="500" /> |
-| Spike Test      | <img src="./images/role/role_spike.png" alt="Role module spike test results" width="500" />                      |
-
-### Transaction Module
-
-| Test Type       | Visualization                                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Capability Test | <img src="./images/transaction/transaction_capablity.png" alt="Transaction module capability test results" width="500" />             |
-| Load Test       | <img src="./images/transaction/transaction_load-test.png" alt="Transaction module load test results near capacity" width="500" />     |
-| Stress Test     | <img src="./images/transaction/transaction_rampling.png" alt="Transaction module stress test behavior beyond capacity" width="500" /> |
-| Spike Test      | <img src="./images/transaction/transaction_spike.png" alt="Transaction module spike test results" width="500" />                      |

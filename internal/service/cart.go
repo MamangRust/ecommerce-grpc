@@ -142,14 +142,24 @@ func (s *cartService) CreateCart(ctx context.Context, req *requests.CreateCartRe
 		)
 	}
 
+	var imageProduct string
+	if product.ImageProduct != nil {
+		imageProduct = *product.ImageProduct
+	}
+
+	var weight int
+	if product.Weight != nil {
+		weight = int(*product.Weight)
+	}
+
 	cartRecord := &requests.CartCreateRecord{
 		ProductID:    req.ProductID,
 		UserID:       req.UserID,
 		Name:         product.Name,
 		Price:        int(product.Price),
-		ImageProduct: *product.ImageProduct,
+		ImageProduct: imageProduct,
 		Quantity:     req.Quantity,
-		Weight:       int(*product.Weight),
+		Weight:       weight,
 	}
 
 	res, err := s.cartRepository.CreateCart(ctx, cartRecord)

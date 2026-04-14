@@ -445,6 +445,8 @@ func (h *productHandleApi) Create(c echo.Context) error {
 		CountInStock: int32(formData.CountInStock),
 		Brand:        formData.Brand,
 		Weight:       int32(formData.Weight),
+		Rating:       int32(formData.Rating),
+		SlugProduct:  formData.SlugProduct,
 		ImageProduct: formData.ImagePath,
 	}
 
@@ -511,6 +513,8 @@ func (h *productHandleApi) Update(c echo.Context) error {
 		CountInStock: int32(formData.CountInStock),
 		Brand:        formData.Brand,
 		Weight:       int32(formData.Weight),
+		Rating:       int32(formData.Rating),
+		SlugProduct:  formData.SlugProduct,
 		ImageProduct: formData.ImagePath,
 	}
 
@@ -731,6 +735,9 @@ func (h *productHandleApi) parseProductForm(
 	if err != nil || formData.Weight <= 0 {
 		return formData, errors.NewBadRequestError("weight must be a positive number")
 	}
+
+	formData.Rating, _ = strconv.Atoi(c.FormValue("rating"))
+	formData.SlugProduct = strings.TrimSpace(c.FormValue("slug_product"))
 
 	file, err := c.FormFile("image_product")
 	if err != nil {

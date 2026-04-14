@@ -5,6 +5,7 @@ import (
 	"ecommerce/internal/domain/requests"
 	db "ecommerce/pkg/database/schema"
 	"ecommerce/pkg/errors/product_errors"
+	"ecommerce/pkg/utils"
 )
 
 type productRepository struct {
@@ -76,10 +77,10 @@ func (r *productRepository) FindByMerchant(ctx context.Context, req *requests.Fi
 
 	reqDb := db.GetProductsByMerchantParams{
 		MerchantID: int32(req.MerchantID),
-		Column2:    stringPtr(req.Search),
-		Column3:    req.CategoryID,
-		Column4:    req.MinPrice,
-		Column5:    req.MaxPrice,
+		Column2:    req.Search,
+		Column3:    int32(req.CategoryID),
+		Column4:    int32(utils.IntPtrToInt(req.MinPrice)),
+		Column5:    int32(utils.IntPtrToInt(req.MaxPrice)),
 		Limit:      int32(req.PageSize),
 		Offset:     int32(offset),
 	}
@@ -87,7 +88,7 @@ func (r *productRepository) FindByMerchant(ctx context.Context, req *requests.Fi
 	res, err := r.db.GetProductsByMerchant(ctx, reqDb)
 
 	if err != nil {
-		return nil, product_errors.ErrFindByMerchant
+		return nil, err
 	}
 
 	return res, nil
@@ -99,8 +100,8 @@ func (r *productRepository) FindByCategory(ctx context.Context, req *requests.Fi
 	reqDb := db.GetProductsByCategoryNameParams{
 		Name:    req.CategoryName,
 		Column2: req.Search,
-		Column3: req.MinPrice,
-		Column4: req.MaxPrice,
+		Column3: int32(utils.IntPtrToInt(req.MinPrice)),
+		Column4: int32(utils.IntPtrToInt(req.MaxPrice)),
 		Limit:   int32(req.PageSize),
 		Offset:  int32(offset),
 	}
@@ -108,7 +109,7 @@ func (r *productRepository) FindByCategory(ctx context.Context, req *requests.Fi
 	res, err := r.db.GetProductsByCategoryName(ctx, reqDb)
 
 	if err != nil {
-		return nil, product_errors.ErrFindByCategory
+		return nil, err
 	}
 
 	return res, nil

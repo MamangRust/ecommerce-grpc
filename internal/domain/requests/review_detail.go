@@ -12,14 +12,14 @@ type ReviewDetailFormData struct {
 type CreateReviewDetailRequest struct {
 	ReviewID int    `json:"review_id" validate:"required"`
 	Type     string `json:"type" validate:"required"`
-	Url      string `json:"url" validate:"required,url"`
+	Url      string `json:"url" validate:"required"`
 	Caption  string `json:"caption" validate:"required"`
 }
 
 type UpdateReviewDetailRequest struct {
 	ReviewDetailID *int   `json:"review_detail_id" validate:"required"`
 	Type           string `json:"type" validate:"required"`
-	Url            string `json:"url" validate:"required,url"`
+	Url            string `json:"url" validate:"required"`
 	Caption        string `json:"caption" validate:"required"`
 }
 

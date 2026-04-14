@@ -923,7 +923,7 @@ func (s *transactionHandleGrpc) Create(ctx context.Context, request *pb.CreateTr
 	}
 
 	paymentStatus := ""
-	if transaction.PaymentStatus == "" {
+	if transaction.PaymentStatus != "" {
 		paymentStatus = transaction.PaymentStatus
 	}
 
@@ -970,7 +970,7 @@ func (s *transactionHandleGrpc) Update(ctx context.Context, request *pb.UpdateTr
 	}
 
 	paymentStatus := ""
-	if transaction.PaymentStatus == "" {
+	if transaction.PaymentStatus != "" {
 		paymentStatus = transaction.PaymentStatus
 	}
 
@@ -1005,7 +1005,7 @@ func (s *transactionHandleGrpc) TrashedTransaction(ctx context.Context, request 
 	}
 
 	paymentStatus := ""
-	if transaction.PaymentStatus == "" {
+	if transaction.PaymentStatus != "" {
 		paymentStatus = transaction.PaymentStatus
 	}
 
@@ -1046,7 +1046,7 @@ func (s *transactionHandleGrpc) RestoreTransaction(ctx context.Context, request 
 	}
 
 	paymentStatus := ""
-	if transaction.PaymentStatus == "" {
+	if transaction.PaymentStatus != "" {
 		paymentStatus = transaction.PaymentStatus
 	}
 

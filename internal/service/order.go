@@ -982,6 +982,8 @@ func (s *orderService) UpdateOrder(ctx context.Context, req *requests.UpdateOrde
 		zap.Int("userID", req.UserID),
 		zap.Int("totalPrice", int(*totalPrice)))
 
+	s.cache.DeleteOrderCache(ctx, *req.OrderID)
+
 	return updated, nil
 }
 
@@ -995,7 +997,7 @@ func (s *orderService) TrashedOrder(ctx context.Context, order_id int) (*db.Orde
 		end(status)
 	}()
 
-	_, err := s.orderRepository.FindByIdTrashed(ctx, order_id)
+	_, err := s.orderRepository.FindById(ctx, order_id)
 	if err != nil {
 		status = "error"
 		return errorhandler.HandleError[*db.Order](
@@ -1007,7 +1009,7 @@ func (s *orderService) TrashedOrder(ctx context.Context, order_id int) (*db.Orde
 		)
 	}
 
-	orderItems, err := s.orderItemRepository.FindOrderItemByOrderTrashed(ctx, order_id)
+	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(ctx, order_id)
 	if err != nil {
 		status = "error"
 		return errorhandler.HandleError[*db.Order](
@@ -1033,6 +1035,21 @@ func (s *orderService) TrashedOrder(ctx context.Context, order_id int) (*db.Orde
 		}
 	}
 
+	shipping, err := s.shippingRepository.FindByOrder(ctx, order_id)
+	if err == nil && shipping != nil {
+		_, err := s.shippingRepository.TrashShippingAddress(ctx, int(shipping.ShippingAddressID))
+		if err != nil {
+			status = "error"
+			return errorhandler.HandleError[*db.Order](
+				s.logger,
+				shippingaddress_errors.ErrTrashShippingAddress,
+				method,
+				span,
+				zap.Int("order_id", order_id),
+			)
+		}
+	}
+
 	trashedOrder, err := s.orderRepository.TrashedOrder(ctx, order_id)
 	if err != nil {
 		status = "error"
@@ -1049,6 +1066,8 @@ func (s *orderService) TrashedOrder(ctx context.Context, order_id int) (*db.Orde
 		zap.Int("order_id", order_id),
 		zap.String("deleted_at", trashedOrder.DeletedAt.Time.String()))
 
+	s.cache.DeleteOrderCache(ctx, order_id)
+
 	return trashedOrder, nil
 }
 
@@ -1062,7 +1081,7 @@ func (s *orderService) RestoreOrder(ctx context.Context, order_id int) (*db.Orde
 		end(status)
 	}()
 
-	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(ctx, order_id)
+	orderItems, err := s.orderItemRepository.FindOrderItemByOrderTrashed(ctx, order_id)
 	if err != nil {
 		status = "error"
 		return errorhandler.HandleError[*db.Order](
@@ -1102,6 +1121,8 @@ func (s *orderService) RestoreOrder(ctx context.Context, order_id int) (*db.Orde
 
 	logSuccess("Order restored successfully", zap.Int("order_id", order_id))
 
+	s.cache.DeleteOrderCache(ctx, order_id)
+
 	return order, nil
 }
 
@@ -1115,7 +1136,7 @@ func (s *orderService) DeleteOrderPermanent(ctx context.Context, order_id int) (
 		end(status)
 	}()
 
-	orderItems, err := s.orderItemRepository.FindOrderItemByOrder(ctx, order_id)
+	orderItems, err := s.orderItemRepository.FindOrderItemByOrderTrashed(ctx, order_id)
 	if err != nil {
 		status = "error"
 		return errorhandler.HandleError[bool](
@@ -1140,6 +1161,36 @@ func (s *orderService) DeleteOrderPermanent(ctx context.Context, order_id int) (
 			)
 		}
 	}
+	shipping, err := s.shippingRepository.FindByOrder(ctx, order_id)
+	if err != nil {
+		// Try to find trashed shipping address if active one not found
+		trashedShipping, errTrashed := s.shippingRepository.FindTrashedByOrder(ctx, order_id)
+		if errTrashed == nil && trashedShipping != nil {
+			_, err := s.shippingRepository.DeleteShippingAddressPermanently(ctx, int(trashedShipping.ShippingAddressID))
+			if err != nil {
+				status = "error"
+				return errorhandler.HandleError[bool](
+					s.logger,
+					shippingaddress_errors.ErrFailedDeleteShippingAddressPermanent,
+					method,
+					span,
+					zap.Int("order_id", order_id),
+				)
+			}
+		}
+	} else if shipping != nil {
+		_, err := s.shippingRepository.DeleteShippingAddressPermanently(ctx, int(shipping.ShippingAddressID))
+		if err != nil {
+			status = "error"
+			return errorhandler.HandleError[bool](
+				s.logger,
+				shippingaddress_errors.ErrFailedDeleteShippingAddressPermanent,
+				method,
+				span,
+				zap.Int("order_id", order_id),
+			)
+		}
+	}
 
 	success, err := s.orderRepository.DeleteOrderPermanent(ctx, order_id)
 	if err != nil {
@@ -1154,6 +1205,8 @@ func (s *orderService) DeleteOrderPermanent(ctx context.Context, order_id int) (
 	}
 
 	logSuccess("Order permanently deleted successfully", zap.Int("order_id", order_id))
+
+	s.cache.DeleteOrderCache(ctx, order_id)
 
 	return success, nil
 }

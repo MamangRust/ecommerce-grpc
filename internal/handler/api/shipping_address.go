@@ -53,7 +53,7 @@ func NewHandlerShippingAddress(
 		apiHandler.Handle("findById", shippingHandler.FindById),
 	)
 	routerShipping.GET(
-		"/order/:id",
+		"/order/:order_id",
 		apiHandler.Handle("findByOrder", shippingHandler.FindByOrder),
 	)
 	routerShipping.GET(

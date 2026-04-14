@@ -53,7 +53,7 @@ type UpdateProductRequest struct {
 	Weight       int     `json:"weight" validate:"required"`
 	Rating       *int    `json:"rating" validate:"required"`
 	SlugProduct  *string `json:"slug_product" validate:"required"`
-	ImageProduct string  `json:"image_product" validate:"required"`
+	ImageProduct string  `json:"image_product"`
 }
 
 type ProductFormData struct {
@@ -65,6 +65,8 @@ type ProductFormData struct {
 	CountInStock int
 	Brand        string
 	Weight       int
+	Rating       int
+	SlugProduct  string
 	ImagePath    string
 }
 

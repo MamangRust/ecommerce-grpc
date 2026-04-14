@@ -3,9 +3,10 @@ package repository
 import (
 	"context"
 	"ecommerce/internal/domain/requests"
-	db "ecommerce/pkg/database/schema"
-	refreshtoken_errors "ecommerce/pkg/errors/refresh_token_errors"
 	"time"
+
+	db "github.com/MamangRust/monolith-ecommerce-shared/errors/database/schema"
+	refreshtoken_errors "github.com/MamangRust/monolith-ecommerce-shared/errors/refresh_token_errors"
 )
 
 type refreshTokenRepository struct {

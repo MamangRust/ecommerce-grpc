@@ -73,6 +73,16 @@ func (r *sliderRepository) FindByTrashed(ctx context.Context, req *requests.Find
 	return res, nil
 }
 
+func (r *sliderRepository) FindById(ctx context.Context, slider_id int) (*db.GetSliderByIDRow, error) {
+	res, err := r.db.GetSliderByID(ctx, int32(slider_id))
+
+	if err != nil {
+		return nil, slider_errors.ErrFindSliderByID
+	}
+
+	return res, nil
+}
+
 func (r *sliderRepository) CreateSlider(ctx context.Context, request *requests.CreateSliderRequest) (*db.CreateSliderRow, error) {
 	req := db.CreateSliderParams{
 		Name:  request.Nama,

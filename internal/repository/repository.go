@@ -52,8 +52,8 @@ func NewRepositories(db *db.Queries) *Repositories {
 		MerchantAward:      NewMerchantAwardRepository(db),
 		MerchantBusiness:   NewMerchantBusinessRepository(db),
 		MerchantDetail:     NewMerchantDetailRepository(db),
-		MerchantSocialLink: NewMerchantSocialMediaLinkRepository(db),
-		MerchantPolicies:   NewMerchantPolicyRepository(db),
+		MerchantSocialLink: NewMerchantSocialLinkRepository(db),
+		MerchantPolicies:   NewMerchantPoliciesRepository(db),
 		ReviewDetail:       NewReviewDetailRepository(db),
 	}
 }

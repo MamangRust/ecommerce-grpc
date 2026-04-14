@@ -168,6 +168,42 @@ func (s *sliderService) FindByActive(ctx context.Context, req *requests.FindAllS
 	return sliders, &totalCount, nil
 }
 
+func (s *sliderService) FindById(ctx context.Context, slider_id int) (*db.GetSliderByIDRow, error) {
+	const method = "FindById"
+
+	ctx, span, end, status, logSuccess := s.observability.StartTracingAndLogging(ctx, method,
+		attribute.Int("slider_id", slider_id))
+
+	defer func() {
+		end(status)
+	}()
+
+	if data, found := s.cache.GetSliderCache(ctx, slider_id); found {
+		logSuccess("Successfully retrieved slider by ID from cache",
+			zap.Int("slider_id", slider_id))
+		return data, nil
+	}
+
+	slider, err := s.sliderRepository.FindById(ctx, slider_id)
+	if err != nil {
+		status = "error"
+		return errorhandler.HandleError[*db.GetSliderByIDRow](
+			s.logger,
+			slider_errors.ErrFailedFindSliderByID,
+			method,
+			span,
+			zap.Int("slider_id", slider_id),
+		)
+	}
+
+	s.cache.SetSliderCache(ctx, slider)
+
+	logSuccess("Successfully fetched slider by ID from repository",
+		zap.Int("slider_id", slider_id))
+
+	return slider, nil
+}
+
 func (s *sliderService) FindByTrashed(ctx context.Context, req *requests.FindAllSlider) ([]*db.GetSlidersTrashedRow, *int, error) {
 	const method = "FindByTrashed"
 
@@ -255,7 +291,7 @@ func (s *sliderService) CreateSlider(ctx context.Context, req *requests.CreateSl
 		)
 	}
 
-	s.cache.DeleteSliderCache(ctx, int(slider.SliderID))
+	s.cache.InvalidateSliderCache(ctx)
 
 	logSuccess("Successfully created slider",
 		zap.Int("slider_id", int(slider.SliderID)),
@@ -288,7 +324,7 @@ func (s *sliderService) UpdateSlider(ctx context.Context, req *requests.UpdateSl
 		)
 	}
 
-	s.cache.DeleteSliderCache(ctx, int(slider.SliderID))
+	s.cache.InvalidateSliderCache(ctx)
 
 	logSuccess("Successfully updated slider",
 		zap.Int("slider_id", int(slider.SliderID)),
@@ -319,7 +355,7 @@ func (s *sliderService) TrashSlider(ctx context.Context, slider_id int) (*db.Sli
 		)
 	}
 
-	s.cache.DeleteSliderCache(ctx, int(slider.SliderID))
+	s.cache.InvalidateSliderCache(ctx)
 
 	logSuccess("Successfully trashed slider",
 		zap.Int("slider_id", int(slider.SliderID)))
@@ -349,7 +385,7 @@ func (s *sliderService) RestoreSlider(ctx context.Context, sliderID int) (*db.Sl
 		)
 	}
 
-	s.cache.DeleteSliderCache(ctx, int(slider.SliderID))
+	s.cache.InvalidateSliderCache(ctx)
 
 	logSuccess("Successfully restored slider",
 		zap.Int("slider_id", int(slider.SliderID)))
@@ -379,7 +415,7 @@ func (s *sliderService) DeleteSliderPermanently(ctx context.Context, sliderID in
 		)
 	}
 
-	s.cache.DeleteSliderCache(ctx, sliderID)
+	s.cache.InvalidateSliderCache(ctx)
 
 	logSuccess("Successfully permanently deleted slider",
 		zap.Int("sliderID", sliderID))
@@ -407,6 +443,7 @@ func (s *sliderService) RestoreAllSliders(ctx context.Context) (bool, error) {
 		)
 	}
 
+	s.cache.InvalidateSliderCache(ctx)
 	logSuccess("Successfully restored all trashed sliders")
 
 	return success, nil
@@ -432,6 +469,7 @@ func (s *sliderService) DeleteAllPermanentSlider(ctx context.Context) (bool, err
 		)
 	}
 
+	s.cache.InvalidateSliderCache(ctx)
 	logSuccess("Successfully permanently deleted all trashed sliders")
 
 	return success, nil

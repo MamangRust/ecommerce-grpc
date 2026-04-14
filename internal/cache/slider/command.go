@@ -11,11 +11,15 @@ type sliderCommandCache struct {
 }
 
 func NewSliderCommandCache(store *cache.CacheStore) *sliderCommandCache {
-	return &sliderCommandCache{}
+	return &sliderCommandCache{store: store}
 }
 
 func (s *sliderCommandCache) DeleteSliderCache(ctx context.Context, slider_id int) {
 	key := fmt.Sprintf(sliderIdKey, slider_id)
 
 	cache.DeleteFromCache(ctx, s.store, key)
+}
+
+func (s *sliderCommandCache) InvalidateSliderCache(ctx context.Context) {
+	s.store.InvalidateCache(ctx, "slider:*")
 }

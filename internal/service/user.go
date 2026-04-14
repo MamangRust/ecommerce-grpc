@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	user_cache "ecommerce/internal/cache/user"
 	"ecommerce/internal/domain/requests"
 	"ecommerce/internal/errorhandler"
@@ -12,7 +11,6 @@ import (
 	"ecommerce/pkg/hash"
 	"ecommerce/pkg/logger"
 	"ecommerce/pkg/observability"
-	"errors"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
@@ -280,20 +278,7 @@ func (s *userService) CreateUser(ctx context.Context, request *requests.CreateUs
 	s.logger.Debug("Creating new user", zap.String("email", request.Email), zap.Any("request", request))
 
 	existingUser, err := s.userRepository.FindByEmail(ctx, request.Email)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			s.logger.Debug("Email is available, proceeding to create user", zap.String("email", request.Email))
-		} else {
-			status = "error"
-			return errorhandler.HandleError[*db.CreateUserRow](
-				s.logger,
-				user_errors.ErrUserEmailAlready,
-				method,
-				span,
-				zap.String("email", request.Email),
-			)
-		}
-	} else if existingUser != nil {
+	if err == nil && existingUser != nil {
 		status = "error"
 		return errorhandler.HandleError[*db.CreateUserRow](
 			s.logger,

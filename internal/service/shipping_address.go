@@ -327,7 +327,7 @@ func (s *shippingAddressService) TrashShippingAddress(ctx context.Context, shipp
 		)
 	}
 
-	s.cache.DeleteShippingAddressCache(ctx, shipping_id)
+	s.cache.InvalidateShippingAddressCache(ctx)
 
 	logSuccess("Successfully trashed shipping address",
 		zap.Int("shipping_id", shipping_id))
@@ -358,7 +358,7 @@ func (s *shippingAddressService) RestoreShippingAddress(ctx context.Context, shi
 		)
 	}
 
-	s.cache.DeleteShippingAddressCache(ctx, shipping_id)
+	s.cache.InvalidateShippingAddressCache(ctx)
 
 	logSuccess("Successfully restored shipping address",
 		zap.Int("shipping_id", shipping_id))
@@ -389,7 +389,7 @@ func (s *shippingAddressService) DeleteShippingAddressPermanently(ctx context.Co
 		)
 	}
 
-	s.cache.DeleteShippingAddressCache(ctx, shipping_id)
+	s.cache.InvalidateShippingAddressCache(ctx)
 
 	logSuccess("Successfully permanently deleted shipping address",
 		zap.Int("shipping_id", shipping_id))
@@ -442,6 +442,7 @@ func (s *shippingAddressService) DeleteAllPermanentShippingAddress(ctx context.C
 		)
 	}
 
+	s.cache.InvalidateShippingAddressCache(ctx)
 	logSuccess("Successfully permanently deleted all trashed shipping addresses")
 
 	return success, nil

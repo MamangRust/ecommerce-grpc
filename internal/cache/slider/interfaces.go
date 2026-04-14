@@ -15,8 +15,12 @@ type SliderQueryCache interface {
 
 	GetSliderTrashedCache(ctx context.Context, req *requests.FindAllSlider) ([]*db.GetSlidersTrashedRow, *int, bool)
 	SetSliderTrashedCache(ctx context.Context, req *requests.FindAllSlider, data []*db.GetSlidersTrashedRow, total *int)
+
+	GetSliderCache(ctx context.Context, slider_id int) (*db.GetSliderByIDRow, bool)
+	SetSliderCache(ctx context.Context, data *db.GetSliderByIDRow)
 }
 
 type SliderCommandCache interface {
 	DeleteSliderCache(ctx context.Context, slider_id int)
+	InvalidateSliderCache(ctx context.Context)
 }

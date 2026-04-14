@@ -20,6 +20,7 @@ type UserService interface {
 	FindByID(ctx context.Context, id int) (*db.GetUserByIDRow, error)
 	FindByActive(ctx context.Context, req *requests.FindAllUsers) ([]*db.GetUsersActiveRow, *int, error)
 	FindByTrashed(ctx context.Context, req *requests.FindAllUsers) ([]*db.GetUserTrashedRow, *int, error)
+
 	CreateUser(ctx context.Context, request *requests.CreateUserRequest) (*db.CreateUserRow, error)
 	UpdateUser(ctx context.Context, request *requests.UpdateUserRequest) (*db.UpdateUserRow, error)
 	TrashedUser(ctx context.Context, user_id int) (*db.TrashUserRow, error)
@@ -36,6 +37,7 @@ type RoleService interface {
 	FindByTrashedRole(ctx context.Context, req *requests.FindAllRole) ([]*db.GetTrashedRolesRow, *int, error)
 	FindById(ctx context.Context, role_id int) (*db.Role, error)
 	FindByUserId(ctx context.Context, id int) ([]*db.Role, error)
+
 	CreateRole(ctx context.Context, request *requests.CreateRoleRequest) (*db.Role, error)
 	UpdateRole(ctx context.Context, request *requests.UpdateRoleRequest) (*db.Role, error)
 	TrashedRole(ctx context.Context, role_id int) (*db.Role, error)
@@ -52,6 +54,7 @@ type BannerService interface {
 	FindByTrashed(ctx context.Context, req *requests.FindAllBanner) ([]*db.GetBannersTrashedRow, *int, error)
 
 	FindById(ctx context.Context, bannerID int) (*db.GetBannerRow, error)
+
 	CreateBanner(ctx context.Context, req *requests.CreateBannerRequest) (*db.CreateBannerRow, error)
 	UpdateBanner(ctx context.Context, req *requests.UpdateBannerRequest) (*db.UpdateBannerRow, error)
 
@@ -99,7 +102,6 @@ type CategoryService interface {
 type CartService interface {
 	FindAll(ctx context.Context, req *requests.FindAllCarts) ([]*db.GetCartsRow, *int, error)
 	CreateCart(ctx context.Context, req *requests.CreateCartRequest) (*db.Cart, error)
-
 	DeletePermanent(ctx context.Context, cartID int) (bool, error)
 	DeleteAllPermanently(ctx context.Context, req *requests.DeleteCartRequest) (bool, error)
 }
@@ -361,6 +363,15 @@ type OrderService interface {
 		ctx context.Context,
 		year int,
 	) ([]*db.GetYearlyTotalRevenueRow, error)
+	FindMonthlyOrder(
+		ctx context.Context,
+		year int,
+	) ([]*db.GetMonthlyOrderRow, error)
+
+	FindYearlyOrder(
+		ctx context.Context,
+		year int,
+	) ([]*db.GetYearlyOrderRow, error)
 
 	FindMonthlyTotalRevenueById(
 		ctx context.Context,
@@ -381,16 +392,6 @@ type OrderService interface {
 		ctx context.Context,
 		req *requests.YearTotalRevenueMerchant,
 	) ([]*db.GetYearlyTotalRevenueByMerchantRow, error)
-
-	FindMonthlyOrder(
-		ctx context.Context,
-		year int,
-	) ([]*db.GetMonthlyOrderRow, error)
-
-	FindYearlyOrder(
-		ctx context.Context,
-		year int,
-	) ([]*db.GetYearlyOrderRow, error)
 
 	FindMonthlyOrderByMerchant(
 		ctx context.Context,
@@ -425,7 +426,7 @@ type OrderService interface {
 	CreateOrder(
 		ctx context.Context,
 		request *requests.CreateOrderRequest,
-	) (*db.UpdateOrderRow, error)
+	) (*db.CreateOrderRow, error)
 
 	UpdateOrder(
 		ctx context.Context,
@@ -546,16 +547,6 @@ type TransactionService interface {
 		year int,
 	) ([]*db.GetYearlyTransactionMethodsSuccessRow, error)
 
-	FindMonthlyTransactionMethodByMerchantSuccess(
-		ctx context.Context,
-		req *requests.MonthMethodTransactionMerchant,
-	) ([]*db.GetMonthlyTransactionMethodsByMerchantSuccessRow, error)
-
-	FindYearlyTransactionMethodByMerchantSuccess(
-		ctx context.Context,
-		req *requests.YearMethodTransactionMerchant,
-	) ([]*db.GetYearlyTransactionMethodsByMerchantSuccessRow, error)
-
 	FindMonthlyTransactionMethodFailed(
 		ctx context.Context,
 		req *requests.MonthMethodTransaction,
@@ -565,6 +556,16 @@ type TransactionService interface {
 		ctx context.Context,
 		year int,
 	) ([]*db.GetYearlyTransactionMethodsFailedRow, error)
+
+	FindMonthlyTransactionMethodByMerchantSuccess(
+		ctx context.Context,
+		req *requests.MonthMethodTransactionMerchant,
+	) ([]*db.GetMonthlyTransactionMethodsByMerchantSuccessRow, error)
+
+	FindYearlyTransactionMethodByMerchantSuccess(
+		ctx context.Context,
+		req *requests.YearMethodTransactionMerchant,
+	) ([]*db.GetYearlyTransactionMethodsByMerchantSuccessRow, error)
 
 	FindMonthlyTransactionMethodByMerchantFailed(
 		ctx context.Context,
@@ -696,6 +697,11 @@ type SliderService interface {
 		req *requests.FindAllSlider,
 	) ([]*db.GetSlidersTrashedRow, *int, error)
 
+	FindById(
+		ctx context.Context,
+		slider_id int,
+	) (*db.GetSliderByIDRow, error)
+
 	CreateSlider(
 		ctx context.Context,
 		request *requests.CreateSliderRequest,
@@ -751,6 +757,7 @@ type ReviewDetailService interface {
 	FindByActive(ctx context.Context, req *requests.FindAllReview) ([]*db.GetReviewDetailsActiveRow, *int, error)
 	FindByTrashed(ctx context.Context, req *requests.FindAllReview) ([]*db.GetReviewDetailsTrashedRow, *int, error)
 	FindById(ctx context.Context, user_id int) (*db.GetReviewDetailRow, error)
+
 	CreateReviewDetail(ctx context.Context, request *requests.CreateReviewDetailRequest) (*db.CreateReviewDetailRow, error)
 	UpdateReviewDetail(ctx context.Context, request *requests.UpdateReviewDetailRequest) (*db.UpdateReviewDetailRow, error)
 	TrashedReviewDetail(ctx context.Context, ReviewDetail_id int) (*db.ReviewDetail, error)

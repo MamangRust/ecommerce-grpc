@@ -440,10 +440,6 @@ func (s *merchantBusinessService) RestoreAllMerchantBusiness(ctx context.Context
 		)
 	}
 
-	// Note: We can't selectively invalidate cache for all merchant businesses,
-	// so we would need to implement a cache flush method if needed
-	// For now, we'll rely on cache expiration
-
 	logSuccess("Successfully restored all trashed merchant businesses")
 
 	return success, nil

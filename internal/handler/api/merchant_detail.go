@@ -304,8 +304,12 @@ func (h *merchantDetailHandleApi) Create(c echo.Context) error {
 
 	var pbSocialLinks []*pb.CreateMerchantSocialRequest
 	for _, link := range formData.SocialLinks {
+		var detailID int32
+		if link.MerchantDetailID != nil {
+			detailID = int32(*link.MerchantDetailID)
+		}
 		pbSocialLinks = append(pbSocialLinks, &pb.CreateMerchantSocialRequest{
-			MerchantDetailId: int32(*link.MerchantDetailID),
+			MerchantDetailId: detailID,
 			Platform:         link.Platform,
 			Url:              link.Url,
 		})

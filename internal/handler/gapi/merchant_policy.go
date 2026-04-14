@@ -290,7 +290,7 @@ func (s *merchantPolicyHandleGrpc) Update(ctx context.Context, request *pb.Updat
 	}, nil
 }
 
-func (s *merchantPolicyHandleGrpc) TrashedMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantPoliciesDeleteAt, error) {
+func (s *merchantPolicyHandleGrpc) TrashedMerchantPolicies(ctx context.Context, request *pb.FindByIdMerchantPoliciesRequest) (*pb.ApiResponseMerchantPoliciesDeleteAt, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -320,7 +320,7 @@ func (s *merchantPolicyHandleGrpc) TrashedMerchant(ctx context.Context, request 
 	}, nil
 }
 
-func (s *merchantPolicyHandleGrpc) RestoreMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantPoliciesDeleteAt, error) {
+func (s *merchantPolicyHandleGrpc) RestoreMerchantPolicies(ctx context.Context, request *pb.FindByIdMerchantPoliciesRequest) (*pb.ApiResponseMerchantPoliciesDeleteAt, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -350,7 +350,7 @@ func (s *merchantPolicyHandleGrpc) RestoreMerchant(ctx context.Context, request 
 	}, nil
 }
 
-func (s *merchantPolicyHandleGrpc) DeleteMerchantPermanent(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantDelete, error) {
+func (s *merchantPolicyHandleGrpc) DeleteMerchantPoliciesPermanent(ctx context.Context, request *pb.FindByIdMerchantPoliciesRequest) (*pb.ApiResponseMerchantDelete, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -368,7 +368,7 @@ func (s *merchantPolicyHandleGrpc) DeleteMerchantPermanent(ctx context.Context, 
 	}, nil
 }
 
-func (s *merchantPolicyHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
+func (s *merchantPolicyHandleGrpc) RestoreAllMerchantPolicies(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
 	_, err := s.merchantPolicyService.RestoreAllMerchantPolicy(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
@@ -380,7 +380,7 @@ func (s *merchantPolicyHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *em
 	}, nil
 }
 
-func (s *merchantPolicyHandleGrpc) DeleteAllMerchantPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
+func (s *merchantPolicyHandleGrpc) DeleteAllMerchantPoliciesPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
 	_, err := s.merchantPolicyService.DeleteAllMerchantPolicyPermanent(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)

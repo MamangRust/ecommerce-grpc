@@ -355,11 +355,11 @@ func (s *merchantDetailHandleGrpc) Create(ctx context.Context, request *pb.Creat
 	pbMerchant := &pb.MerchantDetailCoreResponse{
 		Id:               int32(merchant.MerchantDetailID),
 		MerchantId:       int32(merchant.MerchantID),
-		DisplayName:      *merchant.DisplayName,
-		CoverImageUrl:    *merchant.CoverImageUrl,
-		LogoUrl:          *merchant.LogoUrl,
-		ShortDescription: *merchant.ShortDescription,
-		WebsiteUrl:       *merchant.WebsiteUrl,
+		DisplayName:      getStringValue(merchant.DisplayName),
+		CoverImageUrl:    getStringValue(merchant.CoverImageUrl),
+		LogoUrl:          getStringValue(merchant.LogoUrl),
+		ShortDescription: getStringValue(merchant.ShortDescription),
+		WebsiteUrl:       getStringValue(merchant.WebsiteUrl),
 		CreatedAt:        merchant.CreatedAt.Time.String(),
 		UpdatedAt:        merchant.UpdatedAt.Time.String(),
 	}
@@ -410,11 +410,11 @@ func (s *merchantDetailHandleGrpc) Update(ctx context.Context, request *pb.Updat
 	pbMerchant := &pb.MerchantDetailCoreResponse{
 		Id:               int32(merchant.MerchantDetailID),
 		MerchantId:       int32(merchant.MerchantID),
-		DisplayName:      *merchant.DisplayName,
-		CoverImageUrl:    *merchant.CoverImageUrl,
-		LogoUrl:          *merchant.LogoUrl,
-		ShortDescription: *merchant.ShortDescription,
-		WebsiteUrl:       *merchant.WebsiteUrl,
+		DisplayName:      getStringValue(merchant.DisplayName),
+		CoverImageUrl:    getStringValue(merchant.CoverImageUrl),
+		LogoUrl:          getStringValue(merchant.LogoUrl),
+		ShortDescription: getStringValue(merchant.ShortDescription),
+		WebsiteUrl:       getStringValue(merchant.WebsiteUrl),
 		CreatedAt:        merchant.CreatedAt.Time.String(),
 		UpdatedAt:        merchant.UpdatedAt.Time.String(),
 	}
@@ -426,7 +426,7 @@ func (s *merchantDetailHandleGrpc) Update(ctx context.Context, request *pb.Updat
 	}, nil
 }
 
-func (s *merchantDetailHandleGrpc) TrashedMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantDetailDeleteAtCore, error) {
+func (s *merchantDetailHandleGrpc) TrashedMerchantDetail(ctx context.Context, request *pb.FindByIdMerchantDetailRequest) (*pb.ApiResponseMerchantDetailDeleteAtCore, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -446,11 +446,11 @@ func (s *merchantDetailHandleGrpc) TrashedMerchant(ctx context.Context, request 
 	pbMerchant := &pb.MerchantDetailCoreResponseDeleteAt{
 		Id:               int32(merchant.MerchantDetailID),
 		MerchantId:       int32(merchant.MerchantID),
-		DisplayName:      *merchant.DisplayName,
-		CoverImageUrl:    *merchant.CoverImageUrl,
-		LogoUrl:          *merchant.LogoUrl,
-		ShortDescription: *merchant.ShortDescription,
-		WebsiteUrl:       *merchant.WebsiteUrl,
+		DisplayName:      getStringValue(merchant.DisplayName),
+		CoverImageUrl:    getStringValue(merchant.CoverImageUrl),
+		LogoUrl:          getStringValue(merchant.LogoUrl),
+		ShortDescription: getStringValue(merchant.ShortDescription),
+		WebsiteUrl:       getStringValue(merchant.WebsiteUrl),
 		CreatedAt:        merchant.CreatedAt.Time.String(),
 		UpdatedAt:        merchant.UpdatedAt.Time.String(),
 		DeletedAt:        &wrapperspb.StringValue{Value: deletedAt},
@@ -463,7 +463,7 @@ func (s *merchantDetailHandleGrpc) TrashedMerchant(ctx context.Context, request 
 	}, nil
 }
 
-func (s *merchantDetailHandleGrpc) RestoreMerchant(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantDetailDeleteAtCore, error) {
+func (s *merchantDetailHandleGrpc) RestoreMerchantDetail(ctx context.Context, request *pb.FindByIdMerchantDetailRequest) (*pb.ApiResponseMerchantDetailDeleteAtCore, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -483,11 +483,11 @@ func (s *merchantDetailHandleGrpc) RestoreMerchant(ctx context.Context, request 
 	pbMerchant := &pb.MerchantDetailCoreResponseDeleteAt{
 		Id:               int32(merchant.MerchantDetailID),
 		MerchantId:       int32(merchant.MerchantID),
-		DisplayName:      *merchant.DisplayName,
-		CoverImageUrl:    *merchant.CoverImageUrl,
-		LogoUrl:          *merchant.LogoUrl,
-		ShortDescription: *merchant.ShortDescription,
-		WebsiteUrl:       *merchant.WebsiteUrl,
+		DisplayName:      getStringValue(merchant.DisplayName),
+		CoverImageUrl:    getStringValue(merchant.CoverImageUrl),
+		LogoUrl:          getStringValue(merchant.LogoUrl),
+		ShortDescription: getStringValue(merchant.ShortDescription),
+		WebsiteUrl:       getStringValue(merchant.WebsiteUrl),
 		CreatedAt:        merchant.CreatedAt.Time.String(),
 		UpdatedAt:        merchant.UpdatedAt.Time.String(),
 		DeletedAt:        &wrapperspb.StringValue{Value: deletedAt},
@@ -500,7 +500,7 @@ func (s *merchantDetailHandleGrpc) RestoreMerchant(ctx context.Context, request 
 	}, nil
 }
 
-func (s *merchantDetailHandleGrpc) DeleteMerchantPermanent(ctx context.Context, request *pb.FindByIdMerchantRequest) (*pb.ApiResponseMerchantDelete, error) {
+func (s *merchantDetailHandleGrpc) DeleteMerchantDetailPermanent(ctx context.Context, request *pb.FindByIdMerchantDetailRequest) (*pb.ApiResponseMerchantDelete, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -518,7 +518,7 @@ func (s *merchantDetailHandleGrpc) DeleteMerchantPermanent(ctx context.Context, 
 	}, nil
 }
 
-func (s *merchantDetailHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
+func (s *merchantDetailHandleGrpc) RestoreAllMerchantDetail(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
 	_, err := s.merchantDetailService.RestoreAllMerchantDetail(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
@@ -530,7 +530,7 @@ func (s *merchantDetailHandleGrpc) RestoreAllMerchant(ctx context.Context, _ *em
 	}, nil
 }
 
-func (s *merchantDetailHandleGrpc) DeleteAllMerchantPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
+func (s *merchantDetailHandleGrpc) DeleteAllMerchantDetailPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseMerchantAll, error) {
 	_, err := s.merchantDetailService.DeleteAllMerchantDetailPermanent(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
@@ -559,4 +559,11 @@ func normalizeJSON(v interface{}) ([]byte, bool) {
 		}
 		return b, true
 	}
+}
+
+func getStringValue(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

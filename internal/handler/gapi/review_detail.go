@@ -300,7 +300,7 @@ func (s *reviewDetailHandleGrpc) Update(ctx context.Context, request *pb.UpdateR
 	}, nil
 }
 
-func (s *reviewDetailHandleGrpc) TrashedReview(ctx context.Context, request *pb.FindByIdReviewRequest) (*pb.ApiResponseReviewDetailDeleteAt, error) {
+func (s *reviewDetailHandleGrpc) TrashedReviewDetail(ctx context.Context, request *pb.FindByIdReviewDetailRequest) (*pb.ApiResponseReviewDetailDeleteAt, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -335,7 +335,7 @@ func (s *reviewDetailHandleGrpc) TrashedReview(ctx context.Context, request *pb.
 	}, nil
 }
 
-func (s *reviewDetailHandleGrpc) RestoreReview(ctx context.Context, request *pb.FindByIdReviewRequest) (*pb.ApiResponseReviewDetailDeleteAt, error) {
+func (s *reviewDetailHandleGrpc) RestoreReviewDetail(ctx context.Context, request *pb.FindByIdReviewDetailRequest) (*pb.ApiResponseReviewDetailDeleteAt, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -370,7 +370,7 @@ func (s *reviewDetailHandleGrpc) RestoreReview(ctx context.Context, request *pb.
 	}, nil
 }
 
-func (s *reviewDetailHandleGrpc) DeleteReviewPermanent(ctx context.Context, request *pb.FindByIdReviewRequest) (*pb.ApiResponseReviewDelete, error) {
+func (s *reviewDetailHandleGrpc) DeleteReviewDetailPermanent(ctx context.Context, request *pb.FindByIdReviewDetailRequest) (*pb.ApiResponseReviewDelete, error) {
 	id := int(request.GetId())
 
 	if id == 0 {
@@ -388,7 +388,7 @@ func (s *reviewDetailHandleGrpc) DeleteReviewPermanent(ctx context.Context, requ
 	}, nil
 }
 
-func (s *reviewDetailHandleGrpc) RestoreAllReview(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseReviewAll, error) {
+func (s *reviewDetailHandleGrpc) RestoreAllReviewDetail(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseReviewAll, error) {
 	_, err := s.reviewDetailService.RestoreAllReviewDetail(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
@@ -400,7 +400,7 @@ func (s *reviewDetailHandleGrpc) RestoreAllReview(ctx context.Context, _ *emptyp
 	}, nil
 }
 
-func (s *reviewDetailHandleGrpc) DeleteAllReviewPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseReviewAll, error) {
+func (s *reviewDetailHandleGrpc) DeleteAllReviewDetailPermanent(ctx context.Context, _ *emptypb.Empty) (*pb.ApiResponseReviewAll, error) {
 	_, err := s.reviewDetailService.DeleteAllReviewDetailPermanent(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)

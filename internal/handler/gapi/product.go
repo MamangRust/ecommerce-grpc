@@ -7,6 +7,7 @@ import (
 	"ecommerce/internal/service"
 	"ecommerce/pkg/errors"
 	"ecommerce/pkg/errors/product_errors"
+	"ecommerce/pkg/utils"
 	"math"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -56,14 +57,14 @@ func (s *productHandleGrpc) FindAll(ctx context.Context, request *pb.FindAllProd
 			MerchantId:   int32(product.MerchantID),
 			CategoryId:   int32(product.CategoryID),
 			Name:         product.Name,
-			Description:  *product.Description,
+			Description:  utils.StringPtrToString(product.Description),
 			Price:        int32(product.Price),
 			CountInStock: int32(product.CountInStock),
-			Brand:        *product.Brand,
-			Weight:       int32(*product.Weight),
-			Rating:       float32(*product.Rating),
-			SlugProduct:  *product.SlugProduct,
-			ImageProduct: *product.ImageProduct,
+			Brand:        utils.StringPtrToString(product.Brand),
+			Weight:       utils.Int32PtrToInt32(product.Weight),
+			Rating:       utils.Float64PtrToFloat32(product.Rating),
+			SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+			ImageProduct: utils.StringPtrToString(product.ImageProduct),
 			CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 			UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
 		}
@@ -130,14 +131,14 @@ func (s *productHandleGrpc) FindByMerchant(ctx context.Context, request *pb.Find
 			MerchantId:   int32(product.MerchantID),
 			CategoryId:   int32(product.CategoryID),
 			Name:         product.Name,
-			Description:  *product.Description,
+			Description:  utils.StringPtrToString(product.Description),
 			Price:        int32(product.Price),
 			CountInStock: int32(product.CountInStock),
-			Brand:        *product.Brand,
-			Weight:       int32(*product.Weight),
-			Rating:       float32(*product.Rating),
-			SlugProduct:  *product.SlugProduct,
-			ImageProduct: *product.ImageProduct,
+			Brand:        utils.StringPtrToString(product.Brand),
+			Weight:       utils.Int32PtrToInt32(product.Weight),
+			Rating:       utils.Float64PtrToFloat32(product.Rating),
+			SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+			ImageProduct: utils.StringPtrToString(product.ImageProduct),
 			CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 			UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
 		}
@@ -204,14 +205,14 @@ func (s *productHandleGrpc) FindByCategory(ctx context.Context, request *pb.Find
 			MerchantId:   int32(product.MerchantID),
 			CategoryId:   int32(product.CategoryID),
 			Name:         product.Name,
-			Description:  *product.Description,
+			Description:  utils.StringPtrToString(product.Description),
 			Price:        int32(product.Price),
 			CountInStock: int32(product.CountInStock),
-			Brand:        *product.Brand,
-			Weight:       int32(*product.Weight),
-			Rating:       float32(*product.Rating),
-			SlugProduct:  *product.SlugProduct,
-			ImageProduct: *product.ImageProduct,
+			Brand:        utils.StringPtrToString(product.Brand),
+			Weight:       utils.Int32PtrToInt32(product.Weight),
+			Rating:       utils.Float64PtrToFloat32(product.Rating),
+			SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+			ImageProduct: utils.StringPtrToString(product.ImageProduct),
 			CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 			UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
 		}
@@ -251,14 +252,14 @@ func (s *productHandleGrpc) FindById(ctx context.Context, request *pb.FindByIdPr
 		MerchantId:   int32(product.MerchantID),
 		CategoryId:   int32(product.CategoryID),
 		Name:         product.Name,
-		Description:  *product.Description,
+		Description:  utils.StringPtrToString(product.Description),
 		Price:        int32(product.Price),
 		CountInStock: int32(product.CountInStock),
-		Brand:        *product.Brand,
-		Weight:       int32(*product.Weight),
-		Rating:       float32(*product.Rating),
-		SlugProduct:  *product.SlugProduct,
-		ImageProduct: *product.ImageProduct,
+		Brand:        utils.StringPtrToString(product.Brand),
+		Weight:       utils.Int32PtrToInt32(product.Weight),
+		Rating:       utils.Float64PtrToFloat32(product.Rating),
+		SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+		ImageProduct: utils.StringPtrToString(product.ImageProduct),
 		CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 		UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
 	}
@@ -295,9 +296,9 @@ func (s *productHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAl
 
 	protoProducts := make([]*pb.ProductResponseDeleteAt, len(products))
 	for i, product := range products {
-		var deletedAt string
+		var deletedAt *wrapperspb.StringValue
 		if product.DeletedAt.Valid {
-			deletedAt = product.DeletedAt.Time.Format("2006-01-02")
+			deletedAt = &wrapperspb.StringValue{Value: product.DeletedAt.Time.Format("2006-01-02")}
 		}
 
 		protoProducts[i] = &pb.ProductResponseDeleteAt{
@@ -305,17 +306,17 @@ func (s *productHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAl
 			MerchantId:   int32(product.MerchantID),
 			CategoryId:   int32(product.CategoryID),
 			Name:         product.Name,
-			Description:  *product.Description,
+			Description:  utils.StringPtrToString(product.Description),
 			Price:        int32(product.Price),
 			CountInStock: int32(product.CountInStock),
-			Brand:        *product.Brand,
-			Weight:       int32(*product.Weight),
-			Rating:       float32(*product.Rating),
-			SlugProduct:  *product.SlugProduct,
-			ImageProduct: *product.ImageProduct,
+			Brand:        utils.StringPtrToString(product.Brand),
+			Weight:       utils.Int32PtrToInt32(product.Weight),
+			Rating:       utils.Float64PtrToFloat32(product.Rating),
+			SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+			ImageProduct: utils.StringPtrToString(product.ImageProduct),
 			CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 			UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
-			DeletedAt:    &wrapperspb.StringValue{Value: deletedAt},
+			DeletedAt:    deletedAt,
 		}
 	}
 
@@ -361,9 +362,9 @@ func (s *productHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindA
 
 	protoProducts := make([]*pb.ProductResponseDeleteAt, len(products))
 	for i, product := range products {
-		var deletedAt string
+		var deletedAt *wrapperspb.StringValue
 		if product.DeletedAt.Valid {
-			deletedAt = product.DeletedAt.Time.Format("2006-01-02")
+			deletedAt = &wrapperspb.StringValue{Value: product.DeletedAt.Time.Format("2006-01-02")}
 		}
 
 		protoProducts[i] = &pb.ProductResponseDeleteAt{
@@ -371,17 +372,17 @@ func (s *productHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindA
 			MerchantId:   int32(product.MerchantID),
 			CategoryId:   int32(product.CategoryID),
 			Name:         product.Name,
-			Description:  *product.Description,
+			Description:  utils.StringPtrToString(product.Description),
 			Price:        int32(product.Price),
 			CountInStock: int32(product.CountInStock),
-			Brand:        *product.Brand,
-			Weight:       int32(*product.Weight),
-			Rating:       float32(*product.Rating),
-			SlugProduct:  *product.SlugProduct,
-			ImageProduct: *product.ImageProduct,
+			Brand:        utils.StringPtrToString(product.Brand),
+			Weight:       utils.Int32PtrToInt32(product.Weight),
+			Rating:       utils.Float64PtrToFloat32(product.Rating),
+			SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+			ImageProduct: utils.StringPtrToString(product.ImageProduct),
 			CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 			UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
-			DeletedAt:    &wrapperspb.StringValue{Value: deletedAt},
+			DeletedAt:    deletedAt,
 		}
 	}
 
@@ -403,6 +404,9 @@ func (s *productHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindA
 }
 
 func (s *productHandleGrpc) Create(ctx context.Context, request *pb.CreateProductRequest) (*pb.ApiResponseProduct, error) {
+	rating := int(request.GetRating())
+	slug := request.GetSlugProduct()
+
 	req := &requests.CreateProductRequest{
 		MerchantID:   int(request.GetMerchantId()),
 		CategoryID:   int(request.GetCategoryId()),
@@ -412,6 +416,8 @@ func (s *productHandleGrpc) Create(ctx context.Context, request *pb.CreateProduc
 		CountInStock: int(request.GetCountInStock()),
 		Brand:        request.GetBrand(),
 		Weight:       int(request.GetWeight()),
+		Rating:       &rating,
+		SlugProduct:  &slug,
 		ImageProduct: request.GetImageProduct(),
 	}
 
@@ -429,14 +435,14 @@ func (s *productHandleGrpc) Create(ctx context.Context, request *pb.CreateProduc
 		MerchantId:   int32(product.MerchantID),
 		CategoryId:   int32(product.CategoryID),
 		Name:         product.Name,
-		Description:  *product.Description,
+		Description:  utils.StringPtrToString(product.Description),
 		Price:        int32(product.Price),
 		CountInStock: int32(product.CountInStock),
-		Brand:        *product.Brand,
-		Weight:       int32(*product.Weight),
-		Rating:       float32(*product.Rating),
-		SlugProduct:  *product.SlugProduct,
-		ImageProduct: *product.ImageProduct,
+		Brand:        utils.StringPtrToString(product.Brand),
+		Weight:       utils.Int32PtrToInt32(product.Weight),
+		Rating:       utils.Float64PtrToFloat32(product.Rating),
+		SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+		ImageProduct: utils.StringPtrToString(product.ImageProduct),
 		CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 		UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
 	}
@@ -455,6 +461,9 @@ func (s *productHandleGrpc) Update(ctx context.Context, request *pb.UpdateProduc
 		return nil, product_errors.ErrGrpcInvalidID
 	}
 
+	rating := int(request.GetRating())
+	slug := request.GetSlugProduct()
+
 	req := &requests.UpdateProductRequest{
 		ProductID:    &id,
 		MerchantID:   int(request.GetMerchantId()),
@@ -465,6 +474,8 @@ func (s *productHandleGrpc) Update(ctx context.Context, request *pb.UpdateProduc
 		CountInStock: int(request.GetCountInStock()),
 		Brand:        request.GetBrand(),
 		Weight:       int(request.GetWeight()),
+		Rating:       &rating,
+		SlugProduct:  &slug,
 		ImageProduct: request.GetImageProduct(),
 	}
 
@@ -482,14 +493,14 @@ func (s *productHandleGrpc) Update(ctx context.Context, request *pb.UpdateProduc
 		MerchantId:   int32(product.MerchantID),
 		CategoryId:   int32(product.CategoryID),
 		Name:         product.Name,
-		Description:  *product.Description,
+		Description:  utils.StringPtrToString(product.Description),
 		Price:        int32(product.Price),
 		CountInStock: int32(product.CountInStock),
-		Brand:        *product.Brand,
-		Weight:       int32(*product.Weight),
-		Rating:       float32(*product.Rating),
-		SlugProduct:  *product.SlugProduct,
-		ImageProduct: *product.ImageProduct,
+		Brand:        utils.StringPtrToString(product.Brand),
+		Weight:       utils.Int32PtrToInt32(product.Weight),
+		Rating:       utils.Float64PtrToFloat32(product.Rating),
+		SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+		ImageProduct: utils.StringPtrToString(product.ImageProduct),
 		CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 		UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
 	}
@@ -513,9 +524,9 @@ func (s *productHandleGrpc) TrashedProduct(ctx context.Context, request *pb.Find
 		return nil, errors.ToGrpcError(err)
 	}
 
-	var deletedAt string
+	var deletedAt *wrapperspb.StringValue
 	if product.DeletedAt.Valid {
-		deletedAt = product.DeletedAt.Time.Format("2006-01-02")
+		deletedAt = &wrapperspb.StringValue{Value: product.DeletedAt.Time.Format("2006-01-02")}
 	}
 
 	protoProduct := &pb.ProductResponseDeleteAt{
@@ -523,17 +534,17 @@ func (s *productHandleGrpc) TrashedProduct(ctx context.Context, request *pb.Find
 		MerchantId:   int32(product.MerchantID),
 		CategoryId:   int32(product.CategoryID),
 		Name:         product.Name,
-		Description:  *product.Description,
+		Description:  utils.StringPtrToString(product.Description),
 		Price:        int32(product.Price),
 		CountInStock: int32(product.CountInStock),
-		Brand:        *product.Brand,
-		Weight:       int32(*product.Weight),
-		Rating:       float32(*product.Rating),
-		SlugProduct:  *product.SlugProduct,
-		ImageProduct: *product.ImageProduct,
+		Brand:        utils.StringPtrToString(product.Brand),
+		Weight:       utils.Int32PtrToInt32(product.Weight),
+		Rating:       utils.Float64PtrToFloat32(product.Rating),
+		SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+		ImageProduct: utils.StringPtrToString(product.ImageProduct),
 		CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 		UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
-		DeletedAt:    &wrapperspb.StringValue{Value: deletedAt},
+		DeletedAt:    deletedAt,
 	}
 
 	return &pb.ApiResponseProductDeleteAt{
@@ -555,9 +566,9 @@ func (s *productHandleGrpc) RestoreProduct(ctx context.Context, request *pb.Find
 		return nil, errors.ToGrpcError(err)
 	}
 
-	var deletedAt string
+	var deletedAt *wrapperspb.StringValue
 	if product.DeletedAt.Valid {
-		deletedAt = product.DeletedAt.Time.Format("2006-01-02")
+		deletedAt = &wrapperspb.StringValue{Value: product.DeletedAt.Time.Format("2006-01-02")}
 	}
 
 	protoProduct := &pb.ProductResponseDeleteAt{
@@ -565,17 +576,17 @@ func (s *productHandleGrpc) RestoreProduct(ctx context.Context, request *pb.Find
 		MerchantId:   int32(product.MerchantID),
 		CategoryId:   int32(product.CategoryID),
 		Name:         product.Name,
-		Description:  *product.Description,
+		Description:  utils.StringPtrToString(product.Description),
 		Price:        int32(product.Price),
 		CountInStock: int32(product.CountInStock),
-		Brand:        *product.Brand,
-		Weight:       int32(*product.Weight),
-		Rating:       float32(*product.Rating),
-		SlugProduct:  *product.SlugProduct,
-		ImageProduct: *product.ImageProduct,
+		Brand:        utils.StringPtrToString(product.Brand),
+		Weight:       utils.Int32PtrToInt32(product.Weight),
+		Rating:       utils.Float64PtrToFloat32(product.Rating),
+		SlugProduct:  utils.StringPtrToString(product.SlugProduct),
+		ImageProduct: utils.StringPtrToString(product.ImageProduct),
 		CreatedAt:    product.CreatedAt.Time.Format("2006-01-02"),
 		UpdatedAt:    product.UpdatedAt.Time.Format("2006-01-02"),
-		DeletedAt:    &wrapperspb.StringValue{Value: deletedAt},
+		DeletedAt:    deletedAt,
 	}
 
 	return &pb.ApiResponseProductDeleteAt{

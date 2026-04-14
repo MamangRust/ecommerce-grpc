@@ -686,8 +686,10 @@ func (s *categoryService) CreateCategory(ctx context.Context, req *requests.Crea
 		end(status)
 	}()
 
-	slug := utils.GenerateSlug(req.Name)
-	req.Name = slug
+	if req.SlugCategory == nil || *req.SlugCategory == "" {
+		generatedSlug := utils.GenerateSlug(req.Name)
+		req.SlugCategory = &generatedSlug
+	}
 
 	category, err := s.categoryRepository.CreateCategory(ctx, req)
 	if err != nil {
@@ -718,8 +720,10 @@ func (s *categoryService) UpdateCategory(ctx context.Context, req *requests.Upda
 		end(status)
 	}()
 
-	slug := utils.GenerateSlug(req.Name)
-	req.Name = slug
+	if req.SlugCategory == nil || *req.SlugCategory == "" {
+		generatedSlug := utils.GenerateSlug(req.Name)
+		req.SlugCategory = &generatedSlug
+	}
 
 	category, err := s.categoryRepository.UpdateCategory(ctx, req)
 	if err != nil {

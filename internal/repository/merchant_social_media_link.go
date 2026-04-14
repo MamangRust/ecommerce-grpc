@@ -11,7 +11,7 @@ type merchantSocialMediaLinkRepository struct {
 	db *db.Queries
 }
 
-func NewMerchantSocialMediaLinkRepository(db *db.Queries) *merchantSocialMediaLinkRepository {
+func NewMerchantSocialLinkRepository(db *db.Queries) *merchantSocialMediaLinkRepository {
 	return &merchantSocialMediaLinkRepository{
 		db: db,
 	}

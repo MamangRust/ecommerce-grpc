@@ -3,7 +3,7 @@ package requests
 import "github.com/go-playground/validator/v10"
 
 type CreateMerchantSocialRequest struct {
-	MerchantDetailID *int   `json:"merchant_detail_id" validate:"required"`
+	MerchantDetailID *int   `json:"merchant_detail_id" validate:"omitempty"`
 	Platform         string `json:"platform" validate:"required"`
 	Url              string `json:"url" validate:"required,url"`
 }

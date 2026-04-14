@@ -1153,6 +1153,8 @@ func (s *transactionService) CreateTransaction(ctx context.Context, req *request
 		)
 	}
 
+	s.cache.InvalidateTransactionCache(ctx)
+
 	logSuccess("Successfully created transaction",
 		zap.Int("transactionID", int(transaction.TransactionID)),
 		zap.Int("orderID", req.OrderID),
@@ -1299,6 +1301,8 @@ func (s *transactionService) UpdateTransaction(ctx context.Context, req *request
 		)
 	}
 
+	s.cache.InvalidateTransactionCache(ctx)
+
 	logSuccess("Successfully updated transaction",
 		zap.Int("transactionID", *req.TransactionID),
 		zap.Int("orderID", req.OrderID),
@@ -1330,6 +1334,8 @@ func (s *transactionService) TrashedTransaction(ctx context.Context, transaction
 		)
 	}
 
+	s.cache.InvalidateTransactionCache(ctx)
+
 	logSuccess("Successfully trashed transaction", zap.Int("transaction_id", transaction_id))
 
 	return res, nil
@@ -1356,6 +1362,8 @@ func (s *transactionService) RestoreTransaction(ctx context.Context, transaction
 			zap.Int("transaction_id", transaction_id),
 		)
 	}
+
+	s.cache.InvalidateTransactionCache(ctx)
 
 	logSuccess("Successfully restored transaction", zap.Int("transaction_id", transaction_id))
 
@@ -1384,6 +1392,8 @@ func (s *transactionService) DeleteTransactionPermanently(ctx context.Context, t
 		)
 	}
 
+	s.cache.InvalidateTransactionCache(ctx)
+
 	logSuccess("Successfully permanently deleted transaction", zap.Int("transactionID", transactionID))
 
 	return success, nil
@@ -1409,6 +1419,8 @@ func (s *transactionService) RestoreAllTransactions(ctx context.Context) (bool, 
 		)
 	}
 
+	s.cache.InvalidateTransactionCache(ctx)
+
 	logSuccess("Successfully restored all trashed transactions")
 
 	return success, nil
@@ -1433,6 +1445,8 @@ func (s *transactionService) DeleteAllTransactionPermanent(ctx context.Context) 
 			span,
 		)
 	}
+
+	s.cache.InvalidateTransactionCache(ctx)
 
 	logSuccess("Successfully permanently deleted all transactions")
 

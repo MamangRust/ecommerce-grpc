@@ -102,9 +102,9 @@ func (s *sliderHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAll
 
 	protoSliders := make([]*pb.SliderResponseDeleteAt, len(sliders))
 	for i, slider := range sliders {
-		var deletedAt string
+		var deletedAt *wrapperspb.StringValue
 		if slider.DeletedAt.Valid {
-			deletedAt = slider.DeletedAt.Time.Format("2006-01-02")
+			deletedAt = &wrapperspb.StringValue{Value: slider.DeletedAt.Time.Format("2006-01-02")}
 		}
 
 		protoSliders[i] = &pb.SliderResponseDeleteAt{
@@ -113,7 +113,7 @@ func (s *sliderHandleGrpc) FindByActive(ctx context.Context, request *pb.FindAll
 			Image:     slider.Image,
 			CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
 			UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
-			DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+			DeletedAt: deletedAt,
 		}
 	}
 
@@ -159,9 +159,9 @@ func (s *sliderHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAl
 
 	protoSliders := make([]*pb.SliderResponseDeleteAt, len(sliders))
 	for i, slider := range sliders {
-		var deletedAt string
+		var deletedAt *wrapperspb.StringValue
 		if slider.DeletedAt.Valid {
-			deletedAt = slider.DeletedAt.Time.Format("2006-01-02")
+			deletedAt = &wrapperspb.StringValue{Value: slider.DeletedAt.Time.Format("2006-01-02")}
 		}
 
 		protoSliders[i] = &pb.SliderResponseDeleteAt{
@@ -170,7 +170,7 @@ func (s *sliderHandleGrpc) FindByTrashed(ctx context.Context, request *pb.FindAl
 			Image:     slider.Image,
 			CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
 			UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
-			DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+			DeletedAt: deletedAt,
 		}
 	}
 
@@ -270,9 +270,9 @@ func (s *sliderHandleGrpc) TrashedSlider(ctx context.Context, request *pb.FindBy
 		return nil, errors.ToGrpcError(err)
 	}
 
-	var deletedAt string
+	var deletedAt *wrapperspb.StringValue
 	if slider.DeletedAt.Valid {
-		deletedAt = slider.DeletedAt.Time.Format("2006-01-02")
+		deletedAt = &wrapperspb.StringValue{Value: slider.DeletedAt.Time.Format("2006-01-02")}
 	}
 
 	protoSlider := &pb.SliderResponseDeleteAt{
@@ -281,7 +281,7 @@ func (s *sliderHandleGrpc) TrashedSlider(ctx context.Context, request *pb.FindBy
 		Image:     slider.Image,
 		CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
 		UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
-		DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+		DeletedAt: deletedAt,
 	}
 
 	return &pb.ApiResponseSliderDeleteAt{
@@ -303,24 +303,24 @@ func (s *sliderHandleGrpc) RestoreSlider(ctx context.Context, request *pb.FindBy
 		return nil, errors.ToGrpcError(err)
 	}
 
-	var deletedAt string
+	var deletedAtRestore *wrapperspb.StringValue
 	if slider.DeletedAt.Valid {
-		deletedAt = slider.DeletedAt.Time.Format("2006-01-02")
+		deletedAtRestore = &wrapperspb.StringValue{Value: slider.DeletedAt.Time.Format("2006-01-02")}
 	}
 
-	protoSlider := &pb.SliderResponseDeleteAt{
+	protoSliderRestore := &pb.SliderResponseDeleteAt{
 		Id:        int32(slider.SliderID),
 		Name:      slider.Name,
 		Image:     slider.Image,
 		CreatedAt: slider.CreatedAt.Time.Format("2006-01-02"),
 		UpdatedAt: slider.UpdatedAt.Time.Format("2006-01-02"),
-		DeletedAt: &wrapperspb.StringValue{Value: deletedAt},
+		DeletedAt: deletedAtRestore,
 	}
 
 	return &pb.ApiResponseSliderDeleteAt{
 		Status:  "success",
 		Message: "Successfully restored slider",
-		Data:    protoSlider,
+		Data:    protoSliderRestore,
 	}, nil
 }
 

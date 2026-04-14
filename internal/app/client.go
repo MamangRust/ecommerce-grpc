@@ -261,7 +261,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	echoServer := createEchoServer(cfg)
 
 	mapper := response_api.NewResponseApiMapper()
-	imageUpload := upload_image.NewImageUpload()
+	imageUpload := upload_image.NewImageUpload(logger)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
